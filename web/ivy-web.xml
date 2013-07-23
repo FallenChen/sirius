@@ -1,0 +1,3 @@
+<dependency org="io.netty" name="netty-all" rev="4.0.0.CR9" />
+<dependency org="org.rythmengine" name="rythm-engine" rev="1.0-b9" />
+<dependency org="org.fusesource" name="sigar" rev="1.6.4" />
