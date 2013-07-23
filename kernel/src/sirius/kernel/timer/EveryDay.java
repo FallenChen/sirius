@@ -1,0 +1,14 @@
+package sirius.kernel.timer;
+
+public interface EveryDay extends TimedTask {
+    /**
+     * If no config value is given, this will return the default hour, in which
+     * the task will be executed.
+     */
+    int getDefaultHourOfExecution();
+
+    /**
+     * Returns the name of the config key, which stores the hour of execution.
+     */
+    String getConfigKeyName();
+}
