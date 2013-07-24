@@ -4,10 +4,10 @@ import org.rythmengine.Rythm;
 import org.rythmengine.extension.II18nMessageResolver;
 import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
-import sirius.kernel.nls.NLS;
+import sirius.kernel.async.CallContext;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.annotations.Register;
-import sirius.kernel.async.CallContext;
+import sirius.kernel.nls.NLS;
 
 import java.io.File;
 import java.util.Map;

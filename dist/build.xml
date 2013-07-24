@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="sirius" default="release" xmlns:ivy="antlib:org.apache.ivy.ant">
+    <property name="VERSION" value="2013-01"/>
+    <property name="ivy.jar.version" value="2.1.0"/>
+    <property name="ivy.jar.name" value="ivy-${ivy.jar.version}.jar"/>
+    <property name="ivy.home" value="${user.home}/.ivy2"/>
+    <available property="ivy.installed" file="${ivy.home}/${ivy.jar.name}"/>
+
+    <target name="ivy-install" unless="ivy.installed">
+        <mkdir dir="${ivy.home}"/>
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.jar.version}/${ivy.jar.name}"
+             dest="${ivy.home}/${ivy.jar.name}"/>
+    </target>
+
+    <target name="ivy-init" depends="ivy-install">
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant"
+                 classpath="${ivy.home}/${ivy.jar.name}"/>
+    </target>
+
+    <target name="release-kernel" depends="ivy-init">
+        <ivy:resolve file="ivy-kernel.xml" />
+        <ivy:retrieve file="ivy-kernel.xml" />
+        <ivy:makepom ivyfile="ivy-kernel.xml" pomfile="sirius-kernel.pom">
+            <mapping conf="default" scope="compile"/>
+        </ivy:makepom>
+        <!-- Compile Java Sources -->
+        <path id="kernel.cp">
+            <fileset dir="lib" includes="*.jar"/>
+        </path>
+
+        <mkdir dir="classes" />
+        <delete>
+            <fileset dir="classes">
+                <include name="**/*" />
+            </fileset>
+        </delete>
+        <javac compiler="javac1.6"
+               includeantruntime="false"
+               classpathref="kernel.cp"
+               encoding="UTF-8"
+               debug="on"
+               destdir="classes">
+            <src path="../kernel/src"/>
+            <compilerarg value="-Xlint:deprecation"/>
+        </javac>
+
+        <!-- Copy Resources -->
+        <copy todir="classes">
+            <fileset dir="../kernel/src" excludes="**/*.java"/>
+            <fileset dir="../kernel/resources" excludes="**/*.java"/>
+        </copy>
+
+        <!-- Make love (and a .jar) -->
+        <zip destfile="sirius-kernel-${VERSION}.jar" basedir="classes" />
+    </target>
+
+    <target name="release-web" depends="ivy-init">
+        <ivy:resolve file="ivy-web.xml" />
+        <ivy:retrieve file="ivy-web.xml" />
+        <ivy:makepom ivyfile="ivy-web.xml" pomfile="sirius-web.pom">
+            <mapping conf="default" scope="compile"/>
+        </ivy:makepom>
+        <path id="web.cp">
+            <fileset dir="lib" includes="*.jar"/>
+        </path>
+
+        <mkdir dir="classes" />
+        <delete>
+            <fileset dir="classes">
+                <include name="**/*" />
+            </fileset>
+        </delete>
+        <javac compiler="javac1.6"
+               includeantruntime="false"
+               classpathref="web.cp"
+               encoding="UTF-8"
+               debug="on"
+               destdir="classes">
+            <src path="../web/src"/>
+            <compilerarg value="-Xlint:deprecation"/>
+        </javac>
+
+        <!-- Copy Resources -->
+        <copy todir="classes">
+            <fileset dir="../web/src" excludes="**/*.java"/>
+            <fileset dir="../web/resources" excludes="**/*.java"/>
+        </copy>
+
+        <!-- Make love (and a .jar) -->
+        <zip destfile="sirius-web-${VERSION}.jar" basedir="classes" />
+    </target>
+
+    <target name="release-app" depends="ivy-init">
+        <ivy:resolve file="ivy-app.xml" />
+        <ivy:retrieve file="ivy-app.xml" />
+        <ivy:makepom ivyfile="ivy-app.xml" pomfile="sirius-app.pom">
+            <mapping conf="default" scope="compile"/>
+        </ivy:makepom>
+        <!-- Compile Java Sources -->
+        <path id="lib.path.ref">
+            <fileset dir="lib" includes="*.jar"/>
+        </path>
+
+        <mkdir dir="classes" />
+        <delete>
+            <fileset dir="classes">
+                <include name="**/*" />
+            </fileset>
+        </delete>
+        <javac compiler="javac1.6"
+               includeantruntime="false"
+               classpathref="lib.path.ref"
+               encoding="UTF-8"
+               debug="on"
+               destdir="classes">
+            <src path="../app/src"/>
+            <compilerarg value="-Xlint:deprecation"/>
+        </javac>
+
+        <!-- Copy Resources -->
+        <copy todir="classes">
+            <fileset dir="../app/src" excludes="**/*.java"/>
+            <fileset dir="../app/resources" excludes="**/*.java"/>
+        </copy>
+
+        <!-- Make love (and a .jar) -->
+        <zip destfile="sirius-app-${VERSION}.jar" basedir="classes" />
+    </target>
+
+    <target name="release" depends="ivy-init">
+        <mkdir dir="lib" />
+        <delete>
+            <fileset dir="lib">
+                <include name="**/*" />
+            </fileset>
+        </delete>
+        <antcall target="release-kernel" />
+        <antcall target="release-web" />
+        <antcall target="release-app" />
+    </target>
+</project>

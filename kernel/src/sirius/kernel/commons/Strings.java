@@ -8,8 +8,8 @@
 
 package sirius.kernel.commons;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
-import org.jboss.netty.util.CharsetUtil;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -169,7 +169,7 @@ public class Strings {
      */
     public static String urlEncode(String value) {
         try {
-            return URLEncoder.encode(value, CharsetUtil.UTF_8.name());
+            return URLEncoder.encode(value, Charsets.UTF_8.name());
         } catch (UnsupportedEncodingException e) {
             // Cannot happen if Java-Version is > 1.4....
 

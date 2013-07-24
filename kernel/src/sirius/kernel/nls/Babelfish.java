@@ -132,10 +132,10 @@ public class Babelfish {
                     }
                 } catch (Throwable ex) {
                     Exceptions.handle()
-                              .error(ex)
-                              .to(LOG)
-                              .withSystemErrorMessage("Error writing properties of: %s - %s (%s)", entry.getKey())
-                              .handle();
+                            .error(ex)
+                            .to(LOG)
+                            .withSystemErrorMessage("Error writing properties of: %s - %s (%s)", entry.getKey())
+                            .handle();
                 }
                 totalFiles++;
             }
@@ -158,7 +158,7 @@ public class Babelfish {
      * This list enumerates directories not to enter, since they either contain a copy of the file or might
      * be too large to search through
      */
-    private static final String[] IGNORED_DIRECTORIES = new String[]{"bin", "out", "target", "build", "data"};
+    private static final String[] IGNORED_DIRECTORIES = new String[]{"bin", "out", "target", "build", "data", "dist"};
 
     /*
      * Tries to find a source file for the given path, starting from current.
@@ -263,9 +263,9 @@ public class Babelfish {
      * @param classpath the classpath used to discover all relevant properties files
      */
     protected void init(Classpath classpath) {
-        classpath.find(PROPERTIES_FILE, new Callback<Matcher>() {
+        classpath.find(PROPERTIES_FILE, new BasicCollector<Matcher>() {
             @Override
-            public void invoke(Matcher value) throws Exception {
+            public void add(Matcher value) {
                 LOG.FINE("Loading: %s", value.group());
                 String baseName = value.group(1);
                 String lang = value.group(2);

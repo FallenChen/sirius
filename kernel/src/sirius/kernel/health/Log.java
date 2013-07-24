@@ -14,7 +14,6 @@ import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.nls.NLS;
 
-
 /**
  * The logging facade used by the system.
  * <p>
@@ -25,7 +24,7 @@ import sirius.kernel.nls.NLS;
  * <p>
  * In contrast to other approaches, it is not recommended to create a logger per class, but rather one per
  * framework or sub system. It should have a concise name, all lowercase without any dots. The log level of each
- * logger is read from the configuration using <code>logging.NAME</code>. It may be set to one of:
+ * logger is read from the configuration using <code>logging.[NAME]</code>. It may be set to one of:
  * <ul>
  * <li>DEBUG</li>
  * <li>INFO</li>

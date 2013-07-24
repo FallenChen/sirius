@@ -8,14 +8,15 @@
 
 package sirius.kernel;
 
+import com.google.common.base.Charsets;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.log4j.*;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggerRepository;
-import org.jboss.netty.util.CharsetUtil;
 import org.junit.BeforeClass;
+import sirius.kernel.commons.BasicCollector;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.Value;
 import sirius.kernel.commons.Watch;
@@ -37,7 +38,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Contains global constants which are frequently accessed.
+ * Loads and initializes the framework.
+ * <p>
+ * This can be considered the <tt>stage2</tt> when booting the framework, as it is responsible to discover and
+ * initialize all components.
+ * </p>
+ * <p>
+ * This class can be also used as superclass for jUnit-Tests as it starts the framework when required.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public class Sirius {
 
@@ -108,23 +119,23 @@ public class Sirius {
                 lifecycle.started();
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .error(e)
-                          .to(LOG)
-                          .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
-                          .handle();
+                        .error(e)
+                        .to(LOG)
+                        .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
+                        .handle();
             }
         }
     }
 
-    private static void init() {
+    private static void init(ClassLoader loader) {
         initialized = true;
-        classpath = new Classpath("component.conf");
+        classpath = new Classpath(loader, "component.conf");
 
         if (startedAsTest) {
             // Load test configurations (will override component configs
-            classpath.find(Pattern.compile("component-test\\.conf"), new Callback<Matcher>() {
+            classpath.find(Pattern.compile("component-test\\.conf"), new BasicCollector<Matcher>() {
                 @Override
-                public void invoke(Matcher value) throws Exception {
+                public void add(Matcher value) {
                     config = config.withFallback(ConfigFactory.load(value.group()));
                 }
             });
@@ -165,10 +176,10 @@ public class Sirius {
                 lifecycle.stopped();
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .error(e)
-                          .to(LOG)
-                          .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
-                          .handle();
+                        .error(e)
+                        .to(LOG)
+                        .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
+                        .handle();
             }
         }
         started = false;
@@ -185,12 +196,12 @@ public class Sirius {
     public static void initializeTestEnvironment() {
         if (!initialized) {
             startedAsTest = true;
-            main(null);
+            initializeEnvironment(ClassLoader.getSystemClassLoader());
         }
     }
 
 
-    public static void main(String[] args) {
+    public static void initializeEnvironment(ClassLoader loader) {
         Watch w = Watch.start();
         if (!getProperty("sirius.manual-health").asBoolean()) {
             setupLogging();
@@ -208,7 +219,7 @@ public class Sirius {
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("Starting sirius");
         LOG.INFO("---------------------------------------------------------");
-        init();
+        init(loader);
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("System is UP and RUNNING - %s", w.duration());
         LOG.INFO("---------------------------------------------------------");
@@ -273,7 +284,7 @@ public class Sirius {
             DailyRollingFileAppender fa = new DailyRollingFileAppender();
             fa.setName("FileLogger");
             fa.setFile("logs/application.log");
-            fa.setLayout(new PatternLayout("%d %-5p [%c{1}] %m%n"));
+            fa.setLayout(new PatternLayout("%d %-5p [%X{flow}|%t] %c - %m%n"));
             fa.setThreshold(Level.DEBUG);
             fa.setAppend(true);
             fa.activateOptions();
@@ -294,9 +305,9 @@ public class Sirius {
             @Override
             public void publish(LogRecord record) {
                 repository.getLogger(record.getLoggerName())
-                          .log(convertJuliLevel(record.getLevel()),
-                               formatter.formatMessage(record),
-                               record.getThrown());
+                        .log(convertJuliLevel(record.getLevel()),
+                                formatter.formatMessage(record),
+                                record.getThrown());
             }
 
             @Override
@@ -357,10 +368,10 @@ public class Sirius {
     }
 
     private static void setupEncoding() {
-        LOG.INFO("Setting " + CharsetUtil.UTF_8.name() + " as default encoding (file.encoding)");
-        System.setProperty("file.encoding", CharsetUtil.UTF_8.name());
-        LOG.INFO("Setting " + CharsetUtil.ISO_8859_1.name() + " as default mime encoding (mail.mime.charset)");
-        System.setProperty("mail.mime.charset", CharsetUtil.ISO_8859_1.name());
+        LOG.INFO("Setting " + Charsets.UTF_8.name() + " as default encoding (file.encoding)");
+        System.setProperty("file.encoding", Charsets.UTF_8.name());
+        LOG.INFO("Setting " + Charsets.ISO_8859_1.name() + " as default mime encoding (mail.mime.charset)");
+        System.setProperty("mail.mime.charset", Charsets.ISO_8859_1.name());
     }
 
     private static void setupDNSCache() {

@@ -2,7 +2,7 @@ package sirius.app.servlet;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.di.Lifecycle;

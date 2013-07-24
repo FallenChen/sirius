@@ -1,6 +1,15 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.di;
 
 import sirius.kernel.Classpath;
+import sirius.kernel.commons.BasicCollector;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
@@ -26,7 +35,7 @@ public class Injector {
     /**
      * Initializes the framework...
      */
-    public static void init(Callback<MutableGlobalContext> callback, Classpath classpath) {
+    public static void init(Callback<MutableGlobalContext> callback, final Classpath classpath) {
         ctx = new PartRegistry();
 
         final List<Class<?>> classes = new ArrayList<Class<?>>();
@@ -34,39 +43,39 @@ public class Injector {
         LOG.INFO("Initializing the MicroKernel....");
 
         LOG.INFO("Stage 1: Scanning .class files...");
-        classpath.find(Pattern.compile(".*?.class"), new Callback<Matcher>() {
+        classpath.find(Pattern.compile(".*?.class"), new BasicCollector<Matcher>() {
             @Override
-            public void invoke(Matcher matcher) throws Exception {
+            public void add(Matcher matcher) {
                 String relativePath = matcher.group();
                 String className = relativePath.substring(0, relativePath.length() - 6).replace("/", ".");
                 try {
                     LOG.FINE("Found class: " + className);
-                    Class<?> clazz = Class.forName(className);
+                    Class<?> clazz = Class.forName(className, true, classpath.getLoader());
                     if (ClassLoadAction.class.isAssignableFrom(clazz) && !clazz.isInterface()) {
                         try {
                             actions.add((ClassLoadAction) clazz.newInstance());
                         } catch (Throwable e) {
                             Exceptions.handle()
-                                      .error(e)
-                                      .to(LOG)
-                                      .withSystemErrorMessage("Failed to instantiate ClassLoadAction: %s - %s (%s)",
-                                                              className)
-                                      .handle();
+                                    .error(e)
+                                    .to(LOG)
+                                    .withSystemErrorMessage("Failed to instantiate ClassLoadAction: %s - %s (%s)",
+                                            className)
+                                    .handle();
                         }
                     }
                     classes.add(clazz);
                 } catch (NoClassDefFoundError e) {
                     Exceptions.handle()
-                              .error(e)
-                              .to(LOG)
-                              .withSystemErrorMessage("Failed to load dependent class: %s", className)
-                              .handle();
+                            .error(e)
+                            .to(LOG)
+                            .withSystemErrorMessage("Failed to load dependent class: %s", className)
+                            .handle();
                 } catch (Throwable e) {
                     Exceptions.handle()
-                              .error(e)
-                              .to(LOG)
-                              .withSystemErrorMessage("Failed to load class %s: %s (%s)", className)
-                              .handle();
+                            .error(e)
+                            .to(LOG)
+                            .withSystemErrorMessage("Failed to load class %s: %s (%s)", className)
+                            .handle();
                 }
             }
         });
@@ -80,12 +89,12 @@ public class Injector {
                         action.handle(ctx, clazz);
                     } catch (Throwable e) {
                         Exceptions.handle()
-                                  .error(e)
-                                  .to(LOG)
-                                  .withSystemErrorMessage("Failed to autoload: %s with ClassLoadAction: %s: %s (%s)",
-                                                          clazz.getName(),
-                                                          action.getClass().getSimpleName())
-                                  .handle();
+                                .error(e)
+                                .to(LOG)
+                                .withSystemErrorMessage("Failed to autoload: %s with ClassLoadAction: %s: %s (%s)",
+                                        clazz.getName(),
+                                        action.getClass().getSimpleName())
+                                .handle();
                     }
                 }
             }
