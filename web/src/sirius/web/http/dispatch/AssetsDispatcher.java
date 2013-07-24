@@ -1,10 +1,10 @@
-package sirius.web.dispatch;
+package sirius.web.http.dispatch;
 
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.di.annotations.Register;
-import sirius.web.WebContext;
-import sirius.web.WebDispatcher;
+import sirius.web.http.WebContext;
+import sirius.web.http.WebDispatcher;
 
 import java.io.File;
 import java.net.URL;

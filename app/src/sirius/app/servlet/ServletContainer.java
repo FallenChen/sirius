@@ -2,7 +2,7 @@ package sirius.app.servlet;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.di.Lifecycle;
@@ -12,10 +12,10 @@ import sirius.kernel.extensions.Extension;
 import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
-import sirius.web.Response;
-import sirius.web.ServerSession;
-import sirius.web.WebContext;
-import sirius.web.WebDispatcher;
+import sirius.web.http.Response;
+import sirius.web.http.ServerSession;
+import sirius.web.http.WebContext;
+import sirius.web.http.WebDispatcher;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpSessionEvent;
@@ -180,6 +180,11 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     @Override
     public String getName() {
         return "servlets (Sirius ServletContainer)";
+    }
+
+    @Override
+    public String getContextPath() {
+        return getServletContextName();
     }
 
     @Override

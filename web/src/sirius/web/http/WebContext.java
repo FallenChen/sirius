@@ -1,4 +1,4 @@
-package sirius.web;
+package sirius.web.http;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;

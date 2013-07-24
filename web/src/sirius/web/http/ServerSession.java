@@ -1,4 +1,4 @@
-package sirius.web;
+package sirius.web.http;
 
 import com.google.common.collect.Maps;
 import org.joda.time.Duration;

@@ -1,4 +1,4 @@
-package sirius.web;
+package sirius.web.http;
 
 /**
  * Created with IntelliJ IDEA.

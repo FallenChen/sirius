@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel;
 
 import java.io.File;
@@ -8,21 +16,35 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 24.07.13
- * Time: 09:55
- * To change this template use File | Settings | File Templates.
+ * Initial Program Load - This is the main program entry point.
+ * <p>
+ * THis will load all provided jar files from the "libs" sub folder as well as all classes from the "classes"
+ * folder. When debugging from an IDE, set the system property <tt>ide</tt> to <tt>true</tt> - this will
+ * bypass class loading, as all classes are typically provided via the system classpath.
+ * </p>
+ * <p>
+ * This class only generates a <tt>ClassLoader</tt> which is then used to load
+ * {@link Sirius#initializeEnvironment(ClassLoader)} as stage2.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public class IPL {
 
     private static ClassLoader loader = ClassLoader.getSystemClassLoader();
 
+    /**
+     * Main Program entry point
+     *
+     * @param args currently the command line arguments are ignored.
+     */
     public static void main(String[] args) {
         boolean debug = Boolean.parseBoolean(System.getProperty("debug"));
         boolean ide = Boolean.parseBoolean(System.getProperty("ide"));
         File home = new File(System.getProperty("user.dir"));
         if (debug) {
+            System.out.println();
             System.out.println("I N I T I A L   P R O G R A M   L O A D");
             System.out.println("---------------------------------------");
             System.out.println("IPL from: " + home.getAbsolutePath());
@@ -52,6 +74,7 @@ public class IPL {
         try {
             if (debug) {
                 System.out.println("IPL completed - Loading Sirius as stage2...");
+                System.out.println();
             }
             Class.forName("sirius.kernel.Sirius", true, loader)
                  .getMethod("initializeEnvironment", ClassLoader.class)

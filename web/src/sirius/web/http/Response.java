@@ -1,4 +1,4 @@
-package sirius.web;
+package sirius.web.http;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;

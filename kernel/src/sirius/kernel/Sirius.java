@@ -30,7 +30,6 @@ import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
 
 import java.io.File;
-import java.net.URL;
 import java.util.Map;
 import java.util.logging.*;
 import java.util.logging.LogManager;
@@ -86,6 +85,10 @@ public class Sirius {
         return !dev;
     }
 
+    /*
+     * Once the configuration is loaded, this method applies the log level to all log4j and java.util.logging
+     * loggers
+     */
     private static void setupLogLevels() {
         if (!config.hasPath("health")) {
             return;
@@ -107,7 +110,9 @@ public class Sirius {
         }
     }
 
-
+    /*
+     * Starts all framework components
+     */
     private static void start() {
         if (started) {
             stop();
@@ -119,20 +124,23 @@ public class Sirius {
                 lifecycle.started();
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
+                          .handle();
             }
         }
     }
 
+    /*
+     * Discovers all components in the class path and initializes the {@link Injector}
+     */
     private static void init(ClassLoader loader) {
         initialized = true;
-        classpath = new Classpath(loader, "component.conf");
+        classpath = new Classpath(loader, "component.marker");
 
         if (startedAsTest) {
-            // Load test configurations (will override component configs
+            // Load test configurations (will override component configs)
             classpath.find(Pattern.compile("component-test\\.conf"), new BasicCollector<Matcher>() {
                 @Override
                 public void add(Matcher value) {
@@ -141,10 +149,15 @@ public class Sirius {
             });
         }
 
-        // Apply component configs to core config...
-        for (URL url : classpath.getComponentRoots()) {
-            config = config.withFallback(ConfigFactory.parseURL(url));
-        }
+        // Load component configurations
+        classpath.find(Pattern.compile("component-(.*?)\\.conf"), new BasicCollector<Matcher>() {
+            @Override
+            public void add(Matcher value) {
+                if (!"test".equals(value.group(1))) {
+                    config = config.withFallback(ConfigFactory.load(value.group()));
+                }
+            }
+        });
 
         // Setup log-system based on configuration
         setupLogLevels();
@@ -164,7 +177,7 @@ public class Sirius {
     }
 
     /**
-     * Stops the framework...
+     * Stops the framework.
      */
     public static void stop() {
         if (!started) {
@@ -176,10 +189,10 @@ public class Sirius {
                 lifecycle.stopped();
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
+                          .handle();
             }
         }
         started = false;
@@ -200,24 +213,34 @@ public class Sirius {
         }
     }
 
-
+    /**
+     * Initializes the framework.
+     * <p>
+     * This is called by {@link IPL#main(String[])} once the classloader is fully populated.
+     * </p>
+     *
+     * @param loader the class loader containing all class files and jars used to build the system
+     */
     public static void initializeEnvironment(ClassLoader loader) {
         Watch w = Watch.start();
         if (!getProperty("sirius.manual-health").asBoolean()) {
             setupLogging();
+        }
+        LOG.INFO("---------------------------------------------------------");
+        LOG.INFO("Booting the SIRIUS Framework...");
+        LOG.INFO("---------------------------------------------------------");
+        if (!getProperty("sirius.manual-health").asBoolean()) {
             LOG.INFO(
                     "Updated log4j config! To block this, set the system property 'sirius.manual-health' to true! [-Dsirius.manual-health=true]");
         }
-        LOG.INFO("Setting up environment...");
-        LOG.INFO("---------------------------------------------------------");
         setupDNSCache();
         setupEncoding();
         LOG.INFO("---------------------------------------------------------");
-        LOG.INFO("Loading config");
+        LOG.INFO("Loading config...");
         LOG.INFO("---------------------------------------------------------");
         setupConfiguration();
         LOG.INFO("---------------------------------------------------------");
-        LOG.INFO("Starting sirius");
+        LOG.INFO("Starting the system...");
         LOG.INFO("---------------------------------------------------------");
         init(loader);
         LOG.INFO("---------------------------------------------------------");
@@ -233,6 +256,9 @@ public class Sirius {
         }));
     }
 
+    /*
+     * Loads all relevant .conf files
+     */
     private static void setupConfiguration() {
         config = ConfigFactory.empty();
         if (Sirius.class.getResource("/application.conf") != null) {
@@ -250,8 +276,8 @@ public class Sirius {
         if (startedAsTest && Sirius.class.getResource("/test.conf") != null) {
             LOG.INFO("using test.conf from classpath...");
             config = ConfigFactory.parseFile(new File("test.conf")).withFallback(config);
-        } else if (Sirius.isDev()) {
-            LOG.INFO("develop.conf not present work directory");
+        } else if (startedAsTest) {
+            LOG.INFO("test.conf not present work directory");
         }
         if (new File("instance.conf").exists()) {
             LOG.INFO("using instance.conf from filesystem...");
@@ -261,8 +287,8 @@ public class Sirius {
         }
     }
 
-    /**
-     * Initializes log4j as health framework. In development mode, we log everything to the console.
+    /*
+     * Initializes log4j as logging framework. In development mode, we log everything to the console.
      * In production mode, we use a rolling file appender and log into the logs directory.
      */
     private static void setupLogging() {
@@ -305,9 +331,9 @@ public class Sirius {
             @Override
             public void publish(LogRecord record) {
                 repository.getLogger(record.getLoggerName())
-                        .log(convertJuliLevel(record.getLevel()),
-                                formatter.formatMessage(record),
-                                record.getThrown());
+                          .log(convertJuliLevel(record.getLevel()),
+                               formatter.formatMessage(record),
+                               record.getThrown());
             }
 
             @Override
@@ -324,7 +350,6 @@ public class Sirius {
     }
 
     public static Level convertJuliLevel(java.util.logging.Level juliLevel) {
-
         if (juliLevel.equals(java.util.logging.Level.FINEST)) {
             return Level.TRACE;
         } else if (juliLevel.equals(java.util.logging.Level.FINER)) {
@@ -367,6 +392,9 @@ public class Sirius {
         return java.util.logging.Level.FINE;
     }
 
+    /*
+     * Set UTF-8 as encoding (expect for mails - which require ISO-8859-1)
+     */
     private static void setupEncoding() {
         LOG.INFO("Setting " + Charsets.UTF_8.name() + " as default encoding (file.encoding)");
         System.setProperty("file.encoding", Charsets.UTF_8.name());
@@ -374,6 +402,9 @@ public class Sirius {
         System.setProperty("mail.mime.charset", Charsets.ISO_8859_1.name());
     }
 
+    /*
+     * By default java infinitely caches all DNS entries. WIll be changed to 10 seconds...
+     */
     private static void setupDNSCache() {
         LOG.INFO("Setting DNS-Cache to 10 seconds...");
         java.security.Security.setProperty("networkaddress.cache.ttl", "10");
@@ -383,7 +414,12 @@ public class Sirius {
         return Value.of(System.getProperty(property));
     }
 
-
+    /**
+     * Returns the system config based on the current instance.conf (file system), application.conf (classpath) and
+     * all component-XXX.conf
+     *
+     * @return the initialized config or <tt>null</tt> if the framework is not setup yet.
+     */
     public static Config getConfig() {
         return config;
     }

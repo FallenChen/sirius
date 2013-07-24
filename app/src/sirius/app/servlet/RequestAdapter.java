@@ -2,7 +2,7 @@ package sirius.app.servlet;
 
 import com.google.common.collect.Maps;
 import org.jboss.netty.util.CharsetUtil;
-import sirius.web.WebContext;
+import sirius.web.http.WebContext;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletInputStream;

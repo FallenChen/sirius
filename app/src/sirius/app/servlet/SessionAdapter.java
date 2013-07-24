@@ -1,7 +1,7 @@
 package sirius.app.servlet;
 
 import sirius.kernel.commons.Callback;
-import sirius.web.ServerSession;
+import sirius.web.http.ServerSession;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.*;

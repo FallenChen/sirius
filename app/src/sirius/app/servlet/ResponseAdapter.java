@@ -12,7 +12,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.util.CharsetUtil;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.ValueHolder;
-import sirius.web.WebContext;
+import sirius.web.http.WebContext;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;

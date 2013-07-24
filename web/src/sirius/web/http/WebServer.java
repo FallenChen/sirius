@@ -1,4 +1,4 @@
-package sirius.web;
+package sirius.web.http;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.typesafe.config.Config;

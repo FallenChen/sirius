@@ -1,4 +1,4 @@
-package sirius.web;
+package sirius.web.templates;
 
 import org.rythmengine.Rythm;
 import org.rythmengine.extension.II18nMessageResolver;
@@ -38,7 +38,7 @@ public class RythmConfig implements Lifecycle {
         config.put("rythm.home.template.dir",
                    new File(Thread.currentThread()
                                   .getContextClassLoader()
-                                  .getResource("component.conf")
+                                  .getResource("component.marker")
                                   .getFile()).getParent());
         File tmpDir = new File(System.getProperty("java.io.tmpdir"), CallContext.getCurrent().getNodeName() + "_rythm");
         tmpDir.mkdirs();

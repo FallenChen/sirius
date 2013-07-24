@@ -1,4 +1,4 @@
-package sirius.web;
+package sirius.web.http;
 
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;

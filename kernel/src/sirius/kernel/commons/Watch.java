@@ -8,6 +8,7 @@
 
 package sirius.kernel.commons;
 
+import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
 
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 public class Watch {
 
     private long startTime = 0L;
+    private long lastMicroTime = 0L;
 
     /**
      * Creates and starts a new watch.
@@ -59,6 +61,7 @@ public class Watch {
      */
     public void reset() {
         startTime = System.nanoTime();
+        lastMicroTime = startTime;
     }
 
     /**
@@ -112,6 +115,17 @@ public class Watch {
      */
     public String duration() {
         return duration(false);
+    }
+
+    /**
+     * Submits the value for this watch to the {@link Microtiming} framework using the given key
+     *
+     * @param key the key used to store the elapsed time for.
+     */
+    public void submitMicroTiming(String key) {
+        long newTime = System.nanoTime();
+        Microtiming.submit(key, newTime - lastMicroTime);
+        lastMicroTime = newTime;
     }
 
     @Override
