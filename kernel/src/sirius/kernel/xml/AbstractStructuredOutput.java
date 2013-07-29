@@ -13,43 +13,42 @@ import java.util.List;
 
 public abstract class AbstractStructuredOutput implements StructuredOutput {
 
+    protected static enum ElementType {
+        UNKNOWN, OBJECT, ARRAY;
+    }
+
     protected static class Element {
-        static final int TYPE_OBJECT = 1;
-        static final int TYPE_ARRAY = 2;
-        private int type;
+
+        private ElementType type;
         private String name;
         private boolean empty = true;
 
-        public boolean isEmpty() {
+        protected boolean isEmpty() {
             return empty;
         }
 
-        public void setEmpty(boolean empty) {
+        protected void setEmpty(boolean empty) {
             this.empty = empty;
         }
 
-        public Element(int type, String name) {
+        protected Element(ElementType type, String name) {
             this.type = type;
             this.name = name;
         }
 
-        public static int getTYPE_ARRAY() {
-            return TYPE_ARRAY;
-        }
-
-        public int getType() {
+        protected ElementType getType() {
             return type;
         }
 
-        public String getName() {
+        protected String getName() {
             return name;
         }
 
     }
 
-    public int getCurrentType() {
+    public ElementType getCurrentType() {
         if (nesting.isEmpty()) {
-            return 0;
+            return ElementType.UNKNOWN;
         }
         return nesting.get(0).getType();
     }
@@ -61,7 +60,7 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         return nesting.get(0).isEmpty();
     }
 
-    private List<Element> nesting = new ArrayList<Element>();
+    protected List<Element> nesting = new ArrayList<Element>();
 
     @Override
     public void beginArray(String name) {
@@ -69,8 +68,7 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         if (!nesting.isEmpty()) {
             nesting.get(0).setEmpty(false);
         }
-        nesting.add(0, new Element(Element.TYPE_ARRAY, name));
-
+        nesting.add(0, new Element(ElementType.ARRAY, name));
     }
 
     protected abstract void startArray(String name);
@@ -89,7 +87,7 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         if (!nesting.isEmpty()) {
             nesting.get(0).setEmpty(false);
         }
-        nesting.add(0, new Element(Element.TYPE_OBJECT, name));
+        nesting.add(0, new Element(ElementType.OBJECT, name));
     }
 
     @Override
@@ -98,7 +96,7 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         if (!nesting.isEmpty()) {
             nesting.get(0).setEmpty(false);
         }
-        nesting.add(0, new Element(Element.TYPE_OBJECT, name));
+        nesting.add(0, new Element(ElementType.OBJECT, name));
     }
 
     public class TagBuilder {
@@ -130,7 +128,7 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         }
         Element e = nesting.get(0);
         nesting.remove(0);
-        if (e.getType() != Element.TYPE_ARRAY) {
+        if (e.getType() != ElementType.ARRAY) {
             throw new IllegalArgumentException("Invalid result structure. No array to close"); //$NON-NLS-1$
         }
         endArray(e.getName());
@@ -143,7 +141,7 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
         }
         Element e = nesting.get(0);
         nesting.remove(0);
-        if (e.getType() != Element.TYPE_OBJECT) {
+        if (e.getType() != ElementType.OBJECT) {
             throw new IllegalArgumentException("Invalid result structure. No object to close"); //$NON-NLS-1$
         }
         endObject(e.getName());
@@ -158,7 +156,7 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
 
     @Override
     public void property(String name, Object data) {
-        if (getCurrentType() != Element.TYPE_OBJECT && getCurrentType() != Element.TYPE_ARRAY) {
+        if (getCurrentType() != ElementType.OBJECT && getCurrentType() != ElementType.ARRAY) {
             throw new IllegalArgumentException("Invalid result structure. Cannot place a property here."); //$NON-NLS-1$
         }
         writeProperty(name, data);

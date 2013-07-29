@@ -13,7 +13,7 @@ public class CacheEntry<K, V> {
      */
     protected Counter hits = new Counter();
     /**
-     * Timestamp when the entry was added to the cache.
+     * Timestamp when the entry was added to the cached.
      */
     protected long created = 0;
     /**

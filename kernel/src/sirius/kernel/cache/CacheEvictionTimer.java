@@ -12,6 +12,7 @@ class CacheEvictionTimer implements EveryTenMinutes {
     @Override
     public void runTimer() throws Exception {
         for (Cache<?, ?> cache : CacheManager.getCaches()) {
+            CacheManager.LOG.FINE("Running cached eviction for: %s", cache.getName());
             cache.runEviction();
         }
 

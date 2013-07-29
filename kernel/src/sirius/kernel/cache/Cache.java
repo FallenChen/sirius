@@ -5,22 +5,22 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Represents a cache which contains a key value mapping.
+ * Represents a cached which contains a key value mapping.
  */
 public interface Cache<K, V> {
 
     /**
-     * Returns the name of the cache.
+     * Returns the name of the cached.
      */
     String getName();
 
     /**
-     * Returns the max size of the cache.
+     * Returns the max size of the cached.
      */
     int getMaxSize();
 
     /**
-     * Returns the number of entries in the cache.
+     * Returns the number of entries in the cached.
      */
     int getSize();
 
@@ -36,7 +36,7 @@ public interface Cache<K, V> {
     List<Long> getUseHistory();
 
     /**
-     * Returns the cache-hitrate (in percent)
+     * Returns the cached-hitrate (in percent)
      */
     Long getHitRate();
 
@@ -57,7 +57,7 @@ public interface Cache<K, V> {
     void runEviction();
 
     /**
-     * Clears up the complete cache.
+     * Clears up the complete cached.
      */
     void clear();
 
@@ -78,27 +78,27 @@ public interface Cache<K, V> {
     void put(K key, V value);
 
     /**
-     * Removes the given item from the cache.
+     * Removes the given item from the cached.
      */
     void remove(K key);
 
     /**
-     * Checks if there is a cache entry for the given key.
+     * Checks if there is a cached entry for the given key.
      */
     boolean contains(K key);
 
     /**
-     * Provides access to the keys stored in this cache.
+     * Provides access to the keys stored in this cached.
      */
     Iterator<K> keySet();
 
     /**
-     * Provides access to the contents of this cache.
+     * Provides access to the contents of this cached.
      */
     List<CacheEntry<K, V>> getContents();
 
     /**
-     * Verifies that the cache has the given size.
+     * Verifies that the cached has the given size.
      */
     void ensureSize(int intValue);
 }

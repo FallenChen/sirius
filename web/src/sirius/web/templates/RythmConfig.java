@@ -1,17 +1,23 @@
 package sirius.web.templates;
 
+import com.google.common.collect.Maps;
 import org.rythmengine.Rythm;
+import org.rythmengine.conf.RythmConfigurationKey;
 import org.rythmengine.extension.II18nMessageResolver;
+import org.rythmengine.extension.ISourceCodeEnhancer;
 import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.annotations.Register;
+import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
+import sirius.web.http.WebContext;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Created with IntelliJ IDEA.
@@ -23,6 +29,8 @@ import java.util.TreeMap;
 @Register
 public class RythmConfig implements Lifecycle {
 
+    public static final Log LOG = Log.get("rythm");
+
     public static class I18nResourceResolver implements II18nMessageResolver {
 
         @Override
@@ -33,7 +41,8 @@ public class RythmConfig implements Lifecycle {
 
     @Override
     public void started() {
-        Map<String, String> config = new TreeMap<String, String>();
+
+        Map<String, Object> config = Maps.newTreeMap();
         config.put("rythm.engine.mode", Sirius.isDev() ? "dev" : "prod");
         config.put("rythm.home.template.dir",
                    new File(Thread.currentThread()
@@ -44,7 +53,43 @@ public class RythmConfig implements Lifecycle {
         tmpDir.mkdirs();
         config.put("rythm.home.tmp.dir", tmpDir.getAbsolutePath());
         config.put("rythm.i18n.message.resolver.impl", I18nResourceResolver.class.getName());
+        config.put(RythmConfigurationKey.CODEGEN_SOURCE_CODE_ENHANCER.getKey(), new ISourceCodeEnhancer() {
+            @Override
+            public List<String> imports() {
+                return Collections.emptyList();
+            }
+
+            @Override
+            public String sourceCode() {
+                return "";
+            }
+
+            @Override
+            public Map<String, ?> getRenderArgDescriptions() {
+                Map<String, Object> map = Maps.newTreeMap();
+                map.put("ctx", CallContext.class);
+                map.put("prefix", String.class);
+                map.put("product", String.class);
+                map.put("version", String.class);
+                map.put("call", WebContext.class);
+                return map;
+            }
+
+            @Override
+            public void setRenderArgs(ITemplate template) {
+                CallContext ctx = CallContext.getCurrent();
+                ctx.addToMDC("template", template.__getTemplateClass(true).getFullName());
+                WebContext wc = ctx.get(WebContext.class);
+
+                template.__setRenderArg("ctx", ctx);
+                template.__setRenderArg("prefix", wc.getContextPrefix());
+                template.__setRenderArg("product", Sirius.getProductName());
+                template.__setRenderArg("version", Sirius.getProductVersion());
+                template.__setRenderArg("call", wc);
+            }
+        });
         Rythm.init(config);
+
     }
 
     @Override

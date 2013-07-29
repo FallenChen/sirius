@@ -81,6 +81,11 @@ import java.util.*;
 public class Extensions {
 
     /**
+     * Name of the default entry for an extension
+     */
+    public static final String DEFAULT = "default";
+
+    /**
      * The logger used by the extensions framework
      */
     protected static final Log LOG = Log.get("extensions");
@@ -93,7 +98,7 @@ public class Extensions {
     }
 
     /*
-     * Used as cache for already loaded extension lists
+     * Used as cached for already loaded extension lists
      */
     private static Map<String, Map<String, Extension>> cache = Collections.synchronizedMap(new TreeMap<String, Map<String, Extension>>());
 
@@ -119,12 +124,12 @@ public class Extensions {
         ConfigObject cfg = Sirius.getConfig().getConfig(type).root();
         List<BasicExtension> list = Lists.newArrayList();
         ConfigObject def = null;
-        if (cfg.containsKey("default")) {
-            def = (ConfigObject) cfg.get("default");
+        if (cfg.containsKey(DEFAULT)) {
+            def = (ConfigObject) cfg.get(DEFAULT);
         }
         for (Map.Entry<String, ConfigValue> entry : cfg.entrySet()) {
             String key = entry.getKey();
-            if (!"default".equals(key) && !key.contains(".")) {
+            if (!DEFAULT.equals(key) && !key.contains(".")) {
                 list.add(new BasicExtension(type, key, (ConfigObject) entry.getValue(), def));
             }
         }

@@ -24,6 +24,7 @@ import sirius.kernel.di.Injector;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.MutableGlobalContext;
 import sirius.kernel.di.PartCollection;
+import sirius.kernel.di.annotations.ConfigValue;
 import sirius.kernel.di.annotations.Parts;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
@@ -423,5 +424,37 @@ public class Sirius {
     public static Config getConfig() {
         return config;
     }
+
+    @ConfigValue("product.name")
+    private static String productName;
+
+    @ConfigValue("product.version")
+    private static String productVersion;
+
+
+    /**
+     * Returns the name of the product which is running SIRIUS.
+     * <p>
+     * Can be set via the config value <code>product.name</code>.
+     * </p>
+     *
+     * @return the name of the product for which the framework was started.
+     */
+    public static String getProductName() {
+        return productName;
+    }
+
+    /**
+     * Returns the version of the product which is running SIRIUS.
+     * <p>
+     * Can be set via the config value <code>product.version</code>.
+     * </p>
+     *
+     * @return the version of the product for which the framework was started.
+     */
+    public static String getProductVersion() {
+        return productVersion;
+    }
+
 
 }

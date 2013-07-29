@@ -1,15 +1,18 @@
 package sirius.web.http;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.typesafe.config.Config;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import org.jboss.netty.handler.codec.http.multipart.DiskAttribute;
+import org.jboss.netty.handler.codec.http.multipart.DiskFileUpload;
+import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
+import sirius.kernel.di.annotations.ConfigValue;
 import sirius.kernel.di.annotations.Context;
-import sirius.kernel.di.annotations.Part;
 import sirius.kernel.di.annotations.Register;
 import sirius.kernel.health.Log;
 
@@ -20,42 +23,68 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Register
 public class WebServer implements Lifecycle {
 
-    @Part
-    private Config config;
+    @ConfigValue("http.port")
+    private int port;
+
+    @ConfigValue("http.uploadDiskThreshold")
+    private long uploadDiskThreshold;
+
+    @ConfigValue("http.minUploadFreespace")
+    private static long minUploadFreespace;
+
+    @ConfigValue("http.maxUploadSize")
+    private static long maxUploadSize;
 
     @Context
     private GlobalContext ctx;
 
     public static final Log LOG = Log.get("web");
+    private static HttpDataFactory httpDataFactory;
     private ThreadPoolExecutor bossExecutor;
     private ThreadPoolExecutor workerExecutor;
     private ServerBootstrap bootstrap;
 
+
+    protected static long getMinUploadFreespace() {
+        return minUploadFreespace;
+    }
+
+    protected static long getMaxUploadSize() {
+        return maxUploadSize;
+    }
+
+    protected static HttpDataFactory getHttpDataFactory() {
+        return httpDataFactory;
+    }
+
     @Override
     public void started() {
-        int port = config.getInt("http.port");
         if (port <= 0) {
             LOG.INFO("web server is disabled (http.port is <= 0)");
             return;
         }
         LOG.INFO("Initializing netty at port %d", port);
 
+        // Setup disk handling.
+        DiskFileUpload.deleteOnExitTemporaryFile = true;
+        DiskFileUpload.baseDirectory = null;
+        DiskAttribute.deleteOnExitTemporaryFile = true;
+        DiskAttribute.baseDirectory = null;
+        httpDataFactory = new DefaultHttpDataFactory(uploadDiskThreshold);
+
         // Keep our sexy thread names..
         ThreadRenamingRunnable.setThreadNameDeterminer(ThreadNameDeterminer.CURRENT);
 
-        // 1) CTX durchreichen!
-        // 1.2) health in WEB
-
-        // 1) Service-Dispatcher
-        // 2) Help-Dispatcher
-        // 3) Stats
-        // 4) Console
-        // 5) langs
-        // 6) GUI
-        // 7) Servlet-Container
-        //> @prefix @config
-        // Std-Importe
-        // Config-Mapping - System-Description
+        // Std-Header
+        // Web-stats
+        // Web-Timing
+        // Service-Stats
+        // Bind to request
+        // @Description
+        // Help-System
+        // I18n-System
+        // Async-Engine
+        // JDBC
 
         // Configure the server.
         bossExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();

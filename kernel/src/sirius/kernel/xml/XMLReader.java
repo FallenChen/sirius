@@ -1,6 +1,5 @@
 package sirius.kernel.xml;
 
-import com.scireum.common.rpc.StructuredNode;
 import org.w3c.dom.Node;
 import org.xml.sax.Attributes;
 import org.xml.sax.EntityResolver;
@@ -159,7 +158,7 @@ public class XMLReader extends DefaultHandler {
             reader.parse(new InputSource(stream));
         } catch (UserInterruptException e) {
             /*
-			 * IGNORED - this is used to cancel parsing if the used tried to
+             * IGNORED - this is used to cancel parsing if the used tried to
 			 * cancel a process.
 			 */
         } finally {

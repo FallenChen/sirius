@@ -12,7 +12,7 @@ import sirius.kernel.extensions.Extension;
 import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
-import sirius.web.http.Response;
+import sirius.web.http.MimeHelper;
 import sirius.web.http.ServerSession;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
@@ -204,7 +204,7 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public String getMimeType(String s) {
-        return Response.MIME_TYPES_MAP.getContentType(s);
+        return MimeHelper.guessMimeType(s);
     }
 
     @Override
@@ -381,7 +381,7 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
                 } catch (Throwable t) {
                     LOG.SEVERE(t);
                     if (!res.isCommitted()) {
-                        ctx.respond().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, t);
+                        ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(LOG, t));
                     }
                 }
                 return true;

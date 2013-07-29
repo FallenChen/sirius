@@ -8,41 +8,42 @@
 
 package sirius.web.http.services;
 
-import com.scireum.common.BusinessException;
-import com.scireum.common.Tools;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.health.Exceptions;
 import sirius.kernel.xml.AbstractStructuredOutput;
 import sirius.kernel.xml.Attribute;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.*;
 
 public class JSONStructuredOutput extends AbstractStructuredOutput {
 
     private Writer writer;
     private final String callback;
 
-    public JSONStructuredOutput(OutputStream out, String callback, String encoding) throws Exception {
-        this.callback = callback;
-        writer = new OutputStreamWriter(out, encoding);
+    public JSONStructuredOutput(OutputStream out, String callback, String encoding) {
+        try {
+            this.callback = callback;
+            writer = new OutputStreamWriter(out, encoding);
+        } catch (UnsupportedEncodingException e) {
+            throw Exceptions.handle(e);
+        }
     }
 
     @Override
     protected void endArray(String name) {
         try {
-            writer.write("]"); //$NON-NLS-1$
+            writer.write("]");
         } catch (IOException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
     @Override
     protected void endObject(String name) {
         try {
-            writer.write("}"); //$NON-NLS-1$
+            writer.write("}");
         } catch (IOException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -50,14 +51,14 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
     protected void startArray(String name) {
         try {
             addRequiredComma();
-            if (getCurrentType() == Element.TYPE_OBJECT) {
+            if (getCurrentType() == ElementType.OBJECT) {
                 writer.write(string(name));
-                writer.write(":["); //$NON-NLS-1$
+                writer.write(":[");
             } else {
-                writer.write("["); //$NON-NLS-1$
+                writer.write("[");
             }
         } catch (IOException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -65,11 +66,11 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
     protected void startObject(String name, Attribute... attributes) {
         try {
             addRequiredComma();
-            if (getCurrentType() == Element.TYPE_OBJECT) {
+            if (getCurrentType() == ElementType.OBJECT) {
                 writer.write(string(name));
-                writer.write(":{"); //$NON-NLS-1$
+                writer.write(":{");
             } else {
-                writer.write("{"); //$NON-NLS-1$
+                writer.write("{");
             }
             if (attributes != null) {
                 for (Attribute attr : attributes) {
@@ -77,13 +78,13 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
                 }
             }
         } catch (IOException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
     private String string(String value) {
         if (value == null || value.length() == 0) {
-            return "\"\""; //$NON-NLS-1$
+            return "\"\"";
         }
 
         char b;
@@ -109,24 +110,24 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
                     sb.append(c);
                     break;
                 case '\b':
-                    sb.append("\\b"); //$NON-NLS-1$
+                    sb.append("\\b");
                     break;
                 case '\t':
-                    sb.append("\\t"); //$NON-NLS-1$
+                    sb.append("\\t");
                     break;
                 case '\n':
-                    sb.append("\\n"); //$NON-NLS-1$
+                    sb.append("\\n");
                     break;
                 case '\f':
-                    sb.append("\\f"); //$NON-NLS-1$
+                    sb.append("\\f");
                     break;
                 case '\r':
-                    sb.append("\\r"); //$NON-NLS-1$
+                    sb.append("\\r");
                     break;
                 default:
                     if (c < ' ' || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) {
-                        String t = "000" + Integer.toHexString(c); //$NON-NLS-1$
-                        sb.append("\\u" + t.substring(t.length() - 4)); //$NON-NLS-1$
+                        String t = "000" + Integer.toHexString(c);
+                        sb.append("\\u" + t.substring(t.length() - 4));
                     } else {
                         sb.append(c);
                     }
@@ -139,13 +140,13 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
     @Override
     public void beginResult() {
         try {
-            if (Tools.notEmpty(callback)) {
+            if (Strings.isFilled(callback)) {
                 writer.write(callback);
                 writer.write("(");
             }
-            beginObject("result"); //$NON-NLS-1$
+            beginObject("result");
         } catch (IOException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -158,12 +159,12 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
     public void writeProperty(String name, Object data) {
         try {
             addRequiredComma();
-            if (getCurrentType() == Element.TYPE_OBJECT) {
+            if (getCurrentType() == ElementType.OBJECT) {
                 writer.write(string(name));
-                writer.write(":"); //$NON-NLS-1$
+                writer.write(":");
             }
             if (data == null) {
-                writer.write("null"); //$NON-NLS-1$
+                writer.write("null");
             } else if (data instanceof Boolean) {
                 writer.write(data.toString());
             } else if (data instanceof Number) {
@@ -172,16 +173,16 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
                 writer.write(string(data.toString()));
             }
         } catch (IOException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
     private void addRequiredComma() {
         if (!isCurrentObjectEmpty()) {
             try {
-                writer.write(","); //$NON-NLS-1$
+                writer.write(",");
             } catch (IOException e) {
-                throw new BusinessException(e);
+                throw Exceptions.handle(e);
             }
         }
 
@@ -192,12 +193,12 @@ public class JSONStructuredOutput extends AbstractStructuredOutput {
         try {
             endObject();
             super.endResult();
-            if (Tools.notEmpty(callback)) {
+            if (Strings.isFilled(callback)) {
                 writer.write(")");
             }
-            writer.flush();
+            writer.close();
         } catch (IOException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 

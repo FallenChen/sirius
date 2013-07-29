@@ -1,7 +1,5 @@
 package sirius.kernel.xml;
 
-import com.scireum.common.rpc.StructuredNode;
-
 /**
  * Called by the XMLReader for a parsed sub-DOM tree.
  *

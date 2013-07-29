@@ -1,4 +1,4 @@
-@args sirius.kernel.async.CallContext ctx, org.jboss.netty.handler.codec.http.HttpResponseStatus status, String message
+@args org.jboss.netty.handler.codec.http.HttpResponseStatus status, String message
 <html>
     <head>
         <title>Error - @status.getCode()</title>
@@ -12,7 +12,7 @@
             <b>Diagnostic:</b>
             <ul>
                 <li><b>node:</b> @ctx.getNodeName()</li>
-                <li><b>duration:</b> @ctx.getWatch().elapsed() ms</li>
+                <li><b>duration:</b> @ctx.getWatch().duration()</li>
                 @for(sirius.kernel.commons.Tuple t : ctx.getMDC()) {
                     <li>
                         <b>@t.getFirst():</b> @t.getSecond()

@@ -91,12 +91,17 @@ class ManagedCache<K, V> implements Cache<K, V> {
         }
         // Remove all outdated entries...
         long now = System.currentTimeMillis();
+        int numEvicted = 0;
         Iterator<Entry<K, CacheEntry<K, V>>> iter = data.asMap().entrySet().iterator();
         while (iter.hasNext()) {
             Entry<K, CacheEntry<K, V>> next = iter.next();
             if (next.getValue().getMaxAge() > now) {
                 iter.remove();
+                numEvicted++;
             }
+        }
+        if (numEvicted > 0 && CacheManager.LOG.isFINE()) {
+            CacheManager.LOG.FINE("Evicted %d entries from %s", numEvicted, name);
         }
     }
 
@@ -131,9 +136,9 @@ class ManagedCache<K, V> implements Cache<K, V> {
                     if (computer != null) {
                         V value = computer.compute(key);
                         return new CacheEntry<K, V>(key,
-                                             value,
-                                             timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
-                                             verificationInterval + System.currentTimeMillis());
+                                                    value,
+                                                    timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
+                                                    verificationInterval + System.currentTimeMillis());
                     }
                     return null;
                 }

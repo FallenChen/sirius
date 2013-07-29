@@ -22,7 +22,7 @@ public class NotFoundDispatcher implements WebDispatcher {
 
     @Override
     public boolean dispatch(WebContext ctx) throws Exception {
-        ctx.respond().error(HttpResponseStatus.NOT_FOUND,
+        ctx.respondWith().error(HttpResponseStatus.NOT_FOUND,
                       Strings.apply("No dispatcher found for: %s", ctx.getRequest().getUri()));
         return true;
     }

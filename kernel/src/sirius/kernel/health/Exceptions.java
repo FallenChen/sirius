@@ -57,14 +57,19 @@ public class Exceptions {
      * e gracefully
      */
     private static Object[] extendParams(Throwable e, Object[] params) {
-        Object[] newParams = new Object[params.length + 2];
-        System.arraycopy(params, 0, newParams, 0, params.length);
-        if (e != null) {
-            newParams[params.length] = e.getMessage();
-            newParams[params.length + 1] = e.getClass().getName();
+        Object[] newParams = null;
+        if (params == null) {
+            newParams = new Object[2];
         } else {
-            newParams[params.length] = NLS.get("HandledException.unknownError");
-            newParams[params.length + 1] = "UnknownError";
+            newParams = new Object[params.length + 2];
+            System.arraycopy(params, 0, newParams, 0, params.length);
+        }
+        if (e != null) {
+            newParams[newParams.length - 2] = e.getMessage();
+            newParams[newParams.length - 1] = e.getClass().getName();
+        } else {
+            newParams[newParams.length - 2] = NLS.get("HandledException.unknownError");
+            newParams[newParams.length - 1] = "UnknownError";
         }
         return newParams;
     }
@@ -104,7 +109,7 @@ public class Exceptions {
         private String systemErrorMessage;
         private Object[] systemErrorMessageParams;
         private boolean processError = true;
-        private String key = "HandledException.exception";
+        private String key="HandledException.exception";
         private Map<String, Object> params = Maps.newTreeMap();
 
         /**
@@ -202,16 +207,16 @@ public class Exceptions {
             }
             try {
                 String message = null;
-                if (Strings.isFilled(systemErrorMessage)) {
+                if (Strings.isEmpty(systemErrorMessage)) {
+                    // Add exception infos
+                    set("errorMessage", ex == null ? NLS.get("HandledException.unknownError") : ex.getMessage());
+                    set("errorClass", ex == null ? "UnknownError" : ex.getClass().getName());
+                    // Format resulting error message
+                    message = NLS.fmtr(key).set(params).format();
+                } else {
                     // Generate system error message and prefix with translated info about the system error
                     message = NLS.apply("HandledException.systemError",
                                         Strings.apply(systemErrorMessage, extendParams(ex, systemErrorMessageParams)));
-                } else {
-                    // Add exception infos
-                    set("errorMessage", ex == null ? NLS.get("HandledException.unknownError") : ex.getMessage());
-                    set("errorClass", ex == null ? "" : ex.getClass().getName());
-                    // Format resulting error message
-                    message = NLS.fmtr(key).set(params).format();
                 }
                 HandledException result = new HandledException(message, ex);
                 if (processError) {

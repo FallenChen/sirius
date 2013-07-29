@@ -1,10 +1,7 @@
 package sirius.app.servlet;
 
 import com.google.common.collect.Lists;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -12,12 +9,15 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.util.CharsetUtil;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.ValueHolder;
+import sirius.web.http.MimeHelper;
+import sirius.web.http.Response;
 import sirius.web.http.WebContext;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.LinkedHashMap;
@@ -28,7 +28,7 @@ import java.util.Map;
 /**
  * Created with IntelliJ IDEA.
  * User: aha
- * Date: 17.07.13
+ * Date: 17.07.13¡
  * Time: 17:54
  * To change this template use File | Settings | File Templates.
  */
@@ -41,7 +41,6 @@ public class ResponseAdapter implements HttpServletResponse {
     private List<Cookie> cookies = Lists.newArrayList();
     private Map<String, Object> headers = new LinkedHashMap<String, Object>();
     private int status = SC_OK;
-    private int bufferSize = 8192;
     private Integer contentLength;
     private String contentType;
     private boolean outputWritten = false;
@@ -87,7 +86,7 @@ public class ResponseAdapter implements HttpServletResponse {
     @Override
     public void sendError(int i, String s) throws IOException {
         assertNotCommitted();
-        wc.respond().error(HttpResponseStatus.valueOf(i), s);
+        wc.respondWith().error(HttpResponseStatus.valueOf(i), s);
     }
 
     private void assertNotCommitted() {
@@ -99,7 +98,7 @@ public class ResponseAdapter implements HttpServletResponse {
     @Override
     public void sendError(int i) throws IOException {
         assertNotCommitted();
-        wc.respond().error(HttpResponseStatus.valueOf(i));
+        wc.respondWith().error(HttpResponseStatus.valueOf(i));
     }
 
     @Override
@@ -163,53 +162,44 @@ public class ResponseAdapter implements HttpServletResponse {
         if (stream != null) {
             return stream;
         }
-
         if (outputWritten) {
             throw new IllegalStateException();
         }
+        String content = contentType;
+        if (Strings.isEmpty(content)) {
+            content = MimeHelper.guessMimeType(wc.getRequestedURI());
+        } else {
+            if (characterEncoding != null && !contentType.contains(";")) {
+                content = contentType + ";charset=" + characterEncoding;
+            }
+        }
 
-        final ChannelBuffer buffer = null; //ChannelBuffers.buffer(8192);
+        final OutputStream os = wc.respondWith()
+                                  .outputStream(HttpResponseStatus.valueOf(status), content, contentLength);
         stream = new ServletOutputStream() {
             @Override
             public void write(int b) throws IOException {
-                write(new byte[]{(byte)b}, 0 ,1 );
+                os.write(b);
             }
 
             @Override
             public void write(byte[] b) throws IOException {
-                write(b, 0, b.length);
+                os.write(b);
             }
 
             @Override
             public void write(byte[] b, int off, int len) throws IOException {
-                if (stream == null) {
-                    throw new IllegalStateException();
-                }
-                if (buffer == null) {
-                    writeHeaders();
-                    future.set(wc.getCtx().getChannel().write(ChannelBuffers.copiedBuffer(b, off, len)));
-                } else {
-                    if (buffer.writableBytes() <= len) {
-                        writeHeaders();
-                        future.set(wc.getCtx().getChannel().write(buffer.readBytes(buffer.readableBytes())));
-                    }
-                    buffer.writeBytes(b, off, len);
-                }
+                os.write(b, off, len);
             }
 
             @Override
             public void flush() throws IOException {
-                if (stream == null) {
-                    throw new IllegalStateException();
-                }
-                if (buffer != null && buffer.readableBytes() > 1) {
-                    writeHeaders();
-                    future.set(wc.getCtx().getChannel().write(buffer.readBytes(buffer.readableBytes())));
-                }
+                os.flush();
             }
 
             @Override
             public void close() throws IOException {
+                os.close();
             }
         };
 
@@ -240,23 +230,18 @@ public class ResponseAdapter implements HttpServletResponse {
     }
 
     public void complete() {
-        if (writer != null) {
-            writer.flush();
-        } else if (stream != null) {
-            try {
-                stream.flush();
-            } catch (IOException e) {
-                ServletContainer.LOG.FINE(e);
+        try {
+            if (writer != null) {
+                writer.flush();
+            } else if (stream == null) {
+                getOutputStream();
             }
-        } else {
-            throw new IllegalArgumentException("Empty result");
-        }
-        stream = null;
-        //TODO keepalive
-        if (future.get() != null) {
-            future.get().addListener(ChannelFutureListener.CLOSE);
-        } else {
-            wc.getCtx().getChannel().close();
+            stream.close();
+        } catch (IOException e) {
+            ServletContainer.LOG.FINE(e);
+            if (wc.getCtx().getChannel().isOpen()) {
+                wc.getCtx().getChannel().close();
+            }
         }
     }
 
@@ -291,20 +276,16 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public void setBufferSize(int i) {
-        assertNotCommitted();
-        this.bufferSize = Math.max(i, 0);
+
     }
 
     @Override
     public int getBufferSize() {
-        return bufferSize;
+        return Response.BUFFER_SIZE;
     }
 
     @Override
     public void flushBuffer() throws IOException {
-        if (stream != null) {
-            stream.flush();
-        }
     }
 
     @Override

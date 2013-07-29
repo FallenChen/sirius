@@ -303,7 +303,7 @@ public class Babelfish {
     }
 
     /*
-     * Disables the cache for properties files to enable reloading
+     * Disables the cached for properties files to enable reloading
      */
     private static class NonCachingControl extends ResourceBundle.Control {
 

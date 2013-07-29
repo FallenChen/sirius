@@ -1,3 +1,4 @@
 <dependency org="io.netty" name="netty" rev="3.6.6.Final"/>
 <dependency org="org.rythmengine" name="rythm-engine" rev="1.0-b9" />
 <dependency org="org.fusesource" name="sigar" rev="1.6.4" />
+<dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.13" />

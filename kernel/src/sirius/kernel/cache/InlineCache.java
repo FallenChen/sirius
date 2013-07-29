@@ -3,8 +3,8 @@ package sirius.kernel.cache;
 import sirius.kernel.commons.ValueProvider;
 
 /**
- * Caches simple values to prevent frequent re-computation. The cache will never
- * empty itself. If a real lookup-cache is required, use {@link Cache} and
+ * Caches simple values to prevent frequent re-computation. The cached will never
+ * empty itself. If a real lookup-cached is required, use {@link Cache} and
  * {@link CacheManager}.
  */
 public class InlineCache<E> {
@@ -27,7 +27,7 @@ public class InlineCache<E> {
     }
 
     /**
-     * Clears the cache.
+     * Clears the cached.
      */
     public void flush() {
         lastComputation = 0;

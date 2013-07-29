@@ -1,35 +1,32 @@
 package sirius.kernel.xml;
 
-import com.scireum.common.Log;
-import com.scireum.common.Tools;
-import com.scireum.common.data.Value;
-import com.scireum.common.rpc.StructuredNode;
+import com.google.common.base.Charsets;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import sirius.kernel.cache.Cache;
+import sirius.kernel.cache.CacheManager;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Tuple;
+import sirius.kernel.commons.Value;
+import sirius.kernel.health.Exceptions;
 
 import javax.xml.xpath.*;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Default implementation for XMLNode
  */
 public class XMLNodeImpl implements StructuredNode {
 
-    private static final XPathFactory XPATH = XPathFactory.newInstance();
-    private static final Cache<Tuple<Thread, String>, XPathExpression> cache = CacheManager.createCache("XPath",
-                                                                                                        100,
-                                                                                                        null,
-                                                                                                        15,
-                                                                                                        TimeUnit.MINUTES,
-                                                                                                        null,
-                                                                                                        0,
-                                                                                                        TimeUnit.SECONDS);
+    private static Cache<Tuple<Thread, String>, XPathExpression> cache;
 
     private static XPathExpression compile(String xpath) throws XPathExpressionException {
         Tuple<Thread, String> key = new Tuple<Thread, String>(Thread.currentThread(), xpath);
+        if (cache == null) {
+            cache = CacheManager.createCache("xpath");
+        }
         XPathExpression result = cache.get(key);
         if (result == null) {
             result = XPATH.newXPath().compile(xpath);
@@ -39,16 +36,8 @@ public class XMLNodeImpl implements StructuredNode {
     }
 
     private static final XPathFactory XPATH = XPathFactory.newInstance();
-    private Node node;
 
-    /**
-     * Overrides the default xpath compiler.
-     */
-    public static void installCompiler(XPathCompiler compiler) {
-        if (compiler != null) {
-            xc = compiler;
-        }
-    }
+    private Node node;
 
     public XMLNodeImpl(Node root) {
         node = root;
@@ -56,7 +45,7 @@ public class XMLNodeImpl implements StructuredNode {
 
     @Override
     public StructuredNode queryNode(String path) throws XPathExpressionException {
-        Node result = (Node) xc.compile(path).evaluate(node, XPathConstants.NODE);
+        Node result = (Node) compile(path).evaluate(node, XPathConstants.NODE);
         if (result == null) {
             return null;
         }
@@ -65,7 +54,7 @@ public class XMLNodeImpl implements StructuredNode {
 
     @Override
     public List<StructuredNode> queryNodeList(String path) throws XPathExpressionException {
-        NodeList result = (NodeList) xc.compile(path).evaluate(node, XPathConstants.NODESET);
+        NodeList result = (NodeList) compile(path).evaluate(node, XPathConstants.NODESET);
         List<StructuredNode> resultList = new ArrayList<StructuredNode>(result.getLength());
         for (int i = 0; i < result.getLength(); i++) {
             resultList.add(new XMLNodeImpl(result.item(i)));
@@ -81,7 +70,7 @@ public class XMLNodeImpl implements StructuredNode {
 
     @Override
     public String queryString(String path) throws XPathExpressionException {
-        Object result = xc.compile(path).evaluate(node, XPathConstants.NODE);
+        Object result = compile(path).evaluate(node, XPathConstants.NODE);
         if (result == null) {
             return null;
         }
@@ -105,10 +94,10 @@ public class XMLNodeImpl implements StructuredNode {
         if (result instanceof Node) {
             try {
                 StringWriter writer = new StringWriter();
-                Tools.writeXML((Node) result, writer, Tools.UTF_8, true);
+                XMLGenerator.writeXML((Node) result, writer, Charsets.UTF_8.name(), true);
                 return writer.toString();
             } catch (Throwable e) {
-                Log.UTIL.SEVERE(e);
+                Exceptions.handle(e);
                 return null;
             }
         }
@@ -117,7 +106,7 @@ public class XMLNodeImpl implements StructuredNode {
 
     @Override
     public boolean isEmpty(String path) throws XPathExpressionException {
-        return Tools.emptyString(queryString(path));
+        return Strings.isEmpty(queryString(path));
     }
 
     @Override
@@ -129,10 +118,10 @@ public class XMLNodeImpl implements StructuredNode {
     public String toString() {
         try {
             StringWriter writer = new StringWriter();
-            Tools.writeXML(node.getParentNode(), writer, Tools.UTF_8, true);
+            XMLGenerator.writeXML(node.getParentNode(), writer, Charsets.UTF_8.name(), true);
             return writer.toString();
         } catch (Throwable e) {
-            Log.UTIL.SEVERE(e);
+            Exceptions.handle(e);
             return node.toString();
         }
     }
@@ -141,4 +130,6 @@ public class XMLNodeImpl implements StructuredNode {
     public Value queryValue(String path) throws XPathExpressionException {
         return Value.of(queryString(path));
     }
+
+
 }

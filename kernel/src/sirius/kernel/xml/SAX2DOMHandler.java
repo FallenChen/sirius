@@ -1,8 +1,8 @@
 package sirius.kernel.xml;
 
-import com.scireum.common.Tools;
 import org.w3c.dom.*;
 import org.xml.sax.Attributes;
+import sirius.kernel.commons.Strings;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -19,10 +19,10 @@ class SAX2DOMHandler {
     private Node currentNode;
     private NodeHandler nodeHandler;
 
-    public SAX2DOMHandler(NodeHandler handler,
-                          String uri,
-                          String name,
-                          Attributes attributes) throws ParserConfigurationException {
+    protected SAX2DOMHandler(NodeHandler handler,
+                             String uri,
+                             String name,
+                             Attributes attributes) throws ParserConfigurationException {
         this.nodeHandler = handler;
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder loader = factory.newDocumentBuilder();
@@ -47,10 +47,10 @@ class SAX2DOMHandler {
         Element element = document.createElement(name);
         for (int i = 0; i < attributes.getLength(); i++) {
             String attrName = attributes.getLocalName(i);
-            if (Tools.emptyString(attrName)) {
+            if (Strings.isEmpty(attrName)) {
                 attrName = attributes.getQName(i);
             }
-            if (!Tools.emptyString(attrName)) {
+            if (Strings.isFilled(attrName)) {
                 element.setAttribute(attrName, attributes.getValue(i));
             }
         }
@@ -67,16 +67,16 @@ class SAX2DOMHandler {
         return root;
     }
 
-    public void startElement(String uri, String name, Attributes attributes) {
+    protected void startElement(String uri, String name, Attributes attributes) {
         createElement(name, attributes);
     }
 
-    public void processingInstruction(String target, String data) {
+    protected void processingInstruction(String target, String data) {
         ProcessingInstruction instruction = document.createProcessingInstruction(target, data);
         currentNode.appendChild(instruction);
     }
 
-    public boolean endElement(String uri, String name) {
+    protected boolean endElement(String uri, String name) {
         if (!currentNode.getNodeName().equals(name)) {
             throw new DOMException(DOMException.SYNTAX_ERR,
                                    "Unexpected end-tag: " + name + " expected: " + currentNode.getNodeName());
@@ -84,11 +84,11 @@ class SAX2DOMHandler {
         return nodeUp();
     }
 
-    public void text(String data) {
+    protected void text(String data) {
         currentNode.appendChild(document.createTextNode(data));
     }
 
-    public NodeHandler getNodeHandler() {
+    protected NodeHandler getNodeHandler() {
         return nodeHandler;
     }
 }

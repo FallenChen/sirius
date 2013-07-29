@@ -2,6 +2,7 @@ package sirius.web.http.dispatch;
 
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.annotations.ConfigValue;
 import sirius.kernel.di.annotations.Register;
 import sirius.web.http.WebContext;
@@ -15,7 +16,7 @@ public class HelpDispatcher implements WebDispatcher {
 
     @Override
     public int getPriority() {
-        return 30;
+        return PriorityCollector.DEFAULT_PRIORITY;
     }
 
     @ConfigValue("help.indexTemplate")
@@ -34,15 +35,15 @@ public class HelpDispatcher implements WebDispatcher {
             // Dispatch static content...
             URL url = getClass().getResource(uri);
             if (url == null) {
-                ctx.respond().error(HttpResponseStatus.NOT_FOUND);
+                ctx.respondWith().error(HttpResponseStatus.NOT_FOUND);
             } else if ("file".equals(url.getProtocol())) {
-                ctx.respond().file(new File(url.toURI()));
+                ctx.respondWith().file(new File(url.toURI()));
             } else {
-                ctx.respond().resource(url.openConnection());
+                ctx.respondWith().resource(url.openConnection());
             }
         } else {
             // Render help template...
-            ctx.respond().cache().nlsTemplate(uri);
+            ctx.respondWith().cached().nlsTemplate(uri);
         }
         return true;
     }

@@ -37,7 +37,7 @@ public class WebServerPipelineFactory implements ChannelPipelineFactory {
 
     private List<WebDispatcher> getSortedDispatchers() {
         if (sortedDispatchers == null) {
-            PriorityCollector<WebDispatcher> collector = new PriorityCollector<WebDispatcher>();
+            PriorityCollector<WebDispatcher> collector = PriorityCollector.create();
             for (WebDispatcher wd : dispatchers.getParts()) {
                 collector.add(wd.getPriority(), wd);
             }

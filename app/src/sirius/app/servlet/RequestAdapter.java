@@ -166,12 +166,12 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public boolean isRequestedSessionIdFromCookie() {
-        return ctx.getServerSessionSource() == WebContext.SERVER_SESSION_SOURCE_COOKIE;
+        return ctx.getServerSessionSource() == WebContext.ServerSessionSource.COOKIE;
     }
 
     @Override
     public boolean isRequestedSessionIdFromURL() {
-        return ctx.getServerSessionSource() == WebContext.SERVER_SESSION_SOURCE_PARAMETER;
+        return ctx.getServerSessionSource() == WebContext.ServerSessionSource.PARAMETER;
     }
 
     @Override

@@ -10,7 +10,9 @@ package sirius.kernel.async;
 
 import org.apache.log4j.MDC;
 import sirius.kernel.Sirius;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
+import sirius.kernel.commons.Value;
 import sirius.kernel.commons.Watch;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
@@ -28,6 +30,7 @@ import java.util.*;
  */
 public class CallContext {
 
+    public static final String MDC_FLOW = "flow";
     private static ThreadLocal<CallContext> currentContext = new ThreadLocal<CallContext>();
     private static String nodeName;
 
@@ -46,7 +49,7 @@ public class CallContext {
 
     private static CallContext initialize(String externalFlowId) {
         CallContext ctx = new CallContext();
-        ctx.addToMDC("flow", externalFlowId);
+        ctx.addToMDC(MDC_FLOW, externalFlowId);
         ctx.setLang(NLS.getDefaultLanguage());
         currentContext.set(ctx);
         return ctx;
@@ -68,9 +71,8 @@ public class CallContext {
 
     public String getNodeName() {
         if (nodeName == null) {
-            if (Sirius.getConfig().hasPath("sirius.nodeName")) {
-                nodeName = Sirius.getConfig().getString("sirius.nodeName");
-            } else {
+            nodeName = Sirius.getConfig().getString("sirius.nodeName");
+            if (Strings.isEmpty(nodeName)) {
                 try {
                     nodeName = InetAddress.getLocalHost().getHostName();
                 } catch (UnknownHostException e) {
@@ -85,6 +87,10 @@ public class CallContext {
 
     public List<Tuple<String, String>> getMDC() {
         return Tuple.fromMap(mdc);
+    }
+
+    public Value getMDCValue(String key) {
+        return Value.of(mdc.get(key));
     }
 
     public Watch getWatch() {
@@ -137,4 +143,16 @@ public class CallContext {
         this.lang = lang;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> e : mdc.entrySet()) {
+            sb.append(e.getKey());
+            sb.append(": ");
+            sb.append(e.getValue());
+            sb.append("\n");
+        }
+
+        return sb.toString();
+    }
 }

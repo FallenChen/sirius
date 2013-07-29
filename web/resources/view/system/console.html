@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>@product - Console</title>
+    <script language="javascript" type="text/javascript" src="@prefix/assets/system/js/jquery-1.5.min.js"></script>
+    <script language="javascript" type="text/javascript" src="@prefix/assets/system/js/jquery.terminal.js"></script>
+    <link href="@prefix/assets/system/css/jquery.terminal.css" rel="stylesheet" />
+    <script>
+        $(document).ready(function ($) {
+            $('#term').terminal('@prefix/service/json/system-console', {
+                greetings: '@product / @version - Type "help" for a list of available commands.'
+            });
+            $('body').css('background-color', '#000000');
+        });
+    </script>
+</head>
+<body>
+    <div id="term"></div>
+</body>
+</html>

@@ -8,11 +8,11 @@ import java.net.URL;
  */
 public class XMLCall {
 
-    private OutcallImpl outcall;
+    private Outcall outcall;
 
     public static XMLCall to(URL url) throws IOException {
         XMLCall result = new XMLCall();
-        result.outcall = new OutcallImpl(url);
+        result.outcall = new Outcall(url);
         result.outcall.setRequestProperty("Content-Type", "text/xml");
         return result;
     }

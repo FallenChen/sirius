@@ -2,6 +2,7 @@ package sirius.web.http.dispatch;
 
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.annotations.Register;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
@@ -13,7 +14,7 @@ import java.net.URL;
 public class AssetsDispatcher implements WebDispatcher {
     @Override
     public int getPriority() {
-        return 10;
+        return PriorityCollector.DEFAULT_PRIORITY;
     }
 
     @Override
@@ -22,18 +23,18 @@ public class AssetsDispatcher implements WebDispatcher {
             return false;
         }
         if (ctx.getRequestedURI().startsWith("/assets/dynamic")) {
-            ctx.respond().cache().template(ctx.getRequestedURI());
+            ctx.respondWith().cached().template(ctx.getRequestedURI());
         } else {
             URL url = getClass().getResource(ctx.getRequestedURI());
             if (url == null) {
                 url = getClass().getResource("/assets/defaults" + ctx.getRequestedURI().substring(7));
             }
             if (url == null) {
-                ctx.respond().error(HttpResponseStatus.NOT_FOUND);
+                ctx.respondWith().error(HttpResponseStatus.NOT_FOUND);
             } else if ("file".equals(url.getProtocol())) {
-                ctx.respond().file(new File(url.toURI()));
+                ctx.respondWith().file(new File(url.toURI()));
             } else {
-                ctx.respond().resource(url.openConnection());
+                ctx.respondWith().resource(url.openConnection());
             }
         }
         return true;

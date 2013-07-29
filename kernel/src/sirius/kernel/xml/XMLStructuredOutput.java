@@ -8,10 +8,10 @@
 
 package sirius.kernel.xml;
 
-import com.scireum.common.BusinessException;
-import com.scireum.common.Tools;
+import com.google.common.base.Charsets;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
+import sirius.kernel.health.Exceptions;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -41,12 +41,12 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
             if (doctype != null) {
                 serializer.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM, doctype);
             }
-            serializer.setOutputProperty(OutputKeys.ENCODING, Tools.UTF_8);
+            serializer.setOutputProperty(OutputKeys.ENCODING, Charsets.UTF_8.name());
             serializer.setOutputProperty(OutputKeys.INDENT, "yes");
             hd.setResult(streamResult);
             hd.startDocument();
         } catch (Exception e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -55,7 +55,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
         try {
             hd.endElement("", "", name);
         } catch (SAXException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -64,7 +64,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
         try {
             hd.endElement("", "", name);
         } catch (SAXException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -74,11 +74,11 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
             super.endResult();
             try {
                 hd.endDocument();
-                out.flush();
+                out.close();
             } catch (SAXException e) {
-                throw new BusinessException(e);
+                throw Exceptions.handle(e);
             } catch (IOException e) {
-                throw new BusinessException(e);
+                throw Exceptions.handle(e);
             }
         }
     }
@@ -93,7 +93,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
         try {
             hd.startElement("", "", name, null);
         } catch (SAXException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -110,13 +110,13 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
             }
             hd.startElement("", "", name, attrs);
         } catch (SAXException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
     @Override
     public void beginResult() {
-        beginOutput("result"); //$NON-NLS-1$
+        beginOutput("result");
     }
 
     @Override
@@ -129,7 +129,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
             try {
                 hd.startDocument();
             } catch (SAXException e) {
-                throw new BusinessException(e);
+                throw Exceptions.handle(e);
             }
         }
         opensCalled++;
@@ -141,7 +141,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
             try {
                 hd.startDocument();
             } catch (SAXException e) {
-                throw new BusinessException(e);
+                throw Exceptions.handle(e);
             }
         }
         opensCalled++;
@@ -153,7 +153,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
             try {
                 hd.startDocument();
             } catch (SAXException e) {
-                throw new BusinessException(e);
+                throw Exceptions.handle(e);
             }
         }
         opensCalled++;
@@ -170,7 +170,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
             }
             hd.endElement("", "", name);
         } catch (SAXException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 
@@ -181,7 +181,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
                 hd.characters(val.toCharArray(), 0, val.length());
             }
         } catch (SAXException e) {
-            throw new BusinessException(e);
+            throw Exceptions.handle(e);
         }
     }
 

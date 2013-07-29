@@ -8,6 +8,7 @@
 
 package sirius.kernel.di.std;
 
+import com.typesafe.config.ConfigValueType;
 import org.joda.time.Duration;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
@@ -36,6 +37,12 @@ public class ConfigValueAnnotationProcessor implements AnnotationProcessor {
                 field.set(object, Sirius.getConfig().getString(val.value()));
             } else if (int.class.equals(field.getType()) || Integer.class.equals(field.getType())) {
                 field.set(object, Sirius.getConfig().getInt(val.value()));
+            } else if (long.class.equals(field.getType()) || Long.class.equals(field.getType())) {
+                if (Sirius.getConfig().getValue(val.value()).valueType() == ConfigValueType.NUMBER) {
+                    field.set(object, Sirius.getConfig().getLong(val.value()));
+                } else {
+                    field.set(object, Sirius.getConfig().getBytes(val.value()));
+                }
             } else if (boolean.class.equals(field.getType()) || Boolean.class.equals(field.getType())) {
                 field.set(object, Sirius.getConfig().getBoolean(val.value()));
             } else if (List.class.equals(field.getType())) {
