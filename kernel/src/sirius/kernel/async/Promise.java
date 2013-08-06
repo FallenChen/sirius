@@ -11,28 +11,51 @@ package sirius.kernel.async;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.ValueHolder;
 import sirius.kernel.health.Exceptions;
+import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Log;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 12.07.13
- * Time: 23:39
- * To change this template use File | Settings | File Templates.
+ * Represents a value which is computed by another task or thread.
+ * <p>
+ * This is the core mechanism of non-blocking communication between different threads or systems. A value which
+ * is not immediately available is returned as <tt>Promise</tt>. This promise is either successfully fulfilled
+ * or supplied with a failure. In any case a {@link CompletionHandler} can be attached which is notified once
+ * the computation is completed.
+ * </p>
+ * <p>
+ * Since promises can be chained ({@link #chain(Promise)}, {@link #failChain(Promise, sirius.kernel.commons.Callback)})
+ * or aggregated ({@link Async#sequence(java.util.List)}, {@link Barrier}) complex computations can be glued
+ * together using simple components.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public class Promise<V> {
 
     private ValueHolder<V> value;
     private Throwable failure;
+    private boolean hasFailureHandler;
     private List<CompletionHandler<V>> handlers = new ArrayList<CompletionHandler<V>>(1);
 
+    /**
+     * Returns the value of the promise or <tt>null</tt> if not completed yet.
+     *
+     * @return the value of the promised computation. This method will not block, so <tt>null</tt>  is returned if
+     *         the computation has not finished (or failed) yet.
+     */
     public V get() {
         return value != null ? value.get() : null;
     }
 
+    /**
+     * Marks the promise as successful and completed with the given value.
+     *
+     * @param value the value to be used as promised result.
+     */
     public void success(final V value) {
         this.value = new ValueHolder<V>(value);
         for (final CompletionHandler<V> handler : handlers) {
@@ -40,6 +63,9 @@ public class Promise<V> {
         }
     }
 
+    /*
+     * Invokes the onSuccess method of given CompletionHandler.
+     */
     private void completeHandler(final V value, final CompletionHandler<V> handler) {
         try {
             handler.onSuccess(value);
@@ -48,13 +74,26 @@ public class Promise<V> {
         }
     }
 
+    /**
+     * Marks the promise as failed due to the given error.
+     *
+     * @param exception the error to be used as reason for failure.
+     */
     public void fail(final Throwable exception) {
         this.failure = exception;
+        if (!hasFailureHandler) {
+            Exceptions.handle(Async.LOG, exception);
+        } else if (Async.LOG.isFINE() && !(exception instanceof HandledException)) {
+            Async.LOG.FINE(Exceptions.createHandled().error(exception));
+        }
         for (final CompletionHandler<V> handler : handlers) {
             failHandler(exception, handler);
         }
     }
 
+    /*
+     * Invokes the onFailure method of given CompletionHandler.
+     */
     private void failHandler(final Throwable exception, final CompletionHandler<V> handler) {
         try {
             handler.onFailure(exception);
@@ -63,22 +102,51 @@ public class Promise<V> {
         }
     }
 
+    /**
+     * Determines if the promise is completed yet.
+     *
+     * @return <tt>true</tt> if the promise has either successfully completed or failed yet, <tt>false</tt> otherwise.
+     */
     public boolean isCompleted() {
         return isFailed() || isSuccessful();
     }
 
+    /**
+     * Determines if the promise is failed.
+     *
+     * @return <tt>true</tt> if the promise failed, <tt>false</tt> otherwise.
+     */
     public boolean isFailed() {
         return failure != null;
     }
 
+    /**
+     * Determines if the promise was successfully completed yet.
+     *
+     * @return <tt>true</tt> if the promise was successfully completed, <tt>false</tt> otherwise.
+     */
     public boolean isSuccessful() {
         return value != null;
     }
 
+    /**
+     * Returns the failure which was the reason for this promise to have failed.
+     *
+     * @return the error which made this promise fail, or <tt>null</tt>  if the promnise is still running or not
+     *         completed yet.
+     */
     public Throwable getFailure() {
         return failure;
     }
 
+    /**
+     * Used the result of this promise to create a new one by passing the resulting value into the given mapper.
+     *
+     * @param mapper the mapper to transform the promised value of this promise.
+     * @param <X>    the resulting type of the mapper
+     * @return a new promise which will be either contain the mapped value or which fails if either this promise fails
+     *         or if the mapper throws an exception.
+     */
     public <X> Promise<X> map(final Mapper<V, X> mapper) {
         final Promise<X> result = new Promise<X>();
         onComplete(new CompletionHandler<V>() {
@@ -100,6 +168,14 @@ public class Promise<V> {
         return result;
     }
 
+    /**
+     * Uses to result of this promise to generate a new promise using the given mapper.
+     *
+     * @param mapper the mapper to transform the promised value of this promise.
+     * @param <X>    the resulting type of the mapper
+     * @return a new promise which will be either contain the mapped value or which fails if either this promise fails
+     *         or if the mapper throws an exception.
+     */
     public <X> Promise<X> flatMap(final Mapper<V, Promise<X>> mapper) {
         final Promise<X> result = new Promise<X>();
         onComplete(new CompletionHandler<V>() {
@@ -121,6 +197,14 @@ public class Promise<V> {
         return result;
     }
 
+    /**
+     * Chains this promise to the given one.
+     * <p>
+     * Connects both, the successful path as well as the failure handling of this promise to the given one.
+     * </p>
+     *
+     * @param promise the promise to be used as completion handler for this.
+     */
     public void chain(final Promise<V> promise) {
         onComplete(new CompletionHandler<V>() {
             @Override
@@ -135,7 +219,14 @@ public class Promise<V> {
         });
     }
 
-
+    /**
+     * Chains this promise to the given one, by transforming the result value of this promise using the given mapper.
+     *
+     * @param promise the promise to be used as completion handler for this.
+     * @param mapper  the mapper to be used to convert the result of this promise to the value used to the given
+     *                promise.
+     * @param <X>     type of the value expected by the given promise.
+     */
     public <X> void mapChain(final Promise<X> promise, final Mapper<V, X> mapper) {
         onComplete(new CompletionHandler<V>() {
             @Override
@@ -154,6 +245,14 @@ public class Promise<V> {
         });
     }
 
+    /**
+     * Forwards failures to the given promise, while sending successful value to the given successHandler.
+     *
+     * @param promise        the promise to be supplied with any failure of this promise.
+     * @param successHandler the handler used to process successfully computed values.
+     * @param <X>            type of promised value of the given promise.
+     * @return <tt>this</tt> for fluent method chaining
+     */
     public <X> Promise<V> failChain(final Promise<X> promise, final Callback<V> successHandler) {
         return onComplete(new CompletionHandler<V>() {
             @Override
@@ -172,6 +271,16 @@ public class Promise<V> {
         });
     }
 
+    /**
+     * Adds a completion handler to this promise.
+     * <p>
+     * If the promise is already completed, the handler is immediately invoked.
+     * </p>
+     *
+     * @param handler the handler to be notified once the promise is completed. A promise can notify more than one
+     *                handler.
+     * @return <tt>this</tt> for fluent method chaining
+     */
     public Promise<V> onComplete(CompletionHandler<V> handler) {
         if (handler != null) {
             if (isSuccessful()) {
@@ -181,11 +290,22 @@ public class Promise<V> {
             } else {
                 this.handlers.add(handler);
             }
+            hasFailureHandler = true;
         }
 
         return this;
     }
 
+    /**
+     * Adds a completion handler to this promise which only handles the successful completion of the promise.
+     * <p>
+     * If the promise is already completed, the handler is immediately invoked.
+     * </p>
+     *
+     * @param successHandler the handler to be notified once the promise is completed. A promise can notify more than
+     *                       one handler.
+     * @return <tt>this</tt> for fluent method chaining
+     */
     public Promise<V> onSuccess(final Callback<V> successHandler) {
         return onComplete(new CompletionHandler<V>() {
             @Override
@@ -204,7 +324,18 @@ public class Promise<V> {
         });
     }
 
+    /**
+     * Adds a completion handler to this promise which only handles the failed completion of the promise.
+     * <p>
+     * If the promise is already completed, the handler is immediately invoked.
+     * </p>
+     *
+     * @param failureHandler the handler to be notified once the promise is completed. A promise can notify more than
+     *                       one handler.
+     * @return <tt>this</tt> for fluent method chaining
+     */
     public Promise<V> onFailure(final Callback<Throwable> failureHandler) {
+        hasFailureHandler = true;
         return onComplete(new CompletionHandler<V>() {
             @Override
             public void onSuccess(V value) throws Exception {
@@ -217,19 +348,17 @@ public class Promise<V> {
         });
     }
 
-    public Promise<V> traceErrors(Log logger, Callback<Throwable> error) {
-        if (logger.isFINE()) {
-            return onFailure(error);
-        }
-
-        return this;
-    }
-
-    public Promise<V> logErrors() {
-        return logErrors(Async.LOG);
-    }
-
-    public Promise<V> logErrors(Log log) {
+    /**
+     * Adds an error handler, which handles failures by logging them to the given {@link Log}
+     * <p>
+     * By default, if no explicit completion handler is present, all failures are logged using the <tt>async</tt>
+     * logger.
+     * </p>
+     *
+     * @param log the logger to be used when logging an error.
+     * @return <tt>this</tt> for fluent method chaining
+     */
+    public Promise<V> handleErrors(Log log) {
         return onFailure(new Callback<Throwable>() {
             @Override
             public void invoke(Throwable value) throws Exception {

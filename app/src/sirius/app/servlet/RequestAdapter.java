@@ -1,7 +1,10 @@
 package sirius.app.servlet;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.jboss.netty.util.CharsetUtil;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import sirius.kernel.commons.Strings;
+import sirius.web.http.MimeHelper;
 import sirius.web.http.WebContext;
 
 import javax.servlet.RequestDispatcher;
@@ -9,15 +12,12 @@ import javax.servlet.ServletInputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.security.Principal;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -33,6 +33,7 @@ public class RequestAdapter implements HttpServletRequest {
     private ServletContainer container;
     private Map<String, Object> attributes = Maps.newTreeMap();
     private SessionAdapter session;
+    private List<Cookie> cookies;
 
     public RequestAdapter(WebContext ctx, String servletPath, ServletContainer container) {
         this.ctx = ctx;
@@ -42,12 +43,27 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getAuthType() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
     public Cookie[] getCookies() {
-        return new Cookie[0];
+        if (cookies == null) {
+            cookies = Lists.newArrayList();
+            for (org.jboss.netty.handler.codec.http.Cookie cookie : ctx.getCookies()) {
+                Cookie javaCookie = new Cookie(cookie.getName(), cookie.getValue());
+                javaCookie.setComment(cookie.getComment());
+                if (Strings.isFilled(cookie.getDomain())) {
+                    javaCookie.setDomain(cookie.getDomain());
+                }
+                javaCookie.setMaxAge(cookie.getMaxAge());
+                javaCookie.setPath(cookie.getPath());
+                javaCookie.setSecure(cookie.isSecure());
+                javaCookie.setVersion(cookie.getVersion());
+                cookies.add(javaCookie);
+            }
+        }
+        return cookies.toArray(new Cookie[cookies.size()]);
     }
 
     @Override
@@ -91,12 +107,12 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getPathTranslated() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
     public String getContextPath() {
-        return "";
+        return ctx.getContextPrefix();
     }
 
     @Override
@@ -106,22 +122,22 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getRemoteUser() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
     public boolean isUserInRole(String s) {
-        throw new UnsupportedOperationException();
+        return false;
     }
 
     @Override
     public Principal getUserPrincipal() {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
     public String getRequestedSessionId() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return ctx.getRequestedSessionId();
     }
 
     @Override
@@ -192,30 +208,75 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
-        return CharsetUtil.UTF_8.name();
+        return ctx.getContent().getCharset().name();
     }
 
     @Override
     public void setCharacterEncoding(String s) throws UnsupportedEncodingException {
-        throw new UnsupportedOperationException();
+        ctx.getContent().setCharset(Charset.forName(s));
     }
 
     @Override
     public int getContentLength() {
-        return 0;
+        return (int) ctx.getContent().length();
     }
 
     @Override
     public String getContentType() {
-        return "text/plain";
+        return ctx.getHeaderValue(HttpHeaders.Names.CONTENT_TYPE)
+                  .replaceEmptyWith(MimeHelper.guessMimeType(ctx.getRequestedURI()))
+                  .asString();
     }
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
+        final InputStream is = (ctx.getContent().isInMemory()) ? new ByteArrayInputStream(ctx.getContent()
+                                                                                             .get()) : new FileInputStream(
+                ctx.getContent().getFile());
         return new ServletInputStream() {
             @Override
             public int read() throws IOException {
-                return 0;
+                return is.read();
+            }
+
+            @Override
+            public int read(byte[] b) throws IOException {
+                return is.read(b);
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                return is.read(b, off, len);
+            }
+
+            @Override
+            public long skip(long n) throws IOException {
+                return is.skip(n);
+            }
+
+            @Override
+            public int available() throws IOException {
+                return is.available();
+            }
+
+            @Override
+            public void close() throws IOException {
+                is.close();
+            }
+
+            @Override
+            public synchronized void mark(int readlimit) {
+                is.mark(readlimit);
+            }
+
+            @Override
+            public synchronized void reset() throws IOException {
+                is.reset();
+            }
+
+            @Override
+            public boolean markSupported() {
+                return is.markSupported();
             }
         };
     }
@@ -246,17 +307,27 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getProtocol() {
-        throw new UnsupportedOperationException();
+        return ctx.getRequest().getProtocolVersion().getProtocolName();
     }
 
     @Override
     public String getScheme() {
-        throw new UnsupportedOperationException();
+        try {
+            return new URI(ctx.getRequest().getUri()).getScheme();
+        } catch (URISyntaxException e) {
+            ServletContainer.LOG.FINE(e);
+            return "unknown";
+        }
     }
 
     @Override
     public String getServerName() {
-        throw new UnsupportedOperationException();
+        try {
+            return new URI(ctx.getRequest().getUri()).getHost();
+        } catch (URISyntaxException e) {
+            ServletContainer.LOG.FINE(e);
+            return "unknown";
+        }
     }
 
     @Override
@@ -266,17 +337,17 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public BufferedReader getReader() throws IOException {
-        return new BufferedReader(new StringReader(""));
+        return new BufferedReader(new InputStreamReader(getInputStream(), getCharacterEncoding()));
     }
 
     @Override
     public String getRemoteAddr() {
-        throw new UnsupportedOperationException();
+        return ctx.getCtx().getChannel().getRemoteAddress().toString();
     }
 
     @Override
     public String getRemoteHost() {
-        throw new UnsupportedOperationException();
+        return getRemoteAddr();
     }
 
     @Override
@@ -291,7 +362,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public Locale getLocale() {
-        return Locale.US;
+        return new Locale(ctx.getLang());
     }
 
     @Override

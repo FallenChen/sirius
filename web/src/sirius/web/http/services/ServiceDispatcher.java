@@ -1,5 +1,7 @@
 package sirius.web.http.services;
 
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import sirius.kernel.async.Async;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.PriorityCollector;
@@ -38,7 +40,7 @@ public class ServiceDispatcher implements WebDispatcher {
         if ("/service".equals(uri)) {
             ctx.respondWith().cached().template("/help/service/info.xhtml");
         }
-        String[] path = uri.substring(1).split("/");
+        final String[] path = uri.substring(1).split("/");
         if (path.length != 3) {
             ctx.respondWith()
                .cached()
@@ -52,33 +54,51 @@ public class ServiceDispatcher implements WebDispatcher {
                     value.getWatch().submitMicroTiming(ctx.getRequestedURI());
                 }
             });
-            ServiceCall call = null;
-            String type = path[1];
-            String[] subURI = new String[path.length - 2];
-            System.arraycopy(path, 2, subURI, 0, path.length - 2);
-            if ("xml".equals(type)) {
-                call = new XMLServiceCall(subURI, ctx);
-            } else if ("json".equals(type)) {
-                call = new JSONServiceCall(subURI, ctx);
-            }
+            Async.executor("web-services").fork(new Runnable() {
+                @Override
+                public void run() {
+                    ServiceCall call = null;
+                    String type = path[1];
+                    String[] subURI = new String[path.length - 2];
+                    System.arraycopy(path, 2, subURI, 0, path.length - 2);
+                    if ("xml".equals(type)) {
+                        call = new XMLServiceCall(subURI, ctx);
+                    } else if ("json".equals(type)) {
+                        call = new JSONServiceCall(subURI, ctx);
+                    }
 
-            if (call == null) {
-                //TODO handle type failure
-            }
-            String service = path[2];
-            StructuredService serv = gc.getPart(service, StructuredService.class);
-            if (serv == null) {
-                call.handle(null,
-                            Exceptions.createHandled()
-                                      .withSystemErrorMessage(
-                                              "Unknown service: %s. Try /services for a complete list of available services.",
-                                              service)
-                                      .handle());
-                return true;
-            } else {
-                call.invoke(serv);
-                return true;
-            }
+                    if (call == null) {
+                        ctx.respondWith()
+                           .error(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
+                                  Exceptions.createHandled()
+                                            .withSystemErrorMessage(
+                                                    "Unknown or unsupported type: %s. Use 'xml' or 'json'",
+                                                    type)
+                                            .handle());
+                        return;
+                    }
+                    String service = path[2];
+                    StructuredService serv = gc.getPart(service, StructuredService.class);
+                    if (serv == null) {
+                        call.handle(null,
+                                    Exceptions.createHandled()
+                                              .withSystemErrorMessage(
+                                                      "Unknown service: %s. Try /services for a complete list of available services.",
+                                                      service)
+                                              .handle());
+                    } else {
+                        call.invoke(serv);
+                    }
+                }
+
+            }).dropOnOverload(new Runnable() {
+                @Override
+                public void run() {
+                    ctx.respondWith()
+                       .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, "Request dropped - System overload!");
+                }
+            }).execute();
+            return true;
         }
     }
 }

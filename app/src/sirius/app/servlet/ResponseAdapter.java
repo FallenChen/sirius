@@ -2,11 +2,11 @@ package sirius.app.servlet;
 
 import com.google.common.collect.Lists;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.DefaultCookie;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.util.CharsetUtil;
+import sirius.kernel.async.CallContext;
+import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.ValueHolder;
 import sirius.web.http.MimeHelper;
@@ -20,10 +20,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * Created with IntelliJ IDEA.
@@ -39,7 +37,7 @@ public class ResponseAdapter implements HttpServletResponse {
     private ServletOutputStream stream;
     private String characterEncoding = null;
     private List<Cookie> cookies = Lists.newArrayList();
-    private Map<String, Object> headers = new LinkedHashMap<String, Object>();
+    private MultiMap<String, Object> headers = MultiMap.create();
     private int status = SC_OK;
     private Integer contentLength;
     private String contentType;
@@ -58,7 +56,7 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public boolean containsHeader(String s) {
-        return headers.containsKey(s);
+        return headers.keySet().contains(s);
     }
 
     @Override
@@ -86,6 +84,7 @@ public class ResponseAdapter implements HttpServletResponse {
     @Override
     public void sendError(int i, String s) throws IOException {
         assertNotCommitted();
+        outputWritten = true;
         wc.respondWith().error(HttpResponseStatus.valueOf(i), s);
     }
 
@@ -98,6 +97,7 @@ public class ResponseAdapter implements HttpServletResponse {
     @Override
     public void sendError(int i) throws IOException {
         assertNotCommitted();
+        outputWritten = true;
         wc.respondWith().error(HttpResponseStatus.valueOf(i));
     }
 
@@ -108,7 +108,7 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public void setDateHeader(String s, long l) {
-        headers.put(s, l);
+        headers.set(s, l);
     }
 
     @Override
@@ -118,7 +118,7 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public void setHeader(String s, String s2) {
-        headers.put(s, s2);
+        headers.set(s, s2);
     }
 
     @Override
@@ -128,7 +128,7 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public void setIntHeader(String s, int i) {
-        headers.put(s, i);
+        headers.set(s, i);
     }
 
     @Override
@@ -165,68 +165,79 @@ public class ResponseAdapter implements HttpServletResponse {
         if (outputWritten) {
             throw new IllegalStateException();
         }
-        String content = contentType;
-        if (Strings.isEmpty(content)) {
-            content = MimeHelper.guessMimeType(wc.getRequestedURI());
-        } else {
-            if (characterEncoding != null && !contentType.contains(";")) {
-                content = contentType + ";charset=" + characterEncoding;
-            }
-        }
-
-        final OutputStream os = wc.respondWith()
-                                  .outputStream(HttpResponseStatus.valueOf(status), content, contentLength);
         stream = new ServletOutputStream() {
+
+            private OutputStream os;
+
+            private void makeOutputStream() {
+                outputWritten = true;
+                String content = contentType;
+                if (Strings.isEmpty(content)) {
+                    content = MimeHelper.guessMimeType(wc.getRequestedURI());
+                } else {
+                    if (characterEncoding != null && !contentType.contains(";")) {
+                        content = contentType + ";charset=" + characterEncoding;
+                    }
+                }
+
+                for (Cookie cookie : cookies) {
+                    DefaultCookie nettyCookie = new DefaultCookie(cookie.getName(), cookie.getValue());
+                    nettyCookie.setComment(cookie.getComment());
+                    nettyCookie.setDomain(cookie.getDomain());
+                    nettyCookie.setMaxAge(cookie.getMaxAge());
+                    nettyCookie.setPath(cookie.getPath());
+                    nettyCookie.setSecure(cookie.getSecure());
+                    nettyCookie.setVersion(cookie.getVersion());
+                    wc.setCookie(nettyCookie);
+                }
+
+                os = wc.respondWith()
+                       .headers(headers)
+                       .outputStream(HttpResponseStatus.valueOf(status), content, contentLength);
+            }
+
             @Override
             public void write(int b) throws IOException {
+                if (os == null) {
+                    makeOutputStream();
+                }
                 os.write(b);
             }
 
             @Override
             public void write(byte[] b) throws IOException {
+                if (os == null) {
+                    makeOutputStream();
+                }
                 os.write(b);
             }
 
             @Override
             public void write(byte[] b, int off, int len) throws IOException {
+                if (os == null) {
+                    makeOutputStream();
+                }
                 os.write(b, off, len);
             }
 
             @Override
             public void flush() throws IOException {
+                if (os == null) {
+                    makeOutputStream();
+                }
                 os.flush();
             }
 
             @Override
             public void close() throws IOException {
+                if (os == null) {
+                    makeOutputStream();
+                }
                 os.close();
             }
         };
 
         return stream;
-    }
-
-    private void writeHeaders() {
-        if (!outputWritten) {
-            if (contentType != null) {
-                if (characterEncoding != null && !contentType.contains(";")) {
-                    addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType + ";charset=" + characterEncoding);
-                } else {
-                    addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
-                }
-            }
-            if (contentLength != null) {
-                addIntHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength);
-            }
-            DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-                                                                   HttpResponseStatus.valueOf(status));
-            for (Map.Entry<String, Object> header : headers.entrySet()) {
-                response.addHeader(header.getKey(), header.getValue());
-            }
-
-            future.set(wc.getCtx().getChannel().write(response));
-            outputWritten = true;
-        }
     }
 
     public void complete() {
@@ -305,11 +316,11 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public void setLocale(Locale locale) {
-        throw new UnsupportedOperationException();
+        CallContext.getCurrent().setLang(locale.getLanguage());
     }
 
     @Override
     public Locale getLocale() {
-        throw new UnsupportedOperationException();
+        return new Locale(CallContext.getCurrent().getLang());
     }
 }

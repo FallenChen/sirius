@@ -85,6 +85,27 @@ public class MultiMap<K, V> {
     }
 
     /**
+     * Sets the given value to the given name.
+     * <p>
+     * All previously set values will be removed.
+     * </p>
+     *
+     * @param key   the key for which the value is added to the map
+     * @param value the name (and only) value for the given key
+     */
+    public void set(K key, V value) {
+        Collection<V> list = base.get(key);
+        if (list == null) {
+            list = createValueList();
+            base.put(key, list);
+        } else {
+            list.clear();
+        }
+        list.add(value);
+    }
+
+
+    /**
      * Can be overridden to specify the subclass of <tt>List</tt> used to store value lists.
      *
      * @return a new instance which is used as value list for a key.

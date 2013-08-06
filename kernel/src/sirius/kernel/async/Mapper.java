@@ -9,12 +9,23 @@
 package sirius.kernel.async;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 14.07.13
- * Time: 10:00
- * To change this template use File | Settings | File Templates.
+ * Maps a given value of type V to a new value of type X.
+ * <p>
+ * This is intended to be used by {@link Promise#map(Mapper)} or {@link Promise#flatMap(Mapper)}.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public interface Mapper<V, X> {
+
+    /**
+     * Maps the given value into a new one.
+     *
+     * @param value the value to map
+     * @return the mapped value for the given input.
+     * @throws Exception simplifies error handling, since commonly, errors are forwarded to the next promise.
+     */
     X apply(V value) throws Exception;
+
 }

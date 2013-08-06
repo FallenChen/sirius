@@ -9,15 +9,28 @@
 package sirius.kernel.async;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 14.07.13
- * Time: 10:01
- * To change this template use File | Settings | File Templates.
+ * Handler which can be attached to instances of {@link Promise} to be notified once a value is available or when the
+ * computation failed.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public interface CompletionHandler<V> {
-
+    /**
+     * Invoked if the promise is successfully completed with the given value.
+     *
+     * @param value the computed value of the promise.
+     * @throws Exception simplifies exception handling as each error is either passed on to the next promise or logged
+     *                   via {@link sirius.kernel.health.Exceptions#handle()}
+     */
     void onSuccess(V value) throws Exception;
 
+    /**
+     * Invoked if the promise is fails with the given throwable.
+     *
+     * @param throwable the thrown error which occurred while computing the promised value.
+     * @throws Exception simplifies exception handling as each error is either passed on to the next promise or logged
+     *                   via {@link sirius.kernel.health.Exceptions#handle()}
+     */
     void onFailure(Throwable throwable) throws Exception;
 }

@@ -1,6 +1,7 @@
 package sirius.web.http.controller;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import sirius.kernel.async.Async;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.PriorityCollector;
@@ -45,23 +46,47 @@ public class ControllerDispatcher implements WebDispatcher {
         return route(ctx);
     }
 
-    public boolean route(WebContext ctx) {
-        for (Route route : routes) {
+    public boolean route(final WebContext ctx) {
+        for (final Route route : routes) {
             try {
-                List<Object> params = route.matches(ctx, ctx.getRequestedURI());
+                final List<Object> params = route.matches(ctx, ctx.getRequestedURI());
                 if (params != null) {
-                    params.add(0, ctx);
-                    route.getSuccessCallback().invoke(params);
+                    Async.executor("web-mvc").fork(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                params.add(0, ctx);
+                                route.getSuccessCallback().invoke(params);
+                            } catch (Throwable ex) {
+                                ctx.respondWith()
+                                   .error(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                          Exceptions.handle(WebServer.LOG, ex));
+                            }
+                        }
+                    }).dropOnOverload(new Runnable() {
+                        @Override
+                        public void run() {
+                            ctx.respondWith()
+                               .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, "Request dropped - System overload!");
+                        }
+                    }).execute();
                     return true;
                 }
-            } catch (Throwable e) {
-                try {
-                    route.getFailureCallback().invoke(Exceptions.handle(WebServer.LOG, e));
-                    return true;
-                } catch (Throwable ex) {
-                    ctx.respondWith()
-                       .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
-                }
+            } catch (final Throwable e) {
+                Async.executor("web-mvc").fork(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            route.getFailureCallback().invoke(Exceptions.handle(WebServer.LOG, e));
+                        } catch (Throwable ex) {
+                            ctx.respondWith()
+                               .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
+                        }
+                    }
+
+
+                }).execute();
+                return true;
             }
         }
         return false;

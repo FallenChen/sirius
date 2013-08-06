@@ -16,6 +16,8 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggerRepository;
 import org.junit.BeforeClass;
+import sirius.kernel.async.Async;
+import sirius.kernel.async.Barrier;
 import sirius.kernel.commons.BasicCollector;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.Value;
@@ -32,6 +34,7 @@ import sirius.kernel.nls.NLS;
 
 import java.io.File;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 import java.util.logging.LogManager;
 import java.util.regex.Matcher;
@@ -119,17 +122,27 @@ public class Sirius {
             stop();
         }
         started = true;
-        for (Lifecycle lifecycle : lifecycleParticipants.getParts()) {
-            LOG.INFO("Starting: %s", lifecycle.getName());
-            try {
-                lifecycle.started();
-            } catch (Throwable e) {
-                Exceptions.handle()
-                          .error(e)
-                          .to(LOG)
-                          .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
-                          .handle();
-            }
+        Barrier barrier = Barrier.create();
+        for (final Lifecycle lifecycle : lifecycleParticipants.getParts()) {
+            barrier.add(Async.defaultExecutor().fork(new Runnable() {
+                @Override
+                public void run() {
+                    LOG.INFO("Starting: %s", lifecycle.getName());
+                    try {
+                        lifecycle.started();
+                    } catch (Throwable e) {
+                        Exceptions.handle()
+                                  .error(e)
+                                  .to(LOG)
+                                  .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
+                                  .handle();
+                    }
+                }
+            }).execute());
+        }
+
+        if (!barrier.await(1, TimeUnit.MINUTES)) {
+            LOG.WARN("System initialization did not complete in one minute! Continuing...");
         }
     }
 

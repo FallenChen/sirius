@@ -18,7 +18,10 @@ import sirius.kernel.commons.Value;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Extension system based on the system configuration, providing simple access to extension lists.
@@ -100,7 +103,8 @@ public class Extensions {
     /*
      * Used as cached for already loaded extension lists
      */
-    private static Map<String, Map<String, Extension>> cache = Collections.synchronizedMap(new TreeMap<String, Map<String, Extension>>());
+    private static Map<String, Map<String, Extension>> cache = Maps.newConcurrentMap();
+    private static Map<String, Extension> defaultsCache = Maps.newConcurrentMap();
 
     /**
      * Returns the <tt>Extension</tt> for the given <tt>id</tt> of the given <tt>type</tt>
@@ -110,7 +114,28 @@ public class Extensions {
      * @return the specified extension or <tt>null</tt>, if no such extension exists
      */
     public static Extension getExtension(String type, String id) {
-        return getExtensionMap(type).get(id);
+        Extension result = getExtensionMap(type).get(id);
+        if (result == null) {
+            return getDefault(type);
+        }
+
+        return result;
+    }
+
+    private static Extension getDefault(String type) {
+        Extension result = defaultsCache.get(type);
+        if (result != null) {
+            return result;
+        }
+        ConfigObject cfg = Sirius.getConfig().getConfig(type).root();
+        ConfigObject def = (ConfigObject) cfg.get(DEFAULT);
+        if (cfg.containsKey(DEFAULT)) {
+            result = new BasicExtension(type, DEFAULT, def, null);
+            defaultsCache.put(type, result);
+            return result;
+        }
+
+        return null;
     }
 
     private static Map<String, Extension> getExtensionMap(String type) {

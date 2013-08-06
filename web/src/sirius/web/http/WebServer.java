@@ -9,6 +9,7 @@ import org.jboss.netty.handler.codec.http.multipart.DiskFileUpload;
 import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
+import sirius.kernel.async.Async;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.annotations.ConfigValue;
@@ -17,6 +18,7 @@ import sirius.kernel.di.annotations.Register;
 import sirius.kernel.health.Log;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 

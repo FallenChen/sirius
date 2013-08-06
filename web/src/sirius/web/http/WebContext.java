@@ -50,6 +50,7 @@ public class WebContext {
     private Attribute content;
     private Map<String, String> session;
     private boolean sessionModified;
+    private String lang;
 
     // Used by Response - but stored here, since a new Response might be created....
     protected boolean responseCommitted;
@@ -57,6 +58,7 @@ public class WebContext {
 
 
     private ServerSessionSource serverSessionSource;
+    private String requestedSessionId;
     private ServerSession serverSession;
 
     @ConfigValue("http.sessionCookieName")
@@ -206,23 +208,31 @@ public class WebContext {
         if (serverSession != null) {
             return serverSession;
         }
-        String sid = null;
         if (serverSessionSource == null) {
-            sid = getParameter(serverSessionParameterName);
+            requestedSessionId = getParameter(serverSessionParameterName);
             serverSessionSource = ServerSessionSource.PARAMETER;
-            if (Strings.isEmpty(sid)) {
+            if (Strings.isEmpty(requestedSessionId)) {
                 serverSessionSource = ServerSessionSource.COOKIE;
-                sid = getCookieValue(serverSessionCookieName);
-                if (Strings.isEmpty(sid)) {
+                requestedSessionId = getCookieValue(serverSessionCookieName);
+                if (Strings.isEmpty(requestedSessionId)) {
                     serverSessionSource = null;
                 }
             }
         }
-        if (Strings.isFilled(sid) || create) {
-            serverSession = ServerSession.getSession(sid);
+        if (Strings.isFilled(requestedSessionId) || create) {
+            serverSession = ServerSession.getSession(requestedSessionId);
+            if (serverSession.isNew()) {
+                serverSession.putValue(ServerSession.INITIAL_URI, getRequestedURI());
+                serverSession.putValue(ServerSession.USER_AGENT, getHeader(HttpHeaders.Names.USER_AGENT));
+            }
         }
         return serverSession;
     }
+
+    public String getRequestedSessionId() {
+        return requestedSessionId;
+    }
+
 
     public ServerSessionSource getServerSessionSource() {
         if (serverSessionSource == null && serverSession == null) {
@@ -264,6 +274,10 @@ public class WebContext {
         queryString = qsd.getParameters();
     }
 
+    public Collection<Cookie> getCookies() {
+        return Collections.unmodifiableCollection(cookiesIn.values());
+    }
+
     public Cookie getCookie(String name) {
         if (cookiesIn == null) {
             cookiesIn = Maps.newHashMap();
@@ -298,6 +312,13 @@ public class WebContext {
         setCookie(name, value, Integer.MIN_VALUE);
     }
 
+    public void setHTTPSessionCookie(String name, String value) {
+        DefaultCookie cookie = new DefaultCookie(name, value);
+        cookie.setMaxAge((int) Integer.MIN_VALUE);
+        cookie.setHttpOnly(true);
+        setCookie(cookie);
+    }
+
     public void setCookie(String name, String value, int maxAgeSeconds) {
         DefaultCookie cookie = new DefaultCookie(name, value);
         cookie.setMaxAge((int) maxAgeSeconds);
@@ -306,7 +327,7 @@ public class WebContext {
 
     protected Collection<Cookie> getOutCookies() {
         if (serverSession != null && serverSession.isNew()) {
-            setSessionCookie(serverSessionCookieName, serverSession.getId());
+            setHTTPSessionCookie(serverSessionCookieName, serverSession.getId());
         }
         if (sessionModified) {
             QueryStringEncoder encoder = new QueryStringEncoder("");
@@ -315,10 +336,49 @@ public class WebContext {
             }
             String value = encoder.toString();
             String protection = Hashing.md5().hashString(value + getSessionSecret()).toString();
-            setSessionCookie(sessionCookieName, protection + ":" + value);
+            setHTTPSessionCookie(sessionCookieName, protection + ":" + value);
         }
         return cookiesOut == null ? null : cookiesOut.values();
     }
+
+    public String getLang() {
+        if (lang == null) {
+            lang = parseAcceptLanguage();
+        }
+        return lang;
+    }
+
+    private String parseAcceptLanguage() {
+        double bestQ = 0;
+        String lang = CallContext.getCurrent().getLang();
+        String header = getHeader(HttpHeaders.Names.ACCEPT_LANGUAGE);
+        if (Strings.isEmpty(header)) {
+            return lang;
+        }
+        for (String str : header.split(",")) {
+            String[] arr = str.trim().replace("-", "_").split(";");
+
+            //Parse the q-value
+            double q = 1.0D;
+            for (String s : arr) {
+                s = s.trim();
+                if (s.startsWith("q=")) {
+                    q = Double.parseDouble(s.substring(2).trim());
+                    break;
+                }
+            }
+
+            //Parse the locale
+            Locale locale = null;
+            String[] l = arr[0].split("_");
+            if (l.length > 0 && q > bestQ) {
+                lang = l[0];
+            }
+        }
+
+        return lang;
+    }
+
 
     private String getSessionSecret() {
         if (Strings.isFilled(sessionSecret)) {
@@ -333,6 +393,14 @@ public class WebContext {
 
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
+
+    public String getHeader(String header) {
+        return request.getHeader(header);
+    }
+
+    public Value getHeaderValue(String header) {
+        return Value.of(request.getHeader(header));
+    }
 
     public long getDateHeader(String header) {
         String value = request.getHeader(header);

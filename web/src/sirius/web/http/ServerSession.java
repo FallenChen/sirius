@@ -23,6 +23,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class ServerSession {
 
+    public static final String INITIAL_URI = "_INITIAL_URI";
+    public static final String USER_AGENT = "_USER_AGENT";
+    public static final String USER = "_USER";
+
     public interface Listener {
 
         void sessionCreated(ServerSession session) throws Exception;

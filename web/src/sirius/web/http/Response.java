@@ -11,6 +11,7 @@ import org.jboss.netty.util.CharsetUtil;
 import org.rythmengine.Rythm;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
@@ -39,6 +40,7 @@ public class Response {
 
     private WebContext wc;
     private ChannelHandlerContext ctx;
+    private MultiMap<String, Object> headers;
     private Integer cacheSeconds = null;
     private boolean download = false;
     private boolean isPrivate = false;
@@ -52,6 +54,16 @@ public class Response {
 
     private HttpResponse createResponse(HttpResponseStatus status, boolean keepalive) {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+
+        //Apply headers
+        if (headers != null) {
+            for (Map.Entry<String, Collection<Object>> e : headers.getUnderlyingMap().entrySet()) {
+                for (Object value : e.getValue()) {
+                    response.addHeader(e.getKey(), value);
+                }
+            }
+        }
+
         // Add keepalive header is required
         if (keepalive && isKeepalive()) {
             response.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
@@ -73,7 +85,7 @@ public class Response {
         // Add a P3P-Header. This is used to disable the 3rd-Party auth handling of InternetExplorer
         // which is pretty broken and not used (google and facebook does the same).
         if (wc.addP3PHeader) {
-            response.addHeader("P3P", "CP=\"This site does not have a p3p policy.\"");
+            response.setHeader("P3P", "CP=\"This site does not have a p3p policy.\"");
         }
         return response;
     }
@@ -165,6 +177,43 @@ public class Response {
         return this;
     }
 
+    public Response setHeader(String name, Object value) {
+        if (headers == null) {
+            headers = MultiMap.create();
+        }
+        headers.set(name, value);
+        return this;
+    }
+
+    public Response addHeader(String name, Object value) {
+        if (headers == null) {
+            headers = MultiMap.create();
+        }
+        headers.put(name, value);
+        return this;
+    }
+
+    public Response addHeaderIfNotExists(String name, Object value) {
+        if (headers == null) {
+            headers = MultiMap.create();
+        }
+        if (!headers.keySet().contains(name)) {
+            headers.put(name, value);
+        }
+        return this;
+    }
+
+
+    public Response headers(MultiMap<String, Object> inputHeaders) {
+        for (Map.Entry<String, Collection<Object>> e : inputHeaders.getUnderlyingMap().entrySet()) {
+            for (Object value : e.getValue()) {
+                addHeader(e.getKey(), value);
+            }
+        }
+        return this;
+    }
+
+
     public void status(HttpResponseStatus status) {
         HttpResponse response = createResponse(status, true);
         complete(commit(response));
@@ -210,16 +259,13 @@ public class Response {
         try {
             long fileLength = raf.length();
 
-            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
-            HttpHeaders.setContentLength(response, fileLength);
-            setContentTypeHeader(response, name != null ? name : file.getName());
-            setDateAndCacheHeaders(response,
-                                   file.lastModified(),
-                                   cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
-                                   isPrivate);
+            addHeaderIfNotExists(HttpHeaders.Names.CONTENT_LENGTH, fileLength);
+            setContentTypeHeader(name != null ? name : file.getName());
+            setDateAndCacheHeaders(file.lastModified(), cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
             if (name != null) {
-                setContentDisposition(response, name, download);
+                setContentDisposition(name, download);
             }
+            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
 
             commit(response);
 
@@ -243,49 +289,54 @@ public class Response {
     /**
      * Sets the Date and Cache headers for the HTTP Response
      */
-    private static void setDateAndCacheHeaders(HttpResponse response,
-                                               long lastModifiedMillis,
-                                               int cacheSeconds,
-                                               boolean isPrivate) {
+    private void setDateAndCacheHeaders(long lastModifiedMillis, int cacheSeconds, boolean isPrivate) {
+        if (headers != null) {
+            Set<String> keySet = headers.keySet();
+            if (keySet.contains(HttpHeaders.Names.EXPIRES) || keySet.contains(HttpHeaders.Names.CACHE_CONTROL) || keySet
+                    .contains(HttpHeaders.Names.LAST_MODIFIED)) {
+                return;
+            }
+        }
         SimpleDateFormat dateFormatter = new SimpleDateFormat(WebContext.HTTP_DATE_FORMAT, Locale.US);
         dateFormatter.setTimeZone(TimeZone.getTimeZone(WebContext.HTTP_DATE_GMT_TIMEZONE));
 
         if (cacheSeconds > 0) {
             // Date header
             Calendar time = new GregorianCalendar();
-            response.setHeader(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
+            addHeaderIfNotExists(HttpHeaders.Names.DATE, dateFormatter.format(time.getTime()));
 
             // Add cached headers
             time.add(Calendar.SECOND, cacheSeconds);
-            response.setHeader(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
+            addHeaderIfNotExists(HttpHeaders.Names.EXPIRES, dateFormatter.format(time.getTime()));
             if (isPrivate) {
-                response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + cacheSeconds);
+                addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, "private, max-age=" + cacheSeconds);
             } else {
-                response.setHeader(HttpHeaders.Names.CACHE_CONTROL, "public, max-age=" + cacheSeconds);
+                addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, "public, max-age=" + cacheSeconds);
             }
         } else {
-            response.setHeader(HttpHeaders.Names.CACHE_CONTROL, HttpHeaders.Values.NO_CACHE);
+            addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, HttpHeaders.Values.NO_CACHE);
         }
         if (lastModifiedMillis > 0) {
-            response.setHeader(HttpHeaders.Names.
-                                       LAST_MODIFIED, dateFormatter.format(new Date(lastModifiedMillis)));
+            addHeaderIfNotExists(HttpHeaders.Names.
+                                         LAST_MODIFIED, dateFormatter.format(new Date(lastModifiedMillis)));
         }
     }
 
     /**
      * Sets the content disposition header for the HTTP Response
      */
-    private static void setContentDisposition(HttpResponse response, String name, boolean download) {
-        response.setHeader("Content-Disposition",
-                           download ? "attachment;" : "inline;" + "filename=\"" + name.replaceAll("[^A-Za-z0-9\\-_\\.]",
-                                                                                                  "_") + "\"");
+    private void setContentDisposition(String name, boolean download) {
+        addHeaderIfNotExists("Content-Disposition",
+                             download ? "attachment;" : "inline;" + "filename=\"" + name.replaceAll(
+                                     "[^A-Za-z0-9\\-_\\.]",
+                                     "_") + "\"");
     }
 
     /**
      * Sets the content type header for the HTTP Response
      */
-    private static void setContentTypeHeader(HttpResponse response, String name) {
-        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, MimeHelper.guessMimeType(name));
+    private void setContentTypeHeader(String name) {
+        addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, MimeHelper.guessMimeType(name));
     }
 
     public void resource(URLConnection urlConnection) {
@@ -293,16 +344,15 @@ public class Response {
         try {
             long fileLength = urlConnection.getContentLength();
 
-            response = createResponse(HttpResponseStatus.OK, true);
             HttpHeaders.setContentLength(response, fileLength);
-            setContentTypeHeader(response, name != null ? name : urlConnection.getURL().getFile());
-            setDateAndCacheHeaders(response,
-                                   urlConnection.getLastModified(),
+            setContentTypeHeader(name != null ? name : urlConnection.getURL().getFile());
+            setDateAndCacheHeaders(urlConnection.getLastModified(),
                                    cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
                                    isPrivate);
             if (name != null) {
-                setContentDisposition(response, name, download);
+                setContentDisposition(name, download);
             }
+            response = createResponse(HttpResponseStatus.OK, true);
         } catch (Throwable t) {
             error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
             return;
@@ -349,10 +399,10 @@ public class Response {
             if (Strings.isEmpty(content)) {
                 content = Rythm.renderIfTemplateExists("view/errors/default.html", status, message);
             }
-            HttpResponse response = createResponse(status, false);
-            response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
+            setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             ChannelBuffer channelBuffer = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8);
-            HttpHeaders.setContentLength(response, channelBuffer.readableBytes());
+            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
+            HttpResponse response = createResponse(status, false);
             commit(response);
             completeAndClose(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
@@ -388,18 +438,17 @@ public class Response {
                             .handle();
         }
         try {
-            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
             if (name.endsWith("html")) {
-                response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
+                setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             } else {
-                setContentTypeHeader(response, name);
+                setContentTypeHeader(name);
             }
-            setDateAndCacheHeaders(response,
-                                   System.currentTimeMillis(),
+            setDateAndCacheHeaders(System.currentTimeMillis(),
                                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                    isPrivate);
             ChannelBuffer channelBuffer = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8);
-            HttpHeaders.setContentLength(response, channelBuffer.readableBytes());
+            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
+            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
             commit(response);
             complete(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
@@ -426,14 +475,13 @@ public class Response {
                             .handle();
         }
         try {
-            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
-            response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
-            setDateAndCacheHeaders(response,
-                                   System.currentTimeMillis(),
+            setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
+            setDateAndCacheHeaders(System.currentTimeMillis(),
                                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                    isPrivate);
             ChannelBuffer channelBuffer = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8);
-            HttpHeaders.setContentLength(response, channelBuffer.readableBytes());
+            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
+            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
             commit(response);
             complete(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
@@ -484,14 +532,13 @@ public class Response {
                         waitAndClearBuffer(ctx.getChannel().write(new DefaultHttpChunk(buffer)));
                     }
                 } else {
-                    HttpResponse response = createResponse(status, last || contentLength != null);
                     if (Strings.isFilled(contentType)) {
-                        response.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
+                        addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, contentType);
                     }
-                    setDateAndCacheHeaders(response,
-                                           System.currentTimeMillis(),
+                    setDateAndCacheHeaders(System.currentTimeMillis(),
                                            cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                            isPrivate);
+                    HttpResponse response = createResponse(status, last || contentLength != null);
                     if (last) {
                         if (buffer == null) {
                             HttpHeaders.setContentLength(response, 0);
