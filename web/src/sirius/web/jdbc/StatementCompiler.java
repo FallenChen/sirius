@@ -1,0 +1,218 @@
+package sirius.web.jdbc;
+
+import sirius.kernel.commons.Context;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.nls.NLS;
+import sirius.kernel.references.ReflectionValueReference;
+
+import java.sql.SQLException;
+import java.util.*;
+
+/**
+ * Provides methods to compile SQL statements with embedded parameters.
+ *
+ * @see {@link StatementCompiler#buildParameterizedStatement(StatementStrategy, String, Context)}
+ *      for the supported langauge.
+ */
+public class StatementCompiler {
+
+    /**
+     * Builds a PreparedStatement where references to parameters (${Param} for
+     * normal substitution and #{Param} for LIKE substitution) are replaced by
+     * the given parameters. Blocks created with [ and ] are taken out if the
+     * parameter referenced in between is null.
+     */
+    public static void buildParameterizedStatement(StatementStrategy adapter,
+                                                   String query,
+                                                   Context context) throws SQLException {
+        List<Object> params = new ArrayList<Object>();
+        if (query != null) {
+            parseSection(query, query, adapter, params, context);
+        }
+        try {
+            int index = 0;
+            for (Object param : params) {
+                if (param instanceof Collection<?>) {
+                    for (Object obj : (Collection<?>) param) {
+                        if ((obj != null) && (obj instanceof Calendar)) {
+                            adapter.set(++index, ((Calendar) obj).getTime());
+                        } else {
+                            adapter.set(++index, obj);
+                        }
+                        Databases.LOG.FINE("SETTING: " + index + " TO " + NLS.toMachineString(obj));
+                    }
+                } else {
+                    if ((param != null) && (param instanceof Calendar)) {
+                        adapter.set(++index, ((Calendar) param).getTime());
+                    } else {
+                        adapter.set(++index, param);
+                    }
+                    Databases.LOG.FINE("SETTING: " + index + " TO " + NLS.toMachineString(param));
+                }
+            }
+        } catch (SQLException e) {
+            throw new SQLException(NLS.fmtr("scireum.ds.query.SubstitutionError")
+                                      .set("error", e.getMessage())
+                                      .set("query", adapter.getQueryString())
+                                      .format());
+        }
+    }
+
+    /**
+     * Searches for an occurrence of a block [ .. ]. Everything before the [ is
+     * compiled and added to the result SQL. Everything between the brackets is
+     * compiled and if a parameter was found it is added to the result SQL. The
+     * part after the ] is parsed in a recursive call.
+     * <p/>
+     * If no [ was found, the complete string is compiled and added to the
+     * result SQL.
+     *
+     * @throws java.sql.SQLException with a i18ned message
+     */
+    private static void parseSection(String originalSQL,
+                                     String sql,
+                                     StatementStrategy adapter,
+                                     List<Object> params,
+                                     Context context) throws SQLException {
+        int index = sql.indexOf("[");
+        if (index > -1) {
+            int nextClose = sql.indexOf("]", index + 1);
+            if (nextClose < 0) {
+                throw new SQLException(NLS.fmtr("scireum.db.query.QueryErrorUnbalancedBracket")
+                                          .set("index", index)
+                                          .set("query", originalSQL)
+                                          .format());
+            }
+            int nextOpen = sql.indexOf("[", index + 1);
+            if ((nextOpen > -1) && (nextOpen < nextClose)) {
+                throw new SQLException(NLS.fmtr("scireum.db.query.QueryErrorNoNesting")
+                                          .set("index", index)
+                                          .set("query", originalSQL)
+                                          .format());
+            }
+            compileSection(false, sql, sql.substring(0, index), adapter, params, context);
+            compileSection(true, sql, sql.substring(index + 1, nextClose), adapter, params, context);
+            parseSection(originalSQL, sql.substring(nextClose + 1), adapter, params, context);
+        } else {
+            compileSection(false, sql, sql, adapter, params, context);
+        }
+    }
+
+    /**
+     * Make searchString conform with SQL 92 syntax. Therefore all * are
+     * converted to % and a final % is appended at the end of the string.
+     */
+    public static String addSQLWildcard(String searchString, boolean wildcardLeft) {
+        if (searchString == null) {
+            return null;
+        }
+        if (searchString == "") {
+            return "%";
+        }
+        if ((!searchString.contains("%")) && (searchString.contains("*"))) {
+            searchString = searchString.replace('*', '%');
+        }
+        if (!searchString.endsWith("%")) {
+            searchString = searchString + "%";
+        }
+        if (wildcardLeft && !searchString.startsWith("%")) {
+            searchString = "%" + searchString;
+        }
+        return searchString;
+    }
+
+    /**
+     * Replaces all occurrences of parameters ${..} or #{..} by parameters given
+     * in context.
+     *
+     * @throws java.sql.SQLException with a i18ned message
+     */
+    @SuppressWarnings("unchecked")
+    private static void compileSection(boolean ignoreIfParametersNull,
+                                       String originalSQL,
+                                       String sql,
+                                       StatementStrategy adapter,
+                                       List<Object> params,
+                                       Map<String, Object> context) throws SQLException {
+        boolean parameterFound = !ignoreIfParametersNull;
+        List<Object> tempParams = new ArrayList<Object>();
+        StringBuilder sqlBuilder = new StringBuilder();
+        int index = getNextRelevantIndex(sql);
+        boolean directSubstitution = (index > 0) ? (sql.charAt(index) == '$') : false;
+        while (index >= 0) {
+            int endIndex = sql.indexOf("}", index);
+            if (endIndex < 0) {
+                throw new SQLException(NLS.fmtr("scireum.db.query.ErrorUnbalancedCurlyBracket")
+                                          .set("index", index)
+                                          .set("query", originalSQL)
+                                          .format());
+            }
+            String parameterName = sql.substring(index + 2, endIndex);
+            String accessPath = null;
+            if (parameterName.contains(".")) {
+                accessPath = parameterName.substring(parameterName.indexOf(".") + 1);
+                parameterName = parameterName.substring(0, parameterName.indexOf("."));
+            }
+
+            Object paramValue = context.get(parameterName);
+            if (accessPath != null && paramValue != null) {
+                try {
+                    paramValue = ((ReflectionValueReference<Object, Object>) ReflectionValueReference.create(paramValue.getClass(),
+                                                                                                             accessPath))
+                            .getValue(paramValue);
+                } catch (Throwable e) {
+                    throw new SQLException(NLS.fmtr("scireum.StatementCompiler.cannotEvalAccessPath")
+                                              .set("name", parameterName)
+                                              .set("path", accessPath)
+                                              .set("value", paramValue)
+                                              .set("query", originalSQL)
+                                              .format());
+                }
+            }
+            // A parameter was found, if its value is not null or if it is a non
+            // empty collection
+            parameterFound = (Strings.isFilled(paramValue)) && (!(paramValue instanceof Collection<?>) || !((Collection<?>) paramValue)
+                    .isEmpty());
+            if (directSubstitution || paramValue == null) {
+                tempParams.add(paramValue);
+            } else {
+                tempParams.add(addSQLWildcard(paramValue.toString().toLowerCase(), true));
+            }
+            sqlBuilder.append(sql.substring(0, index));
+            if (paramValue instanceof Collection<?>) {
+                for (int i = 0; i < ((Collection<?>) paramValue).size(); i++) {
+                    if (i > 0) {
+                        sqlBuilder.append(",");
+                    }
+                    sqlBuilder.append(" ");
+                    sqlBuilder.append(adapter.getParameterName());
+                    sqlBuilder.append(" ");
+                }
+            } else {
+                sqlBuilder.append(" ");
+                sqlBuilder.append(adapter.getParameterName());
+                sqlBuilder.append(" ");
+            }
+            sql = sql.substring(endIndex + 1);
+            index = getNextRelevantIndex(sql);
+            directSubstitution = (index > 0) ? (sql.charAt(index) == '$') : false;
+        }
+        sqlBuilder.append(sql);
+        if (parameterFound || !ignoreIfParametersNull) {
+            adapter.appendString(sqlBuilder.toString());
+            params.addAll(tempParams);
+        }
+    }
+
+    /**
+     * Returns the next index of ${ or #{ in the given string.
+     */
+    private static int getNextRelevantIndex(String sql) {
+        int index = sql.indexOf("${");
+        int sharpIndex = sql.indexOf("#{");
+        if ((sharpIndex > -1) && ((index < 0) || (sharpIndex < index))) {
+            return sharpIndex;
+        }
+        return index;
+    }
+}

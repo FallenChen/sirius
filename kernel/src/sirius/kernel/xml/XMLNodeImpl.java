@@ -23,7 +23,7 @@ public class XMLNodeImpl implements StructuredNode {
     private static Cache<Tuple<Thread, String>, XPathExpression> cache;
 
     private static XPathExpression compile(String xpath) throws XPathExpressionException {
-        Tuple<Thread, String> key = new Tuple<Thread, String>(Thread.currentThread(), xpath);
+        Tuple<Thread, String> key = Tuple.create(Thread.currentThread(), xpath);
         if (cache == null) {
             cache = CacheManager.createCache("xpath");
         }

@@ -10,6 +10,8 @@ package sirius.kernel.extensions;
 
 import sirius.kernel.commons.Value;
 
+import javax.annotation.Nonnull;
+
 /**
  * Represents an extension loaded via the {@link Extensions} framework.
  *
@@ -54,6 +56,7 @@ public interface Extension {
      * @return the value wrapping the contents for the given path. This will never by <tt>null</tt>,
      *         but might be empty: {@link sirius.kernel.commons.Value#isNull()}
      */
+    @Nonnull
     Value get(String path);
 
     /**
@@ -72,6 +75,7 @@ public interface Extension {
      * @throws sirius.kernel.health.HandledException
      *          if no value was found for the given <tt>path</tt>
      */
+    @Nonnull
     Value require(String path);
 
     /**
@@ -90,5 +94,6 @@ public interface Extension {
      * @throws sirius.kernel.health.HandledException
      *          if no valid class was given, or if no instance could be created
      */
+    @Nonnull
     Object make(String classProperty);
 }

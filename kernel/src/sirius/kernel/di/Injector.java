@@ -84,14 +84,14 @@ public class Injector {
         for (Class<?> clazz : classes) {
             for (ClassLoadAction action : actions) {
                 if (action.getTrigger() == null || clazz.isAnnotationPresent(action.getTrigger())) {
-                    LOG.FINE("Autoinstalling class: %s based on %s", clazz.getName(), action.getClass().getName());
+                    LOG.FINE("Auto-installing class: %s based on %s", clazz.getName(), action.getClass().getName());
                     try {
                         action.handle(ctx, clazz);
                     } catch (Throwable e) {
                         Exceptions.handle()
                                 .error(e)
                                 .to(LOG)
-                                .withSystemErrorMessage("Failed to autoload: %s with ClassLoadAction: %s: %s (%s)",
+                                .withSystemErrorMessage("Failed to auto-load: %s with ClassLoadAction: %s: %s (%s)",
                                         clazz.getName(),
                                         action.getClass().getSimpleName())
                                 .handle();

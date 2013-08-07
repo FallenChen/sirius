@@ -18,6 +18,9 @@ import sirius.kernel.commons.Value;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -81,6 +84,7 @@ import java.util.Map;
  * @see sirius.kernel.Sirius#setupConfiguration()
  * @since 1.0
  */
+@ParametersAreNonnullByDefault
 public class Extensions {
 
     /**
@@ -101,9 +105,13 @@ public class Extensions {
     }
 
     /*
-     * Used as cached for already loaded extension lists
+     * Used as cache for already loaded extension lists
      */
     private static Map<String, Map<String, Extension>> cache = Maps.newConcurrentMap();
+
+    /*
+     * Used as cache for the default values of a given extension type
+     */
     private static Map<String, Extension> defaultsCache = Maps.newConcurrentMap();
 
     /**
@@ -113,7 +121,15 @@ public class Extensions {
      * @param id   the unique id of the extension to be returned
      * @return the specified extension or <tt>null</tt>, if no such extension exists
      */
+    @Nullable
     public static Extension getExtension(String type, String id) {
+        if (!id.matches("[a-z0-9\\-]+")) {
+            LOG.WARN(
+                    "Bad extension id detected: '%s' (for type: %s). Names should only consist of lowercase letters, digits or '-'",
+                    id,
+                    type);
+        }
+
         Extension result = getExtensionMap(type).get(id);
         if (result == null) {
             return getDefault(type);
@@ -177,6 +193,7 @@ public class Extensions {
      * @param type the type of the extensions to be returned.
      * @return a non-null collection of extensions found for the given type
      */
+    @Nonnull
     public static Collection<Extension> getExtensions(String type) {
         return getExtensionMap(type).values();
     }

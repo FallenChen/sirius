@@ -8,6 +8,7 @@
 
 package sirius.kernel.commons;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -74,7 +75,7 @@ public class Collector<T> {
      *
      * @param entities the collection of values added to the collector.
      */
-    public void addAll(Collection<? extends T> entities) {
+    public void addAll(@Nonnull Collection<? extends T> entities) {
         data.addAll(entities);
     }
 
@@ -87,6 +88,7 @@ public class Collector<T> {
      *
      * @return the list of values supplied to the collector so far.
      */
+    @Nonnull
     public List<T> getData() {
         return data;
     }

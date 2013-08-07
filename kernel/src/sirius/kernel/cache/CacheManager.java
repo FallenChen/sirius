@@ -1,8 +1,14 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.cache;
 
 import sirius.kernel.commons.ValueProvider;
-import sirius.kernel.extensions.Extension;
-import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Log;
 
 import java.util.ArrayList;
@@ -10,55 +16,90 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Provides access to all managed system caches.
+ * Provides access to all managed caches
+ * <p>
+ * Is responsible for creating new caches using {@link #createCache(String)}. Also, this class keeps track of all
+ * known caches.
+ * </p>
+ * <p>
+ * Additionally instances of {@link InlineCache} can be created, which can be used to compute a single value,
+ * which is then cached for a given amount of time.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public class CacheManager {
 
-    /**
+    /*
+     * This class has only static members and is not intended to be instantiated
+     */
+    private CacheManager() {
+
+    }
+
+    /*
      * Logged used by the caching system
      */
     protected static final Log LOG = Log.get("cached");
 
-    private static final String EXTENSION_TYPE_CACHES = "caches";
-    private static final String CONFIG_KEY_MAX_SIZE = "maxSize";
-    private static final String CONFIG_KEY_TTL = "ttl";
-    private static final String CONFIG_KEY_VERIFICATION = "verification";
-
+    /*
+     * Lists all known caches.
+     */
     private static List<Cache<?, ?>> caches = new ArrayList<Cache<?, ?>>();
 
     /**
-     * Returns a list of all caches.
+     * Returns a list of all known caches
+     *
+     * @return a list of all caches created so far
      */
     public static List<Cache<?, ?>> getCaches() {
         return caches;
     }
 
     /**
-     * Creates a cached with the given parameters.
+     * Creates a cache with the given name.
+     * <p>
+     * The name is used to load the settings from the system configuration, using the extension <tt>cache.[name]</tt>.
+     * If a value is absent in the cache, the given <tt>valueComputer</tt> is used to generate the requested value. If
+     * a value is fetched from the cache, it is verified by the given <tt>verifier</tt> in certain intervals before it
+     * is returned to the user.
+     * </p>
+     * <p>
+     * The system config can provide the following values:
+     * <ul>
+     * <li><tt>maxSize</tt>: max number of entries in the cache</li>
+     * <li><tt>ttl</tt>: a duration specifying the max lifetime of a cached entry.</li>
+     * <li><tt>verification</tt>: a duration specifying in which interval a verification of a value will
+     * take place (if possible)</li>
+     * </ul>
+     * </p>
+     *
+     * @param name          the name of the cache, used to load the appropriate extension from the config
+     * @param valueComputer used to compute a value, if no valid value was found in the cache for the given key. Can
+     *                      be <tt>null</tt> if there is no appropriate way to compute such a value. In this case, the
+     *                      cache will simply return <tt>null</tt>.
+     * @param verifier      used to verify a value before it is returned to the user. Note that the
+     *                      value is not verified each time, but in given intervals. If the verifier is <tt>null</tt>,
+     *                      no verification will take place.
+     * @return a newly created cache according to the given parameters and the settings in the system config
      */
     public static <K, V> Cache<K, V> createCache(String name,
                                                  ValueComputer<K, V> valueComputer,
                                                  ValueVerifier<V> verifier) {
-        if (!name.matches("[a-z0-9\\-]+")) {
-            LOG.WARN("Bad cache name detected: '%s'. Names should only consist of lowercase letters, digits or '-'");
-        }
-        Extension cacheInfo = Extensions.getExtension(EXTENSION_TYPE_CACHES, name);
-        if (cacheInfo == null) {
-            LOG.WARN("Cache %s does not exist! Using defaults...", name);
-            cacheInfo = Extensions.getExtension(EXTENSION_TYPE_CACHES, Extensions.DEFAULT);
-        }
-        Cache<K, V> result = new ManagedCache<K, V>(name,
-                                                    cacheInfo.get(CONFIG_KEY_MAX_SIZE).asInt(100),
-                                                    cacheInfo.get(CONFIG_KEY_TTL).asLong(60 * 60 * 1000),
-                                                    valueComputer,
-                                                    verifier,
-                                                    cacheInfo.get(CONFIG_KEY_VERIFICATION).asLong(60 * 60 * 1000));
+        Cache<K, V> result = new ManagedCache<K, V>(name, valueComputer, verifier);
         caches.add(result);
         return result;
     }
 
     /**
-     * Creates a cached with the given parameters.
+     * Creates a cached with the given name.
+     * <p>
+     * This is just a shortcut for {@link #createCache(String, ValueComputer, ValueVerifier)} with neither a
+     * <tt>ValueComputer</tt> nor a <tt>ValueVerifier</tt> supplied.
+     * </p>
+     *
+     * @see #createCache(String, ValueComputer, ValueVerifier)
      */
     public static <K, V> Cache<K, V> createCache(String name) {
         return createCache(name, null, null);
@@ -67,14 +108,27 @@ public class CacheManager {
 
     /**
      * Creates a new {@link InlineCache} with the given TTL and computer.
+     * <p>
+     * An inline cache can be used to compute a single value, which is then cached for a certain amount of time.
+     * </p>
+     *
+     * @param ttl      specifies the number of time units which the computed value will be cached
+     * @param ttlUnit  specifies the unit of time in which the ttl value is expressed
+     * @param computer the provider which is used to re-compute the value once it expired
+     * @return an inline cache which keeps a computed value for the given amount of time and then uses the provided
+     *         computer to re-compute the value
      */
     public static <E> InlineCache<E> createInlineCache(long ttl, TimeUnit ttlUnit, ValueProvider<E> computer) {
         return new InlineCache<E>(computer, TimeUnit.MILLISECONDS.convert(ttl, ttlUnit));
     }
 
     /**
-     * Creates a new {@link InlineCache} which waits 10 seconds until values are
-     * re-computed.
+     * Boilerplate method for {@link #createInlineCache(long, java.util.concurrent.TimeUnit, sirius.kernel.commons.ValueProvider)}
+     * which keeps the computed value for up to 10 seconds.
+     *
+     * @param computer the provider which is used to re-compute the value once it expired
+     * @return an inline cache which keeps a computed value for ten seconds and then uses the provided
+     *         computer to re-compute the value
      */
     public static <E> InlineCache<E> createTenSecondsInlineCache(ValueProvider<E> computer) {
         return new InlineCache<E>(computer, TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS));

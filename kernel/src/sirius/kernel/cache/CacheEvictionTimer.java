@@ -1,13 +1,27 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.cache;
 
 import sirius.kernel.di.annotations.Register;
 import sirius.kernel.timer.EveryTenMinutes;
 
 /**
- * Invoked regularly to remove outdated entries from the system caches...
+ * Invoked regularly to remove outdated entries from the system caches
+ * <p>
+ * This class is responsible to run the cache evictions of all known caches.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 @Register
-class CacheEvictionTimer implements EveryTenMinutes {
+public class CacheEvictionTimer implements EveryTenMinutes {
 
     @Override
     public void runTimer() throws Exception {

@@ -14,6 +14,8 @@ import sirius.kernel.extensions.Extension;
 import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Log;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -36,6 +38,7 @@ import java.util.concurrent.RejectedExecutionException;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 1.0
  */
+@ParametersAreNonnullByDefault
 public class Async {
     protected static final Log LOG = Log.get("async");
     public static final String DEFAULT = "default";
@@ -150,7 +153,7 @@ public class Async {
      * @param <V>   the type of the promise (or its promised value)
      * @return a promise which is already completed with the given value.
      */
-    public static <V> Promise<V> success(V value) {
+    public static <V> Promise<V> success(@Nullable V value) {
         Promise<V> result = promise();
         result.success(value);
         return result;

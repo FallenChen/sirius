@@ -17,6 +17,9 @@ import sirius.kernel.commons.Watch;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
@@ -39,6 +42,7 @@ import java.util.*;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 1.0
  */
+@ParametersAreNonnullByDefault
 public class CallContext {
 
     /**
@@ -77,6 +81,7 @@ public class CallContext {
      *
      * @return the <tt>CallContext</tt> of the current thread.
      */
+    @Nonnull
     public static CallContext getCurrent() {
         CallContext result = currentContext.get();
         if (result == null) {
@@ -159,7 +164,7 @@ public class CallContext {
      * @param key   the name of the value to add
      * @param value the value to add to the mdc.
      */
-    public void addToMDC(String key, String value) {
+    public void addToMDC(String key, @Nullable String value) {
         mdc.put(key, value);
     }
 
@@ -172,6 +177,16 @@ public class CallContext {
         mdc.remove(key);
     }
 
+    /**
+     * Returns or creates the sub context of the given type.
+     * <p>
+     * The class of the sub context must provide a no-args constructor, as it will be instantiated if non existed.
+     * </p>
+     *
+     * @param contextType the type of the sub-context to be returned.
+     * @return an instance of the given type. If no instance was available, a new one is created
+     */
+    @Nonnull
     public <C> C get(Class<C> contextType) {
         try {
             Object result = subContext.get(contextType);

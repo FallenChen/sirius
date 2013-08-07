@@ -1,11 +1,29 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.commons;
 
+import javax.annotation.Nonnull;
 import javax.script.ScriptContext;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+/**
+ * Provides an execution context to scripts etc.
+ * <p>
+ * This is basically a wrapper for <code>Map&lt;String, Object&gt;</code>
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
+ */
 public class Context implements Map<String, Object> {
 
     protected Map<String, Object> data = new TreeMap<String, Object>();
@@ -36,6 +54,13 @@ public class Context implements Map<String, Object> {
         return data.get(key);
     }
 
+    /**
+     * Provides the value associated with the given key as {@link Value}
+     *
+     * @param key the key for which the value should ne returned
+     * @return a value wrapping the internally associated value for the given key
+     */
+    @Nonnull
     public Value getValue(Object key) {
         return Value.of(get(key));
     }
@@ -46,9 +71,15 @@ public class Context implements Map<String, Object> {
         return value;
     }
 
-    public Object putLimited(String key, Object value, int limit) {
+    /**
+     * Sets the given value (its string representation), mit limits this to <tt>limit</tt> characters.
+     *
+     * @param key   the key to which the value should be associated
+     * @param value the value which string representation should be put into the context
+     * @param limit the maximal number of characters to put into the map. Everything after that will be discarded
+     */
+    public void putLimited(String key, Object value, int limit) {
         set(key, Strings.limit(value, limit));
-        return value;
     }
 
     @Override
@@ -98,12 +129,20 @@ public class Context implements Map<String, Object> {
     }
 
     /**
-     * Creates a new context.
+     * Creates a new context
+     *
+     * @return a newly created and empty context
      */
     public static Context create() {
         return new Context();
     }
 
+    /**
+     * Creates a new context which the given change listener attached
+     *
+     * @param listener a change listener which is notified if a value changes
+     * @return a newly created and empty context
+     */
     public static Context create(Runnable listener) {
         Context result = new Context();
         result.changeListener = listener;
@@ -111,7 +150,12 @@ public class Context implements Map<String, Object> {
     }
 
     /**
-     * Fluent API to fill the context: Sets one value
+     * Associates the given <tt>value</tt> to the given <tt>key</tt>, while returning <tt>this</tt>
+     * to permit fluent method chains
+     *
+     * @param key   the key to which the value will be bound
+     * @param value the value to be associated with the given key
+     * @return <tt>this</tt> to permit fluent method calls
      */
     public Context set(String key, Object value) {
         Object original = data.put(key, value);
@@ -122,7 +166,10 @@ public class Context implements Map<String, Object> {
     }
 
     /**
-     * Fluent API to fill the context: Sets all given values.
+     * Puts all name-value-pairs stored in the given map.
+     *
+     * @param data the name value pairs to be put into the context
+     * @return <tt>this</tt> to permit fluent method calls
      */
     public Context setAll(Map<String, Object> data) {
         putAll(data);
@@ -133,7 +180,9 @@ public class Context implements Map<String, Object> {
     }
 
     /**
-     * Writes all parameters into the given {@link javax.script.ScriptContext}.
+     * Writes all parameters into the given {@link javax.script.ScriptContext}
+     *
+     * @param ctx the context to be filled with the internally stored name value pairs
      */
     public void applyTo(ScriptContext ctx) {
         for (Entry<String, Object> e : entrySet()) {

@@ -8,6 +8,8 @@
 
 package sirius.kernel.commons;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -75,7 +77,7 @@ public class MultiMap<K, V> {
      * @param key   the key for which the value is added to the map
      * @param value the value which is added to the list of values for this key
      */
-    public void put(K key, V value) {
+    public void put(@Nonnull K key, @Nullable V value) {
         Collection<V> list = base.get(key);
         if (list == null) {
             list = createValueList();
@@ -93,7 +95,7 @@ public class MultiMap<K, V> {
      * @param key   the key for which the value is added to the map
      * @param value the name (and only) value for the given key
      */
-    public void set(K key, V value) {
+    public void set(@Nonnull K key, @Nullable V value) {
         Collection<V> list = base.get(key);
         if (list == null) {
             list = createValueList();
@@ -123,7 +125,7 @@ public class MultiMap<K, V> {
      * @param key   the key of which value list the value will be removed from
      * @param value the value which will be removed from the value list
      */
-    public void remove(K key, V value) {
+    public void remove(@Nonnull K key, @Nullable V value) {
         Collection<V> list = base.get(key);
         if (list != null) {
             while (list.remove(value)) {
@@ -141,7 +143,8 @@ public class MultiMap<K, V> {
      * @param key the key which value list is to be returned
      * @return the value map associated with the given key or an empty list is the key is unknown
      */
-    public Collection<V> get(K key) {
+    @Nonnull
+    public Collection<V> get(@Nonnull K key) {
         Collection<V> list = base.get(key);
         if (list == null) {
             return Collections.emptyList();
@@ -154,6 +157,7 @@ public class MultiMap<K, V> {
      *
      * @return returns the set of known keys, that is keys for which <tt>put</tt> was called
      */
+    @Nonnull
     public Set<K> keySet() {
         return base.keySet();
     }
@@ -167,6 +171,7 @@ public class MultiMap<K, V> {
      *
      * @return the underlying <tt>Map</tt> of this instance.
      */
+    @Nonnull
     public Map<K, Collection<V>> getUnderlyingMap() {
         return base;
     }
@@ -180,6 +185,7 @@ public class MultiMap<K, V> {
      *
      * @return a list of all values stored for all keys
      */
+    @Nonnull
     public List<V> values() {
         List<V> result = new ArrayList<V>();
         for (Collection<V> val : getUnderlyingMap().values()) {

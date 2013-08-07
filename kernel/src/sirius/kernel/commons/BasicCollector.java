@@ -8,6 +8,7 @@
 
 package sirius.kernel.commons;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.List;
 
@@ -23,13 +24,14 @@ public abstract class BasicCollector<T> extends Collector<T> {
     public abstract void add(T entity);
 
     @Override
-    public void addAll(Collection<? extends T> entities) {
+    public void addAll(@Nonnull Collection<? extends T> entities) {
         for (T entity : entities) {
             add(entity);
         }
     }
 
     @Override
+    @Nonnull
     public List<T> getData() {
         throw new UnsupportedOperationException();
     }

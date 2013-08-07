@@ -8,6 +8,9 @@
 
 package sirius.kernel.commons;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 /**
  * Provides a tuple of values where the key is used as comparator.
  * <p>
@@ -26,30 +29,42 @@ public class ComparableTuple<F extends Comparable<F>, S> extends Tuple<F, S> imp
     /**
      * Creates a new tuple without any values.
      */
-    public ComparableTuple() {
-        super();
-    }
-
-    /**
-     * Creates a new tuple with the given values.
-     *
-     * @param first defines the first value of the tuple
-     * @param second defines the second value of the tuple
-     */
-    public ComparableTuple(F first, S second) {
-        super(first, second);
+    @Nonnull
+    public static <F extends Comparable<F>, S> ComparableTuple<F, S> create() {
+        return new ComparableTuple<F, S>(null, null);
     }
 
     /**
      * Creates a new tuple by only specifying the first value of the tuple.
      * <p>
-     *     The second value will remain <tt>null</tt>.
+     * The second value will remain <tt>null</tt>.
      * </p>
+     *
      * @param first defines the first value of the tuple
      */
-    public ComparableTuple(F first) {
-        super(first);
+    @Nonnull
+    public static <F extends Comparable<F>, S> ComparableTuple<F, S> create(@Nullable F first) {
+        return new ComparableTuple<F, S>(first, null);
     }
+
+    /**
+     * Creates a new tuple with the given values.
+     *
+     * @param first  defines the first value of the tuple
+     * @param second defines the second value of the tuple
+     */
+    @Nonnull
+    public static <F extends Comparable<F>, S> ComparableTuple<F, S> create(@Nullable F first, @Nullable S second) {
+        return new ComparableTuple<F, S>(first, second);
+    }
+
+    /*
+     * Internal constructor. Save a diamond an use the <tt>create</tt> methods.
+     */
+    protected ComparableTuple(F first, S second) {
+        super(first, second);
+    }
+
 
     @Override
     public int compareTo(ComparableTuple<F, S> o) {

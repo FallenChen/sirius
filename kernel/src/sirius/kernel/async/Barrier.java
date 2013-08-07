@@ -8,16 +8,18 @@
 
 package sirius.kernel.async;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Provides a simple barrier to wait for the completion of a set of tasks represented by {@link Barrier}.
- * <p/>
+ * <p>
  * A <tt>Barrier</tt> can be used to block and wait for the completion of a given set of promises. A barrier should
  * only be used once and after a call to <tt>await</tt>, no further promises should be added. Also <tt>await</tt>
  * must only be called once.
+ * </p>
  * <p>
  * The general call pattern looks like that:
  * <code>
@@ -41,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 1.0
  */
+@ParametersAreNonnullByDefault
 public class Barrier {
 
     private AtomicInteger promisesMade = new AtomicInteger(0);

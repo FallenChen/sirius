@@ -14,6 +14,8 @@ import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Log;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,7 +58,7 @@ public class Promise<V> {
      *
      * @param value the value to be used as promised result.
      */
-    public void success(final V value) {
+    public void success(@Nullable final V value) {
         this.value = new ValueHolder<V>(value);
         for (final CompletionHandler<V> handler : handlers) {
             completeHandler(value, handler);
@@ -79,7 +81,7 @@ public class Promise<V> {
      *
      * @param exception the error to be used as reason for failure.
      */
-    public void fail(final Throwable exception) {
+    public void fail(@Nonnull final Throwable exception) {
         this.failure = exception;
         if (!hasFailureHandler) {
             Exceptions.handle(Async.LOG, exception);
@@ -147,7 +149,8 @@ public class Promise<V> {
      * @return a new promise which will be either contain the mapped value or which fails if either this promise fails
      *         or if the mapper throws an exception.
      */
-    public <X> Promise<X> map(final Mapper<V, X> mapper) {
+    @Nonnull
+    public <X> Promise<X> map(@Nonnull final Mapper<V, X> mapper) {
         final Promise<X> result = new Promise<X>();
         onComplete(new CompletionHandler<V>() {
             @Override
@@ -176,7 +179,8 @@ public class Promise<V> {
      * @return a new promise which will be either contain the mapped value or which fails if either this promise fails
      *         or if the mapper throws an exception.
      */
-    public <X> Promise<X> flatMap(final Mapper<V, Promise<X>> mapper) {
+    @Nonnull
+    public <X> Promise<X> flatMap(@Nonnull final Mapper<V, Promise<X>> mapper) {
         final Promise<X> result = new Promise<X>();
         onComplete(new CompletionHandler<V>() {
             @Override
@@ -205,7 +209,7 @@ public class Promise<V> {
      *
      * @param promise the promise to be used as completion handler for this.
      */
-    public void chain(final Promise<V> promise) {
+    public void chain(@Nonnull final Promise<V> promise) {
         onComplete(new CompletionHandler<V>() {
             @Override
             public void onSuccess(V value) throws Exception {
@@ -227,7 +231,7 @@ public class Promise<V> {
      *                promise.
      * @param <X>     type of the value expected by the given promise.
      */
-    public <X> void mapChain(final Promise<X> promise, final Mapper<V, X> mapper) {
+    public <X> void mapChain(@Nonnull final Promise<X> promise, @Nonnull final Mapper<V, X> mapper) {
         onComplete(new CompletionHandler<V>() {
             @Override
             public void onSuccess(V value) throws Exception {
@@ -253,7 +257,8 @@ public class Promise<V> {
      * @param <X>            type of promised value of the given promise.
      * @return <tt>this</tt> for fluent method chaining
      */
-    public <X> Promise<V> failChain(final Promise<X> promise, final Callback<V> successHandler) {
+    @Nonnull
+    public <X> Promise<V> failChain(@Nonnull final Promise<X> promise, @Nonnull final Callback<V> successHandler) {
         return onComplete(new CompletionHandler<V>() {
             @Override
             public void onSuccess(V value) throws Exception {
@@ -281,7 +286,8 @@ public class Promise<V> {
      *                handler.
      * @return <tt>this</tt> for fluent method chaining
      */
-    public Promise<V> onComplete(CompletionHandler<V> handler) {
+    @Nonnull
+    public Promise<V> onComplete(@Nonnull CompletionHandler<V> handler) {
         if (handler != null) {
             if (isSuccessful()) {
                 completeHandler(get(), handler);
@@ -306,7 +312,8 @@ public class Promise<V> {
      *                       one handler.
      * @return <tt>this</tt> for fluent method chaining
      */
-    public Promise<V> onSuccess(final Callback<V> successHandler) {
+    @Nonnull
+    public Promise<V> onSuccess(@Nonnull final Callback<V> successHandler) {
         return onComplete(new CompletionHandler<V>() {
             @Override
             public void onSuccess(V value) throws Exception {
@@ -334,7 +341,8 @@ public class Promise<V> {
      *                       one handler.
      * @return <tt>this</tt> for fluent method chaining
      */
-    public Promise<V> onFailure(final Callback<Throwable> failureHandler) {
+    @Nonnull
+    public Promise<V> onFailure(@Nonnull final Callback<Throwable> failureHandler) {
         hasFailureHandler = true;
         return onComplete(new CompletionHandler<V>() {
             @Override
@@ -358,11 +366,12 @@ public class Promise<V> {
      * @param log the logger to be used when logging an error.
      * @return <tt>this</tt> for fluent method chaining
      */
-    public Promise<V> handleErrors(Log log) {
+    @Nonnull
+    public Promise<V> handleErrors(@Nonnull final Log log) {
         return onFailure(new Callback<Throwable>() {
             @Override
             public void invoke(Throwable value) throws Exception {
-                Exceptions.handle(Async.LOG, value);
+                Exceptions.handle(log, value);
             }
         });
     }

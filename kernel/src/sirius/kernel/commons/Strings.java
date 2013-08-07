@@ -11,6 +11,7 @@ package sirius.kernel.commons;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 
+import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
@@ -43,7 +44,7 @@ public class Strings {
      * @param string the object which is to be checked
      * @return <tt>true</tt> if string is <tt>null</tt> or "", <tt>false</tt> otherwise
      */
-    public static boolean isEmpty(Object string) {
+    public static boolean isEmpty(@Nullable Object string) {
         if (string == null) {
             return true;
         }
@@ -56,7 +57,7 @@ public class Strings {
      * @param string the object which is to be checked
      * @return <tt>true</tt> if string is not <tt>null</tt> and not "", <tt>false</tt> otherwise
      */
-    public static boolean isFilled(Object string) {
+    public static boolean isFilled(@Nullable Object string) {
         if (string == null) {
             return false;
         }
@@ -75,7 +76,7 @@ public class Strings {
      * @return <tt>true</tt> if both values are empty or if both strings are equal
      *         while ignoring their case - <tt>false</tt> otherwise
      */
-    public static boolean equalIgnoreCase(String left, String right) {
+    public static boolean equalIgnoreCase(@Nullable String left, @Nullable String right) {
         if (isEmpty(left)) {
             return isEmpty(right);
         }
@@ -90,7 +91,7 @@ public class Strings {
      * @param right the second string to be compared with
      * @return <tt>true</tt> if both values are empty or if both strings are equal - <tt>false</tt> otherwise
      */
-    public static boolean areEqual(Object left, Object right) {
+    public static boolean areEqual(@Nullable Object left, @Nullable Object right) {
         if (isEmpty(left) && isEmpty(right)) {
             return true;
         }
@@ -108,7 +109,8 @@ public class Strings {
      * @param object the object to be converted to string.
      * @return the string representation of the given object or <tt>null</tt> if <tt>object</tt> was null.
      */
-    public static String toString(Object object) {
+    @Nullable
+    public static String toString(@Nullable Object object) {
         return object == null ? null : object.toString();
     }
 
@@ -189,7 +191,7 @@ public class Strings {
      *         and the part after the separator as second component
      */
     public static Tuple<String, String> split(String input, String separator) {
-        Tuple<String, String> result = new Tuple<String, String>();
+        Tuple<String, String> result = Tuple.create();
         if (isFilled(input)) {
             int idx = input.indexOf(separator);
             if (idx > -1) {
@@ -211,7 +213,7 @@ public class Strings {
      * @return a part of the string representation of the given <tt>input</tt>. If input is shorter
      *         than <tt>length</tt>, the full value is returned. If input is <tt>null</tt>, "" is returned.
      */
-    public static String limit(Object input, int length) {
+    public static String limit(@Nullable Object input, int length) {
         if (isEmpty(input)) {
             return "";
         }

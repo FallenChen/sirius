@@ -10,6 +10,8 @@ package sirius.kernel.async;
 
 import sirius.kernel.health.Exceptions;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
 /**
  * Builder pattern for forking or starting sub tasks.
  * <p>
@@ -26,6 +28,7 @@ import sirius.kernel.health.Exceptions;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 1.0
  */
+@ParametersAreNonnullByDefault
 public class ExecutionBuilder<R> {
 
     /**

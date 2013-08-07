@@ -1,9 +1,20 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.cache;
 
 import com.google.common.cache.CacheBuilder;
+import sirius.kernel.extensions.Extension;
+import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Counter;
 import sirius.kernel.health.Exceptions;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -11,34 +22,71 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
+/**
+ * Implementation of <tt>Cache</tt> used by the <tt>CacheManager</tt>
+ *
+ * @param <K> the type of the keys used by this cache
+ * @param <V> the type of the values supported by this cache
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
+ */
 class ManagedCache<K, V> implements Cache<K, V> {
 
-    private static final int MAX_HISTORY = 25;
+    protected static final int MAX_HISTORY = 25;
+    protected List<Long> usesHistory = new ArrayList<Long>(MAX_HISTORY);
+    protected List<Long> hitRateHistory = new ArrayList<Long>(MAX_HISTORY);
+
     protected int maxSize;
     protected ValueComputer<K, V> computer;
     protected com.google.common.cache.Cache<K, CacheEntry<K, V>> data;
     protected Counter hits = new Counter();
     protected Counter misses = new Counter();
-    protected List<Long> usesHistory = new ArrayList<Long>(MAX_HISTORY);
-    protected List<Long> hitRateHistory = new ArrayList<Long>(MAX_HISTORY);
     protected Date lastEvictionRun = null;
     protected final String name;
-    protected final long timeToLive;
+    protected long timeToLive;
     protected final ValueVerifier<V> verifier;
-    private final long verificationInterval;
+    protected long verificationInterval;
 
-    public ManagedCache(String name,
-                        int maxSize,
-                        long timeToLive,
-                        ValueComputer<K, V> valueComputer,
-                        ValueVerifier<V> verifier,
-                        long verificationInterval) {
+    private static final String EXTENSION_TYPE_CACHE = "cache";
+    private static final String CONFIG_KEY_MAX_SIZE = "maxSize";
+    private static final String CONFIG_KEY_TTL = "ttl";
+    private static final String CONFIG_KEY_VERIFICATION = "verification";
+
+    /**
+     * Creates a new cache. This is not intended to be called outside of <tt>CacheManager</tt>.
+     *
+     * @param name          name of the cache which is also used to fetch the config settings
+     * @param valueComputer used to compute absent cache values for given keys. May be null.
+     * @param verifier      used to verify cached values before they are delivered to the caller.
+     */
+    protected ManagedCache(String name, @Nullable ValueComputer<K, V> valueComputer, @Nullable ValueVerifier<V> verifier) {
         this.name = name;
-        this.verificationInterval = verificationInterval;
-        this.timeToLive = timeToLive;
         this.computer = valueComputer;
         this.verifier = verifier;
-        ensureSize(maxSize);
+    }
+
+    /*
+     * Initializes the cache on first use. This is necessary since most of  the caches will be created by the
+     * static initializes when their classes are created. At this point, the config has not been loaded yet.
+     */
+    protected void init() {
+        if (data != null) {
+            return;
+        }
+
+        Extension cacheInfo = Extensions.getExtension(EXTENSION_TYPE_CACHE, name);
+        if (cacheInfo == null) {
+            CacheManager.LOG.WARN("Cache %s does not exist! Using defaults...", name);
+            cacheInfo = Extensions.getExtension(EXTENSION_TYPE_CACHE, Extensions.DEFAULT);
+        }
+        this.verificationInterval = cacheInfo.get(CONFIG_KEY_VERIFICATION).asLong(60 * 60 * 1000);
+        this.timeToLive = cacheInfo.get(CONFIG_KEY_TTL).asLong(60 * 60 * 1000);
+        this.maxSize = cacheInfo.get(CONFIG_KEY_MAX_SIZE).asInt(100);
+        if (maxSize > 0) {
+            this.data = CacheBuilder.newBuilder().maximumSize(maxSize).build();
+        } else {
+            this.data = CacheBuilder.newBuilder().build();
+        }
     }
 
     @Override
@@ -75,6 +123,9 @@ class ManagedCache<K, V> implements Cache<K, V> {
 
     @Override
     public void runEviction() {
+        if (data == null) {
+            return;
+        }
         usesHistory.add(getUses());
         if (usesHistory.size() > MAX_HISTORY) {
             usesHistory.remove(0);
@@ -107,6 +158,9 @@ class ManagedCache<K, V> implements Cache<K, V> {
 
     @Override
     public void clear() {
+        if (data == null) {
+            return;
+        }
         data.asMap().clear();
         misses.reset();
         hits.reset();
@@ -120,14 +174,18 @@ class ManagedCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean contains(K key) {
+        if (data == null) {
+            return false;
+        }
         return data.asMap().containsKey(key);
     }
-
-    ;
 
     @Override
     public V get(final K key, final ValueComputer<K, V> computer) {
         try {
+            if (data == null) {
+                init();
+            }
             long now = System.currentTimeMillis();
             CacheEntry<K, V> entry = data.get(key, new Callable<CacheEntry<K, V>>() {
                 @Override
@@ -163,12 +221,15 @@ class ManagedCache<K, V> implements Cache<K, V> {
                 return null;
             }
         } catch (Throwable e) {
-            throw Exceptions.handle(e);
+            throw Exceptions.handle(CacheManager.LOG, e);
         }
     }
 
     @Override
     public void put(K key, V value) {
+        if (data == null) {
+            init();
+        }
         CacheEntry<K, V> cv = new CacheEntry<K, V>(key,
                                                    value,
                                                    timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
@@ -178,16 +239,25 @@ class ManagedCache<K, V> implements Cache<K, V> {
 
     @Override
     public void remove(K key) {
+        if (data == null) {
+            return;
+        }
         data.invalidate(key);
     }
 
     @Override
     public Iterator<K> keySet() {
+        if (data == null) {
+            init();
+        }
         return data.asMap().keySet().iterator();
     }
 
     @Override
     public List<CacheEntry<K, V>> getContents() {
+        if (data == null) {
+            init();
+        }
         return new ArrayList<CacheEntry<K, V>>(data.asMap().values());
     }
 
@@ -199,20 +269,6 @@ class ManagedCache<K, V> implements Cache<K, V> {
     @Override
     public List<Long> getHitRateHistory() {
         return hitRateHistory;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public void ensureSize(int intValue) {
-        if (data == null || getMaxSize() != intValue) {
-            maxSize = intValue;
-            if (maxSize > 0) {
-                this.data = CacheBuilder.newBuilder().maximumSize(maxSize).build();
-            } else {
-                this.data = CacheBuilder.newBuilder().build();
-            }
-        }
-
     }
 
 }

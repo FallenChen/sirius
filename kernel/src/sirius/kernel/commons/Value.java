@@ -14,6 +14,9 @@ import org.joda.time.LocalDate;
 import org.joda.time.LocalTime;
 import sirius.kernel.nls.NLS;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.Calendar;
@@ -230,6 +233,7 @@ public class Value {
      *
      * @return the wrapped object of this <tt>Value</tt>
      */
+    @Nullable
     public Object get() {
         return data;
     }
@@ -239,7 +243,8 @@ public class Value {
      *
      * @return the wrapped value or the given defaultValue if the wrapped value is <tt>null</tt>
      */
-    public Object get(Object defaultValue) {
+    @Nonnull
+    public Object get(@Nonnull Object defaultValue) {
         return data == null ? defaultValue : data;
     }
 
@@ -369,6 +374,7 @@ public class Value {
      *
      * @return a string representation of the wrapped object or <tt>null</tt> if the wrapped value is <tt>null</tt>
      */
+    @Nullable
     public String getString() {
         return isNull() ? null : NLS.toMachineString(data);
     }
@@ -382,7 +388,8 @@ public class Value {
      * @return a string representation of the wrapped object
      *         or <tt>defaultValue</tt> if the wrapped value is <tt>null</tt>
      */
-    public String asString(String defaultValue) {
+    @Nonnull
+    public String asString(@Nonnull String defaultValue) {
         return isNull() ? defaultValue : NLS.toMachineString(data);
     }
 
@@ -394,6 +401,7 @@ public class Value {
      *
      * @return a string representation of the wrapped object or <tt>""</tt> if the wrapped value is <tt>null</tt>
      */
+    @Nonnull
     public String asString() {
         return NLS.toMachineString(data);
     }
@@ -416,6 +424,7 @@ public class Value {
      *         except for <tt>Double</tt> or <tt>BigDecimal</tt> values, which are "smart rounded".
      * @see NLS#smartRound(double)
      */
+    @Nonnull
     public String asSmartRoundedString() {
         if (data == null) {
             return "";
@@ -513,6 +522,7 @@ public class Value {
      * @return the wrapped value casted or converted to <tt>Integer</tt> or <tt>null</tt>
      *         if no conversion is possible.
      */
+    @Nullable
     public Integer getInteger() {
         try {
             if (isNull()) {
@@ -581,6 +591,7 @@ public class Value {
      * @return the wrapped value casted or converted to <tt>Long</tt> or <tt>null</tt>
      *         if no conversion is possible.
      */
+    @Nullable
     public Long getLong() {
         try {
             if (isNull()) {
@@ -651,7 +662,8 @@ public class Value {
      * @return the wrapped value casted or converted to <tt>BigDecimal</tt> or <tt>defaultValue</tt>
      *         if no conversion is possible.
      */
-    public BigDecimal getBigDecimal(BigDecimal defaultValue) {
+    @Nonnull
+    public BigDecimal getBigDecimal(@Nonnull BigDecimal defaultValue) {
         try {
             if (isNull()) {
                 return defaultValue;
@@ -761,6 +773,7 @@ public class Value {
      *         or the string representation without the first N characters (or "" if the representation is too short)
      *         if <tt>length is negative</tt>. Returns <code>""</code> if the wrapped value is <tt>null</tt>
      */
+    @Nonnull
     public String left(int length) {
         if (isNull()) {
             return "";
@@ -796,6 +809,7 @@ public class Value {
      *         or the string representation without the last N characters (or "" if the representation is too short)
      *         if <tt>length is negative</tt>. Returns <code>""</code> if the wrapped value is <tt>null</tt>
      */
+    @Nonnull
     public String right(int length) {
         if (isNull()) {
             return "";
@@ -826,6 +840,7 @@ public class Value {
      *
      * @return a substring like {@link String#substring(int, int)} or <code>""</code> if the wrapped value
      */
+    @Nonnull
     public String substring(int startIndex, int endIndex) {
         if (isNull()) {
             return "";
@@ -855,6 +870,7 @@ public class Value {
      * @return an uppercase version of the string representation of the wrapped value or <code>""</code> if the
      *         wrapped value is <tt>null</tt>
      */
+    @Nonnull
     public String toUpperCase() {
         if (isNull()) {
             return "";
@@ -868,6 +884,7 @@ public class Value {
      * @return an lowercase version of the string representation of the wrapped value or <code>""</code> if the
      *         wrapped value is <tt>null</tt>
      */
+    @Nonnull
     public String toLowerCase() {
         if (isNull()) {
             return "";
@@ -891,10 +908,11 @@ public class Value {
      *
      * @param pattern     the pattern to replace
      * @param replacement the replacement to be used for <tt>pattern</tt>
-     * @return a <tt>Value</tt> where all occurences of pattern in the string <tt>representation</tt> of the
+     * @return a <tt>Value</tt> where all occurrences of pattern in the string <tt>representation</tt> of the
      *         wrapped value are replaced by <tt>replacement</tt>. If the wrapped value is null, <tt>this</tt>
      *         is returned.
      */
+    @Nonnull
     public Value replace(String pattern, String replacement) {
         if (data != null) {
             return Value.of(data.toString().replace(pattern, replacement));
@@ -912,6 +930,7 @@ public class Value {
      *         wrapped value are replaced by <tt>replacement</tt>. If the wrapped value is null, <tt>this</tt>
      *         is returned.
      */
+    @Nonnull
     public Value regExReplace(String pattern, String replacement) {
         if (data != null) {
             data = data.toString().replaceAll(pattern, replacement);
@@ -944,6 +963,8 @@ public class Value {
      *         The dollar sign is skipped when passing the key to <tt>NLS</tt>. Otherwise <tt>this</tt> is returned.
      * @see NLS#get(String)
      */
+    @Nonnull
+    @CheckReturnValue
     public Value translate() {
         if (data != null && data instanceof String && ((String) data).startsWith("$")) {
             return Value.of(NLS.get(((String) data).substring(1)));

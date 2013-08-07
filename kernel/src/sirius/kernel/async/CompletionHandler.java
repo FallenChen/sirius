@@ -8,6 +8,9 @@
 
 package sirius.kernel.async;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 /**
  * Handler which can be attached to instances of {@link Promise} to be notified once a value is available or when the
  * computation failed.
@@ -23,7 +26,7 @@ public interface CompletionHandler<V> {
      * @throws Exception simplifies exception handling as each error is either passed on to the next promise or logged
      *                   via {@link sirius.kernel.health.Exceptions#handle()}
      */
-    void onSuccess(V value) throws Exception;
+    void onSuccess(@Nullable V value) throws Exception;
 
     /**
      * Invoked if the promise is fails with the given throwable.
@@ -32,5 +35,5 @@ public interface CompletionHandler<V> {
      * @throws Exception simplifies exception handling as each error is either passed on to the next promise or logged
      *                   via {@link sirius.kernel.health.Exceptions#handle()}
      */
-    void onFailure(Throwable throwable) throws Exception;
+    void onFailure(@Nonnull Throwable throwable) throws Exception;
 }

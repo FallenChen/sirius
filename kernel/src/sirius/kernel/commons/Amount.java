@@ -10,6 +10,10 @@ package sirius.kernel.commons;
 
 import sirius.kernel.nls.NLS;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -35,6 +39,7 @@ import java.text.DecimalFormat;
  * @see BigDecimal
  * @since 1.0
  */
+@Immutable
 public class Amount implements Comparable<Amount> {
 
     /**
@@ -83,7 +88,8 @@ public class Amount implements Comparable<Amount> {
      * @param value the string value which should be converted into a numeric value.
      * @return an <tt>Amount</tt> representing the given input. <tt>NOTHING</tt> if the input was empty.
      */
-    public static Amount ofMachineString(String value) {
+    @Nonnull
+    public static Amount ofMachineString(@Nullable String value) {
         if (Strings.isEmpty(value)) {
             return NOTHING;
         }
@@ -97,7 +103,8 @@ public class Amount implements Comparable<Amount> {
      * @return an <code>Amount</code> representing the given input. <code>NOTHING</code> if the input was empty.
      * @see NLS
      */
-    public static Amount ofUserString(String value) {
+    @Nonnull
+    public static Amount ofUserString(@Nullable String value) {
         if (Strings.isEmpty(value)) {
             return NOTHING;
         }
@@ -110,7 +117,8 @@ public class Amount implements Comparable<Amount> {
      * @param amount the value which should be converted into an <tt>Amount</tt>
      * @return an <tt>Amount</tt> representing the given input. <tt>NOTHING</tt> if the input was empty.
      */
-    public static Amount of(BigDecimal amount) {
+    @Nonnull
+    public static Amount of(@Nullable BigDecimal amount) {
         if (amount == null) {
             return NOTHING;
         }
@@ -123,6 +131,7 @@ public class Amount implements Comparable<Amount> {
      * @param amount the value which should be converted into an <tt>Amount</tt>
      * @return an <tt>Amount</tt> representing the given input
      */
+    @Nonnull
     public static Amount of(int amount) {
         return of(new BigDecimal(amount));
     }
@@ -133,6 +142,7 @@ public class Amount implements Comparable<Amount> {
      * @param amount the value which should be converted into an <tt>Amount</tt>
      * @return an <tt>Amount</tt> representing the given input
      */
+    @Nonnull
     public static Amount of(long amount) {
         return of(new BigDecimal(amount));
     }
@@ -143,6 +153,7 @@ public class Amount implements Comparable<Amount> {
      * @param amount the value which should be converted into an <tt>Amount</tt>
      * @return an <tt>Amount</tt> representing the given input
      */
+    @Nonnull
     public static Amount of(double amount) {
         return of(new BigDecimal(amount));
     }
@@ -153,7 +164,8 @@ public class Amount implements Comparable<Amount> {
      * @param amount the value which should be converted into an <tt>Amount</tt>
      * @return an <tt>Amount</tt> representing the given input. <tt>NOTHING</tt> if the input was empty.
      */
-    public static Amount of(Integer amount) {
+    @Nonnull
+    public static Amount of(@Nullable Integer amount) {
         if (amount == null) {
             return NOTHING;
         }
@@ -166,7 +178,8 @@ public class Amount implements Comparable<Amount> {
      * @param amount the value which should be converted into an <tt>Amount</tt>
      * @return an <tt>Amount</tt> representing the given input. <tt>NOTHING</tt> if the input was empty.
      */
-    public static Amount of(Long amount) {
+    @Nonnull
+    public static Amount of(@Nullable Long amount) {
         if (amount == null) {
             return NOTHING;
         }
@@ -179,7 +192,8 @@ public class Amount implements Comparable<Amount> {
      * @param amount the value which should be converted into an <tt>Amount</tt>
      * @return an <tt>Amount</tt> representing the given input. <tt>NOTHING</tt> if the input was empty.
      */
-    public static Amount of(Double amount) {
+    @Nonnull
+    public static Amount of(@Nullable Double amount) {
         if (amount == null) {
             return NOTHING;
         }
@@ -192,6 +206,7 @@ public class Amount implements Comparable<Amount> {
      *
      * @return the internally used <tt>BigDecimal</tt>
      */
+    @Nullable
     public BigDecimal getAmount() {
         return amount;
     }
@@ -220,7 +235,8 @@ public class Amount implements Comparable<Amount> {
      * @param valueIfNothing the value which is used if there is no internal value
      * @return <tt>this</tt> if there is an internal value, <tt>valueIfNothing</tt> otherwise
      */
-    public Amount fill(Amount valueIfNothing) {
+    @Nonnull
+    public Amount fill(@Nonnull Amount valueIfNothing) {
         if (isEmpty()) {
             return valueIfNothing;
         } else {
@@ -235,7 +251,9 @@ public class Amount implements Comparable<Amount> {
      * @param increase the percent value by which the value of this will be increased
      * @return <tt>NOTHING</tt> if this or increase is empty, <code>this * (1 + increase / 100)</code> otherwise
      */
-    public Amount increasePercent(Amount increase) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount increasePercent(@Nullable Amount increase) {
         return times(ONE.add(increase.asDecimal()));
     }
 
@@ -246,7 +264,9 @@ public class Amount implements Comparable<Amount> {
      * @param decrease the percent value by which the value of this will be decreased
      * @return <tt>NOTHING</tt> if this or increase is empty, <code>this * (1 - increase / 100)</code> otherwise
      */
-    public Amount decreasePercent(Amount decrease) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount decreasePercent(@Nullable Amount decrease) {
         return times(ONE.subtract(decrease.asDecimal()));
     }
 
@@ -261,7 +281,9 @@ public class Amount implements Comparable<Amount> {
      * @return the effective percent value after both percentages would have been applied
      *         or <tt>NOTHING</tt> if one of both was empty.
      */
-    public Amount multiplyPercent(Amount percent) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount multiplyPercent(@Nullable Amount percent) {
         return add(percent).subtract(this.times(percent).divideBy(ONE_HUNDRED));
     }
 
@@ -272,7 +294,9 @@ public class Amount implements Comparable<Amount> {
      * @return an <tt>Amount</tt> representing the sum of <tt>this</tt> and <tt>other</tt> if both values were filled.
      *         If <tt>other</tt> is empty, <tt>this</tt> is returned. If this is empty, <tt>NOTHING</tt> is returned.
      */
-    public Amount add(Amount other) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount add(@Nullable Amount other) {
         if (other == null || other.isEmpty()) {
             return this;
         }
@@ -289,7 +313,9 @@ public class Amount implements Comparable<Amount> {
      * @return an <tt>Amount</tt> representing the difference of <tt>this</tt> and <tt>other</tt> if both values were filled.
      *         If <tt>other</tt> is empty, <tt>this</tt> is returned. If this is empty, <tt>NOTHING</tt> is returned.
      */
-    public Amount subtract(Amount other) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount subtract(@Nullable Amount other) {
         if (other == null || other.isEmpty()) {
             return this;
         }
@@ -306,7 +332,9 @@ public class Amount implements Comparable<Amount> {
      * @return an <tt>Amount</tt> representing the product of <tt>this</tt> and <tt>other</tt> if both values were filled.
      *         If <tt>other</tt> is empty or if <tt>this</tt> is empty, <tt>NOTHING</tt> is returned.
      */
-    public Amount times(Amount other) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount times(@Nonnull Amount other) {
         if (other == null || other.isEmpty() || isEmpty()) {
             return NOTHING;
         }
@@ -321,7 +349,9 @@ public class Amount implements Comparable<Amount> {
      * @return an <tt>Amount</tt> representing the division of <tt>this</tt> by <tt>other</tt> or <tt>NOTHING</tt>
      *         if either of both is empty.
      */
-    public Amount divideBy(Amount other) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount divideBy(@Nullable Amount other) {
         if (other == null || other.isZeroOrNull() || isEmpty()) {
             return NOTHING;
         }
@@ -336,7 +366,9 @@ public class Amount implements Comparable<Amount> {
      * @return an <tt>Amount</tt> representing the ratio between <tt>this</tt> and <tt>other</tt>
      *         or <tt>NOTHING</tt> if either of both is empty.
      */
-    public Amount percentageOf(Amount other) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount percentageOf(@Nullable Amount other) {
         return divideBy(other).toPercent();
     }
 
@@ -348,7 +380,9 @@ public class Amount implements Comparable<Amount> {
      * @return an <tt>Amount</tt> representing the percentage increase between <tt>this</tt> and <tt>other</tt>
      *         or <tt>NOTHING</tt> if either of both is empty.
      */
-    public Amount percentageDifferenceOf(Amount other) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount percentageDifferenceOf(@Nonnull Amount other) {
         return divideBy(other).subtract(ONE).toPercent();
     }
 
@@ -403,6 +437,8 @@ public class Amount implements Comparable<Amount> {
      *
      * @return a percentage representation of the given decimal value.
      */
+    @Nonnull
+    @CheckReturnValue
     public Amount toPercent() {
         return this.times(ONE_HUNDRED);
     }
@@ -413,6 +449,8 @@ public class Amount implements Comparable<Amount> {
      *
      * @return a decimal representation fo the given percent value.
      */
+    @Nonnull
+    @CheckReturnValue
     public Amount asDecimal() {
         return divideBy(ONE_HUNDRED);
     }
@@ -497,7 +535,9 @@ public class Amount implements Comparable<Amount> {
      * @return returns an <tt>Amount</tt> which is rounded using the given <code>NumberFormat</code>
      *         or <tt>NOTHING</tt> if the value is empty.
      */
-    public Amount round(NumberFormat format) {
+    @Nonnull
+    @CheckReturnValue
+    public Amount round(@Nonnull NumberFormat format) {
         if (isEmpty()) {
             return NOTHING;
         }
@@ -528,7 +568,8 @@ public class Amount implements Comparable<Amount> {
      * @see Value#append(String, Object)
      * @see Value#prepend(String, Object)
      */
-    public Value toString(NumberFormat format) {
+    @Nonnull
+    public Value toString(@Nonnull NumberFormat format) {
         return convertToString(format, false);
     }
 
@@ -542,7 +583,8 @@ public class Amount implements Comparable<Amount> {
      *         or an empty <tt>Value</tt> if <tt>this</tt> is empty. Omits 0 as decimal places.
      * @see #toString()
      */
-    public Value toSmartRoundedString(NumberFormat format) {
+    @Nonnull
+    public Value toSmartRoundedString(@Nonnull NumberFormat format) {
         return convertToString(format, true);
     }
 

@@ -8,6 +8,8 @@
 
 package sirius.kernel.async;
 
+import javax.annotation.Nullable;
+
 /**
  * Maps a given value of type V to a new value of type X.
  * <p>
@@ -26,6 +28,7 @@ public interface Mapper<V, X> {
      * @return the mapped value for the given input.
      * @throws Exception simplifies error handling, since commonly, errors are forwarded to the next promise.
      */
-    X apply(V value) throws Exception;
+    @Nullable
+    X apply(@Nullable V value) throws Exception;
 
 }

@@ -10,6 +10,7 @@ package sirius.kernel.commons;
 
 import com.google.common.base.Objects;
 
+import javax.annotation.Nonnull;
 import java.util.*;
 
 /**
@@ -33,8 +34,8 @@ public class Tuple<F, S> {
     /**
      * Creates a new tuple with both values set to <tt>null</tt>
      */
-    public Tuple() {
-        super();
+    public static <F, S> Tuple<F, S> create() {
+        return new Tuple<F, S>(null, null);
     }
 
     /**
@@ -42,13 +43,25 @@ public class Tuple<F, S> {
      *
      * @param first defines the value to be used for the first component of the tuple
      */
-    public Tuple(F first) {
-        super();
-        this.first = first;
+    public static <F, S> Tuple<F, S> create(F first) {
+        return new Tuple<F, S>(first, null);
     }
 
     /**
      * Creates a tuple with a givens value for <tt>first</tt> and <tt>second</tt>
+     *
+     * @param first  defines the value to be used for the first component of the tuple
+     * @param second defines the value to be used for the second component of the tuple
+     */
+    public static <F, S> Tuple<F, S> create(F first, S second) {
+        return new Tuple<F, S>(first, second);
+    }
+
+    /**
+     * Creates a tuple with a givens value for <tt>first</tt> and <tt>second</tt>
+     * <p>
+     * Can be used to specify the generic types for F and S. Otherwise, the <tt>create</tt> methods can be used.
+     * </p>
      *
      * @param first  defines the value to be used for the first component of the tuple
      * @param second defines the value to be used for the second component of the tuple
@@ -124,7 +137,7 @@ public class Tuple<F, S> {
      * @param tuples the collection of tuples to process
      * @return a list containing each <tt>first</tt> component of the collection of given tuples.
      */
-    public static <T extends Tuple<K, V>, K, V> List<K> firsts(Collection<T> tuples) {
+    public static <T extends Tuple<K, V>, K, V> List<K> firsts(@Nonnull Collection<T> tuples) {
         List<K> result = new ArrayList<K>(tuples.size());
         for (Tuple<K, V> t : tuples) {
             result.add(t.getFirst());
@@ -138,7 +151,7 @@ public class Tuple<F, S> {
      * @param tuples the collection of tuples to process
      * @return a list containing each <tt>second</tt> component of the collection of given tuples.
      */
-    public static <T extends Tuple<K, V>, K, V> List<V> seconds(Collection<T> tuples) {
+    public static <T extends Tuple<K, V>, K, V> List<V> seconds(@Nonnull Collection<T> tuples) {
         List<V> result = new ArrayList<V>(tuples.size());
         for (Tuple<K, V> t : tuples) {
             result.add(t.getSecond());
@@ -155,7 +168,7 @@ public class Tuple<F, S> {
      * @return a list of tuples, containing one tuple per map entry where the first component is the key,
      *         and the second component is the value of the map entry.
      */
-    public static <K, V> List<Tuple<K, V>> fromMap(Map<K, V> map) {
+    public static <K, V> List<Tuple<K, V>> fromMap(@Nonnull Map<K, V> map) {
         List<Tuple<K, V>> result = new ArrayList<Tuple<K, V>>(map.size());
         for (Map.Entry<K, V> e : map.entrySet()) {
             result.add(new Tuple<K, V>(e.getKey(), e.getValue()));
@@ -173,7 +186,7 @@ public class Tuple<F, S> {
      *         tuple and the value is the second component of the tuple. If two tuples have equal values as first
      *         component, the specific map entry will be overridden in the order defined in the given collection.
      */
-    public static <K, V> Map<K, V> toMap(Collection<Tuple<K, V>> values) {
+    public static <K, V> Map<K, V> toMap(@Nonnull Collection<Tuple<K, V>> values) {
         Map<K, V> result = new HashMap<K, V>();
         for (Tuple<K, V> e : values) {
             result.put(e.getFirst(), e.getSecond());
