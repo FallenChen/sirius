@@ -1,11 +1,3 @@
-/*
- * Made with all the love in the world
- * by scireum in Remshalden, Germany
- *
- * Copyright by scireum GmbH
- * http://www.scireum.de - info@scireum.de
- */
-
 package sirius.kernel.di.annotations;
 
 import java.lang.annotation.ElementType;
@@ -23,7 +15,7 @@ import java.lang.annotation.Target;
  * Classes wearing this annotations must have a zero args constructor.
  * <p/>
  * Implementations of the OCM are encouraged to create an appropriate
- * {@link sirius.kernel.di.ClassLoadAction} for this annotation.
+ * {@link com.scireum.ocm.model.ClassLoadAction} for this annotation.
  *
  * @author aha
  */

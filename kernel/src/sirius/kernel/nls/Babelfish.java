@@ -262,14 +262,14 @@ public class Babelfish {
      *
      * @param classpath the classpath used to discover all relevant properties files
      */
-    protected void init(Classpath classpath) {
+    protected void init(final Classpath classpath) {
         classpath.find(PROPERTIES_FILE, new BasicCollector<Matcher>() {
             @Override
             public void add(Matcher value) {
                 LOG.FINE("Loading: %s", value.group());
                 String baseName = value.group(1);
                 String lang = value.group(2);
-                importProperties(value.group(), baseName, lang, getLastModified(value.group()));
+                importProperties(value.group(), baseName, lang, getLastModified(classpath, value.group()));
             }
         });
 
@@ -281,7 +281,7 @@ public class Babelfish {
                     public void run() {
                         Thread.currentThread().setName("Babelfish-ResourceWatch");
                         for (Map.Entry<String, Long> entry : loadedFiles.entrySet()) {
-                            long lastModified = getLastModified(entry.getKey());
+                            long lastModified = getLastModified(classpath, entry.getKey());
                             if (lastModified > entry.getValue()) {
                                 LOG.FINE("Reloading: %s", entry.getKey());
                                 Matcher m = PROPERTIES_FILE.matcher(entry.getKey());
@@ -294,9 +294,9 @@ public class Babelfish {
         }
     }
 
-    private long getLastModified(String relativePath) {
+    private long getLastModified(Classpath classpath, String relativePath) {
         try {
-            return getClass().getResource(relativePath).openConnection().getLastModified();
+            return classpath.getLoader().getResource(relativePath).openConnection().getLastModified();
         } catch (Throwable e) {
             return 0;
         }

@@ -275,10 +275,17 @@ public class WebContext {
     }
 
     public Collection<Cookie> getCookies() {
+        fillCookies();
         return Collections.unmodifiableCollection(cookiesIn.values());
     }
 
     public Cookie getCookie(String name) {
+        fillCookies();
+
+        return cookiesIn.get(name);
+    }
+
+    private void fillCookies() {
         if (cookiesIn == null) {
             cookiesIn = Maps.newHashMap();
             CookieDecoder cd = new CookieDecoder();
@@ -289,8 +296,6 @@ public class WebContext {
                 }
             }
         }
-
-        return cookiesIn.get(name);
     }
 
     public String getCookieValue(String name) {

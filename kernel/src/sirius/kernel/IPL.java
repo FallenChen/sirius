@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Initial Program Load - This is the main program entry point.
  * <p>
- * THis will load all provided jar files from the "libs" sub folder as well as all classes from the "classes"
+ * This will load all provided jar files from the "libs" sub folder as well as all classes from the "classes"
  * folder. When debugging from an IDE, set the system property <tt>ide</tt> to <tt>true</tt> - this will
  * bypass class loading, as all classes are typically provided via the system classpath.
  * </p>

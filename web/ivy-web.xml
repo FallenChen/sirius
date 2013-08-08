@@ -3,3 +3,4 @@
 <dependency org="org.fusesource" name="sigar" rev="1.6.4" />
 <dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.13" />
 <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="default"/>
+<dependency org="mysql" name="mysql-connector-java" rev="5.1.12" conf="default"/>

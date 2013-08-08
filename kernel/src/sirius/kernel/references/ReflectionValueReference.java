@@ -1,7 +1,7 @@
 package sirius.kernel.references;
 
-import com.scireum.common.Tools;
-import com.scireum.common.nls.NLS;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.nls.NLS;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -61,17 +61,68 @@ public class ReflectionValueReference<T, V> implements ValueReference<T, V> {
         }
     }
 
+
+    /**
+     * Converts the first character of a given string to upper case.
+     */
+    public static String toFirstUpper(String string) {
+        if (Strings.isEmpty(string)) {
+            return string;
+        }
+        if (string.length() == 1) {
+            return string.toUpperCase();
+        }
+        return string.substring(0, 1).toUpperCase() + string.substring(1);
+    }
+
+    /**
+     * Returns the getter method according to the java beans specification for a
+     * given property.
+     */
+    public static Method getter(Class<? extends Object> clazz, String property) {
+        try {
+            try {
+                return clazz.getMethod("get" + toFirstUpper(property), new Class[0]);
+            } catch (NoSuchMethodException e) {
+                try {
+                    return clazz.getMethod("is" + toFirstUpper(property), new Class[0]);
+                } catch (NoSuchMethodException e1) {
+                    return clazz.getMethod(property, new Class[0]);
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException(Strings.apply("get-Method for Field %s not found: %s",
+                                                             property,
+                                                             e.getMessage()), e);
+        }
+    }
+
+    /**
+     * Returns the setter method according to the java beans specification for a
+     * given property.
+     */
+    public static Method setter(Class<? extends Object> clazz, String property, Class<?> fieldType) {
+        try {
+            return clazz.getMethod("set" + toFirstUpper(property), new Class[]{fieldType});
+        } catch (Exception e) {
+            throw new IllegalArgumentException(Strings.apply("set-Method for Field %s not found: %s",
+                                                             property,
+                                                             e.getMessage()), e);
+        }
+    }
+
+
     public static <T, V> ReflectionValueReference<T, V> create(Class<T> clazz, String field) {
         String[] path = field.split("\\.");
         List<Method> result = new ArrayList<Method>(path.length);
         Method setter = null;
         Class<?> c = clazz;
         for (int i = 0; i < path.length; i++) {
-            Method m = Tools.getter(c, path[i]);
+            Method m = getter(c, path[i]);
             result.add(m);
             if (i == path.length - 1) {
                 try {
-                    setter = Tools.setter(c, path[i], m.getReturnType());
+                    setter = setter(c, path[i], m.getReturnType());
                 } catch (Exception e) {
                     // IGNORE
                 }
