@@ -127,7 +127,7 @@ public class TimerService implements Lifecycle {
         return "timer (System Timer Services)";
     }
 
-    protected void runOneMinuteTimers() {
+    public void runOneMinuteTimers() {
         for (final TimedTask task : everyMinute.getParts()) {
             executeTask(task);
         }
@@ -152,14 +152,14 @@ public class TimerService implements Lifecycle {
         }).execute();
     }
 
-    protected void runTenMinuteTimers() {
+    public void runTenMinuteTimers() {
         for (final TimedTask task : everyTenMinutes.getParts()) {
             executeTask(task);
         }
         lastTenMinutesExecution = System.currentTimeMillis();
     }
 
-    protected void runOneHourTimers() {
+    public void runOneHourTimers() {
         for (final TimedTask task : everyHour.getParts()) {
             executeTask(task);
         }

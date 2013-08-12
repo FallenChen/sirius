@@ -429,6 +429,9 @@ public class Response {
     public void template(String name, Object... params) {
         String content = null;
         try {
+            if (params.length == 1 && params[0] instanceof Object[]) {
+                params = (Object[])params[0];
+            }
             content = Rythm.render(name, params);
         } catch (Throwable e) {
             throw Exceptions.handle()
@@ -460,6 +463,9 @@ public class Response {
     public void nlsTemplate(String name, Object... params) {
         String content = null;
         try {
+            if (params.length == 1 && params[0] instanceof Object[]) {
+                params = (Object[])params[0];
+            }
             content = Rythm.renderIfTemplateExists(name + "_" + NLS.getCurrentLang() + ".html", params);
             if (Strings.isEmpty(content)) {
                 content = Rythm.renderIfTemplateExists(name + "_" + NLS.getDefaultLanguage() + ".html", params);

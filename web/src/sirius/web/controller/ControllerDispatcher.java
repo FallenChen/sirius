@@ -1,4 +1,4 @@
-package sirius.web.http.controller;
+package sirius.web.controller;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.async.Async;

@@ -191,6 +191,15 @@ public class Sirius {
     }
 
     /**
+     * Provides access to the classpath used to load the framework.
+     *
+     * @return the classpath used to load the framework
+     */
+    public static Classpath getClasspath() {
+        return classpath;
+    }
+
+    /**
      * Stops the framework.
      */
     public static void stop() {

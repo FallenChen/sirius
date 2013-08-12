@@ -30,7 +30,7 @@ public class ComparableTuple<F extends Comparable<F>, S> extends Tuple<F, S> imp
      * Creates a new tuple without any values.
      */
     @Nonnull
-    public static <F extends Comparable<F>, S> ComparableTuple<F, S> create() {
+    public static <F extends Comparable<F>, S> ComparableTuple<F, S> createTuple() {
         return new ComparableTuple<F, S>(null, null);
     }
 

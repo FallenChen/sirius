@@ -1,4 +1,4 @@
-package sirius.web.http.controller;
+package sirius.web.controller;
 
 import sirius.kernel.commons.PriorityCollector;
 

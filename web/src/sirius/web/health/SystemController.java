@@ -2,9 +2,9 @@ package sirius.web.health;
 
 import sirius.kernel.di.annotations.Register;
 import sirius.web.http.WebContext;
-import sirius.web.http.controller.BasicController;
-import sirius.web.http.controller.Controller;
-import sirius.web.http.controller.Routed;
+import sirius.web.controller.BasicController;
+import sirius.web.controller.Controller;
+import sirius.web.controller.Routed;
 
 /**
  * Created with IntelliJ IDEA.

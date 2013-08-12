@@ -81,7 +81,7 @@ public class Watch {
      * @return returns the duration since the start of this watch in the given <tt>TimeUnit</tt>
      */
     public long elapsed(TimeUnit unit, boolean reset) {
-        return TimeUnit.NANOSECONDS.convert(System.nanoTime() - startTime, unit);
+        return unit.convert(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
     }
 
     /**

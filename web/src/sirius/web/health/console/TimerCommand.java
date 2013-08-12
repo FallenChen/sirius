@@ -1,7 +1,8 @@
-package sirius.kernel.timer;
+package sirius.web.health.console;
 
 import sirius.kernel.di.annotations.Part;
 import sirius.kernel.di.annotations.Register;
+import sirius.kernel.timer.TimerService;
 import sirius.web.health.console.Command;
 
 /**

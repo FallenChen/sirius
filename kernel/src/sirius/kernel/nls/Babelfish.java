@@ -154,7 +154,7 @@ public class Babelfish {
     }
 
     /*
-     * When searching to the .properties file on disk for a given relative path, we need to scan all source folders.
+     * When searching for the .properties file on disk for a given relative path, we need to scan all source folders.
      * This list enumerates directories not to enter, since they either contain a copy of the file or might
      * be too large to search through
      */
@@ -311,6 +311,7 @@ public class Babelfish {
         public long getTimeToLive(String baseName, Locale locale) {
             return ResourceBundle.Control.TTL_DONT_CACHE;
         }
+
     }
 
     private static ResourceBundle.Control CONTROL = new NonCachingControl();

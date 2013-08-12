@@ -11,9 +11,11 @@ package sirius.kernel.commons;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Map;
 
 /**
  * Provides various helper methods for dealing with Java <tt>Strings</tt>
@@ -219,5 +221,29 @@ public class Strings {
         }
         String str = String.valueOf(input).trim();
         return str.substring(0, Math.min(length, str.length()));
+    }
+
+    /**
+     * Returns a string representation of the given map.
+     * <p>
+     * Keys and values are separated by a colon (:) and entries by a new line.
+     * </p>
+     *
+     * @param source to map to be converted to a string
+     * @return a string representation of the given map, or "" if the map was null
+     */
+    @Nonnull
+    public static String join(@Nullable Map<?, ?> source) {
+        if (source == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<?, ?> entry : source.entrySet()) {
+            sb.append(entry.getKey());
+            sb.append(": ");
+            sb.append(entry.getValue());
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 }

@@ -6,10 +6,11 @@
  * http://www.scireum.de - info@scireum.de
  */
 
-package sirius.kernel.async;
+package sirius.web.health.console;
 
+import sirius.kernel.async.Async;
+import sirius.kernel.async.AsyncExecutor;
 import sirius.kernel.di.annotations.Register;
-import sirius.web.health.console.Command;
 
 /**
  * Console command which reports statistics for all known executors.

@@ -1,4 +1,4 @@
-package sirius.web.http.controller;
+package sirius.web.controller;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  * To change this template use File | Settings | File Templates.
  */
 public class Route {
-    private static final Pattern EXPR = Pattern.compile("(:|#|\\$)\\{(.+?)}");
+    private static final Pattern EXPR = Pattern.compile("(:|#|\\$)\\{?(.+?)}?");
 
     private String format;
     private Pattern pattern;
@@ -61,7 +61,7 @@ public class Route {
                     } else {
                         result.expressions.add(new Tuple<String, Object>(key, m.group(2)));
                     }
-                    finalPattern.append(m.group(1) + "([^/]+)" + m.group(3));
+                    finalPattern.append("([^/]+)");
                 } else if ("*".equals(element)) {
                     finalPattern.append("[^/]+");
                 } else {
@@ -106,7 +106,7 @@ public class Route {
                     } else if (expr.getFirst() == ":") {
                         int idx = (Integer) expr.getSecond();
                         if (idx == result.size() + 1) {
-                            result.add(Value.of(value).coerce(parameterTypes[idx - 1], null));
+                            result.add(Value.of(value).coerce(parameterTypes[idx], null));
                         } else {
                             while (result.size() < idx) {
                                 result.add(null);

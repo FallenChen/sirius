@@ -198,7 +198,7 @@ public class Async {
         // Keep track when we're finished
         final CountDownLatch latch = new CountDownLatch(list.size());
 
-        // Iterate over all promises and create a completion handler, which either forwards a failure or which places
+        // Iterate over all promises and create a completion handler, which either forwards a failure or which placesy
         // a successfully computed in the created result list
         int index = 0;
         for (Promise<V> promise : list) {
