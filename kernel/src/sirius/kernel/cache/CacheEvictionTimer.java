@@ -18,7 +18,7 @@ import sirius.kernel.timer.EveryTenMinutes;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 @Register
 public class CacheEvictionTimer implements EveryTenMinutes {

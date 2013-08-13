@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = ElementType.FIELD)

@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public class InlineCache<E> {
     private E buffer;

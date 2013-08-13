@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @see sirius.kernel.extensions.Extensions
- * @since 1.0
+ * @since 2013/08
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = ElementType.FIELD)

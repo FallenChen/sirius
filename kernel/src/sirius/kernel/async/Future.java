@@ -16,7 +16,7 @@ package sirius.kernel.async;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public class Future extends Promise<Object> {
 

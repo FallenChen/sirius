@@ -15,8 +15,8 @@
  *     forwarded to the user).
  * </p>
  * <p>
- *     The {@link Log} class provides a wrapper over the currently used logging framework. Loggers are auto-configured
- *     on startup via the system configuration.
+ *     The {@link sirius.kernel.health.Log} class provides a wrapper over the currently used logging framework.
+ *     Loggers are auto-configured on startup via the system configuration.
  * </p>
  * <p>
  *     Another essential framework is the {@link sirius.kernel.health.Microtiming}. This can be used for on-demand

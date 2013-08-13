@@ -16,7 +16,7 @@ import javax.annotation.Nonnull;
  * Represents an extension loaded via the {@link Extensions} framework.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public interface Extension {
 

@@ -42,7 +42,7 @@ import java.util.List;
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @see PriorityCollector
- * @since 1.0
+ * @since 2013/08
  */
 public class Collector<T> {
 

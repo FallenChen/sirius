@@ -8,10 +8,14 @@
 
 package sirius.kernel.xml;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 /**
- * Interface for writing structured output like XML or JSON.
+ * Interface for writing structured outputs like XML or JSON.
  *
- * @author aha
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
  */
 public interface StructuredOutput {
 
@@ -22,23 +26,30 @@ public interface StructuredOutput {
 
     /**
      * Starts the result by specifying the name of the root element.
+     *
+     * @param name the name of the root element
      */
-    void beginResult(String name);
+    void beginResult(@Nonnull String name);
 
     /**
-     * Finishes the result
+     * Finishes (closes) the result
      */
     void endResult();
 
     /**
-     * Startes a new object with the given name.
+     * Starts a new object with the given name.
+     *
+     * @param name the name of the element to start
      */
-    void beginObject(String name);
+    void beginObject(@Nonnull String name);
 
     /**
-     * Startes a new object with the given name and attributes.
+     * Starts a new object with the given name and attributes
+     *
+     * @param name       the name of the object to create
+     * @param attributes the attributes to add to the object
      */
-    void beginObject(String name, Attribute... attributes);
+    void beginObject(@Nonnull String name, Attribute... attributes);
 
     /**
      * Ends the currently open object.
@@ -47,13 +58,18 @@ public interface StructuredOutput {
 
     /**
      * Adds a property to the current object.
+     *
+     * @param name the name of the property
+     * @param data the value of the property
      */
-    void property(String name, Object data);
+    void property(@Nonnull String name, @Nullable Object data);
 
     /**
      * Starts an array with is added to the current object as "name".
+     *
+     * @param name the name of the array
      */
-    void beginArray(String name);
+    void beginArray(@Nonnull String name);
 
     /**
      * Ends the currently open array.

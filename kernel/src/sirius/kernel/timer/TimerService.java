@@ -27,7 +27,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 @Register(name = "timer", classes = {TimerService.class, Lifecycle.class})
 public class TimerService implements Lifecycle {

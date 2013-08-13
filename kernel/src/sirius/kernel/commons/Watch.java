@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @see System#nanoTime()
- * @since 1.0
+ * @since 2013/08
  */
 public class Watch {
 

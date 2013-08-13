@@ -22,7 +22,7 @@ import java.util.Collection;
  * @author Andreas Haufler (aha@scireum.de)
  * @see sirius.kernel.di.AnnotationProcessor
  * @see Parts
- * @since 1.0
+ * @since 2013/08
  */
 @Register
 public class PartsAnnotationProcessor implements AnnotationProcessor {

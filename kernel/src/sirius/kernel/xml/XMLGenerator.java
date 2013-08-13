@@ -15,6 +15,8 @@ import org.w3c.dom.DocumentType;
 import org.w3c.dom.Node;
 import sirius.kernel.health.Exceptions;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -28,12 +30,28 @@ import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 
+/**
+ * Uses an XMLStructuredOutput with a temporary buffer to generate XML into a String.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
+ */
+@ParametersAreNonnullByDefault
 public class XMLGenerator extends XMLStructuredOutput {
 
+    /**
+     * Creates a new XMLGenerator which uses an internal buffer to store the XML.
+     */
     public XMLGenerator() {
         super(new ByteArrayOutputStream());
     }
 
+    /**
+     * Returns the generated XML as string using the given encoding.
+     *
+     * @param encoding the encoding to use when converting the binary buffer to a String.
+     * @return a string representation of the generated XML.
+     */
     public String generate(String encoding) {
         try {
             return new String(((ByteArrayOutputStream) out).toByteArray(), encoding);
@@ -42,6 +60,11 @@ public class XMLGenerator extends XMLStructuredOutput {
         }
     }
 
+    /**
+     * Returns the generated XML as string, using UTF-8 as encoding.
+     *
+     * @return a string representation of the generated XML.
+     */
     public String generate() {
         return generate(Charsets.UTF_8.name());
     }
@@ -49,12 +72,27 @@ public class XMLGenerator extends XMLStructuredOutput {
     /**
      * Writes the given XML document to the given writer.
      *
-     * @throws javax.xml.transform.TransformerException if an exception during serialization occurs.
+     * @param doc      the XML document to write
+     * @param writer   the target to write the XML to
+     * @param encoding the encoding used to write the XML
+     * @throws javax.xml.transform.TransformerException
+     *          if an exception during serialization occurs.
      */
     public static void writeXML(Node doc, Writer writer, String encoding) throws TransformerException {
         writeXML(doc, writer, encoding, false);
     }
 
+    /**
+     * Writes the given XML document to the given writer.
+     *
+     * @param doc                the XML document to write
+     * @param writer             the target to write the XML to
+     * @param encoding           the encoding used to write the XML
+     * @param omitXMLDeclaration determines whether the XML declaration should be skipped (<tt>true</tt>) or not
+     *                           (<tt>false</tt>).
+     * @throws javax.xml.transform.TransformerException
+     *          if an exception during serialization occurs.
+     */
     public static void writeXML(Node doc,
                                 Writer writer,
                                 String encoding,
@@ -78,11 +116,16 @@ public class XMLGenerator extends XMLStructuredOutput {
     /**
      * Creates a new xml document.
      *
-     * @throws javax.xml.parsers.ParserConfigurationException if no suitable xml implementation was found.
+     * @param namespaceURI  defines the uri of the default namespace used by the resulting document
+     * @param qualifiedName returns the name of the root element of the resulting document
+     * @param docType       specifies the DocumentType used by the resulting document
+     * @return a Document created by the given specifications
+     * @throws javax.xml.parsers.ParserConfigurationException
+     *          if no suitable xml implementation was found.
      */
-    public static Document createDocument(String namespaceURI,
+    public static Document createDocument(@Nullable String namespaceURI,
                                           String qualifiedName,
-                                          DocumentType docType) throws ParserConfigurationException {
+                                          @Nullable DocumentType docType) throws ParserConfigurationException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         DOMImplementation impl = builder.getDOMImplementation();

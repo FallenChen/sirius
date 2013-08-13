@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @see NLS
- * @since 1.0
+ * @since 2013/08
  */
 public class Babelfish {
 

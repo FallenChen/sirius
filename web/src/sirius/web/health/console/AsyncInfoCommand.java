@@ -16,7 +16,7 @@ import sirius.kernel.di.std.Register;
  * Console command which reports statistics for all known executors.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 @Register(name = "async")
 public class AsyncInfoCommand implements Command {

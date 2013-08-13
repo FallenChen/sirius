@@ -82,7 +82,7 @@ import java.util.Map;
  * @see Extension
  * @see Value
  * @see sirius.kernel.Sirius#setupConfiguration()
- * @since 1.0
+ * @since 2013/08
  */
 @ParametersAreNonnullByDefault
 public class Extensions {

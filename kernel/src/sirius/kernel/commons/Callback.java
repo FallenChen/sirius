@@ -12,7 +12,7 @@ package sirius.kernel.commons;
  * Provides a simple callback which can be invoked with a value of the given type.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public interface Callback<T> {
     /**

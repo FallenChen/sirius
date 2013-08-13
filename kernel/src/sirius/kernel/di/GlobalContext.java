@@ -22,7 +22,7 @@ import java.util.Collection;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public interface GlobalContext {
 
@@ -60,7 +60,7 @@ public interface GlobalContext {
      * @param uniqueName the name for which the part was registered
      * @param clazz      one of the lookup classes for which the part was registered
      * @return the part which the given unique name, registered for the given class.
-     * @thows HandledException if no matching part was found
+     * @throws sirius.kernel.health.HandledException if no matching part was found
      */
     @Nonnull
     <P> P findPart(@Nonnull String uniqueName, @Nonnull Class<P> clazz);

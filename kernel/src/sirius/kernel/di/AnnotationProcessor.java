@@ -18,7 +18,7 @@ import java.lang.reflect.Field;
  * (to handle annotations placed on fields).
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public interface AnnotationProcessor {
     /**

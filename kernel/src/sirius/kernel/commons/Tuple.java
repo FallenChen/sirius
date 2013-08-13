@@ -24,7 +24,7 @@ import java.util.*;
  * @author Andreas Haufler (aha@scireum.de)
  * @see Tuple
  * @see Comparable
- * @since 1.0
+ * @since 2013/08
  */
 public class Tuple<F, S> {
 

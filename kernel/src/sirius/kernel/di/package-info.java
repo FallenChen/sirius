@@ -21,7 +21,7 @@
  * </p>
  * <p>
  *     Being a micro kernel, all those annotations are already extensions. Therefore it's very easy to process other
- *     annotations (i.e. like Javas {@link javax.inject.Inject}).
+ *     annotations (i.e. like Java's <tt>javax.inject.Inject</tt>).
  * </p>
  * <p>
  *     The framework operates on field level. Therefore an object can be "wired" (having its dependencies filled), which

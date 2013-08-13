@@ -16,7 +16,7 @@ import javax.annotation.Nullable;
  * computation failed.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public interface CompletionHandler<V> {
     /**

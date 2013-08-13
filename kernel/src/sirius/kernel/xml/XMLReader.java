@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.xml;
 
 import org.w3c.dom.Node;
@@ -15,12 +23,16 @@ import java.net.URL;
 import java.util.*;
 
 /**
- * This class is a combination of DOM and SAX parsing since import files like
- * BMECat files are generally too big for DOM parsers but SAX is too
- * inconvenient, this class extracts part of the SAX-stream, converts them into
- * sub-DOMs and calls the application for each sub-DOM.
+ * A combination of DOM and SAX parser which permits to parse very large XML files while conveniently handling sub tree
+ * using a DOM and xpath api.
+ * <p>
+ * Used SAX to parse a given XML file. A set of {@link NodeHandler} objects can be given, which get notified if
+ * a sub-tree below a given tag was parsed. This sub-tree is available as DOM and can conveniently be processed
+ * using xpath.
+ * </p>
  *
- * @author aha
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
  */
 public class XMLReader extends DefaultHandler {
 
@@ -89,41 +101,58 @@ public class XMLReader extends DefaultHandler {
     private InterruptSignal interrupt;
 
     /**
-     * Registers a new handler for a qualified name of a node. Handlers are
-     * invoked AFTER the complete node was read. Since documents like BMECat
-     * usually don't mix XML-data, namespaces are ignored for now which eases
-     * the processing a lot (especially xpath related tasks). Namespaces however
-     * could be easily added by repalcing String with QName here.
+     * Registers a new handler for a qualified name of a node.
+     * <p>
+     * Handlers are invoked after the complete node was read. Namespaces are ignored for now which eases
+     * the processing a lot (especially for xpath related tasks). Namespaces however
+     * could be easily added by replacing String with QName here.
+     * </p>
+     *
+     * @param name    the qualified name of the tag which should be parsed and processed
+     * @param handler the NodeHandler used to process the parsed DOM sub-tree
      */
     public void addHandler(String name, NodeHandler handler) {
         handlers.put(name, handler);
     }
 
     /**
-     * Parses the given stream
+     * Parses the given stream.
+     *
+     * @throws IOException if parsing the XML fails either due to an IO error or due to an SAXException (when
+     *                     processing a malformed XML).
      */
-    public void parse(InputStream stream) throws ParserConfigurationException, SAXException, IOException {
+    public void parse(InputStream stream) throws IOException {
         parse(stream, null, null);
     }
 
     /**
-     * Returns a XMLNode for the given w3c node.
+     * Returns a {@link StructuredNode} for the given w3c DOM node.
+     *
+     * @param node the DOM node to wrap
+     * @return a <tt>StructuredNode</tt> wrapping the given node
      */
     public static StructuredNode convert(Node node) {
         return new XMLNodeImpl(node);
     }
 
+    /*
+     * Used to handle the InterruptSignal
+     */
     class UserInterruptException extends RuntimeException {
 
         private static final long serialVersionUID = -7454219131982518216L;
     }
 
     /**
-     * Parses the given stream and using the given monitor
+     * Parses the given stream using the given locator and interrupt signal.
+     *
+     * @param stream    the stream containing the XML data
+     * @param locator   the resource locator used to discover dependent resources
+     * @param interrupt an InterruptSignal which can be used to cancel XML parsing
+     * @throws IOException if parsing the XML fails either due to an IO error or due to an SAXException (when
+     *                     processing a malformed XML).
      */
-    public void parse(InputStream stream,
-                      final ResourceLocator locator,
-                      InterruptSignal interrupt) throws ParserConfigurationException, SAXException, IOException {
+    public void parse(InputStream stream, final ResourceLocator locator, InterruptSignal interrupt) throws IOException {
         this.interrupt = interrupt;
         try {
             SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -156,6 +185,10 @@ public class XMLReader extends DefaultHandler {
             });
             reader.setContentHandler(this);
             reader.parse(new InputSource(stream));
+        } catch (ParserConfigurationException e) {
+            throw new IOException(e);
+        } catch (SAXException e) {
+            throw new IOException(e);
         } catch (UserInterruptException e) {
             /*
              * IGNORED - this is used to cancel parsing if the used tried to

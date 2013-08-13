@@ -20,7 +20,7 @@ import java.lang.annotation.Annotation;
  * @author Andreas Haufler (aha@scireum.de)
  * @see ClassLoadAction
  * @see Register
- * @since 1.0
+ * @since 2013/08
  */
 public class AutoRegisterAction implements ClassLoadAction {
 

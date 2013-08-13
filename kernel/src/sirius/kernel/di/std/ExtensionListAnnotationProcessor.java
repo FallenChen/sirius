@@ -21,7 +21,7 @@ import java.lang.reflect.Field;
  * @author Andreas Haufler (aha@scireum.de)
  * @see sirius.kernel.di.AnnotationProcessor
  * @see ExtensionList
- * @since 1.0
+ * @since 2013/08
  */
 @Register
 public class ExtensionListAnnotationProcessor implements AnnotationProcessor {

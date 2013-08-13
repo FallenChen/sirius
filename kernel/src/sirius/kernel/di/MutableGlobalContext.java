@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
  * initialization to make parts visible in the <tt>GlobalContext</tt>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public interface MutableGlobalContext extends GlobalContext {
     /**

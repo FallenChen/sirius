@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.xml;
 
 import org.w3c.dom.*;
@@ -10,7 +18,10 @@ import javax.xml.parsers.ParserConfigurationException;
 
 
 /**
- * Used to create a dom-tree for incoming nodes.
+ * Internal adapter used to forward SAX events
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
  */
 class SAX2DOMHandler {
 

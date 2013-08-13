@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
  * @author Andreas Haufler (aha@scireum.de)
  * @see Tuple
  * @see Comparable
- * @since 1.0
+ * @since 2013/08
  */
 public class ComparableTuple<F extends Comparable<F>, S> extends Tuple<F, S> implements Comparable<ComparableTuple<F, S>> {
 

@@ -28,7 +28,7 @@ import java.util.concurrent.Callable;
  * @param <K> the type of the keys used by this cache
  * @param <V> the type of the values supported by this cache
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 class ManagedCache<K, V> implements Cache<K, V> {
 

@@ -35,7 +35,7 @@ import java.util.List;
  * @see CacheManager
  * @see ValueComputer
  * @see ValueVerifier
- * @since 1.0
+ * @since 2013/08
  */
 public interface Cache<K, V> {
 

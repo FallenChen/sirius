@@ -21,7 +21,7 @@ import java.util.Date;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public class CacheEntry<K, V> {
     /*

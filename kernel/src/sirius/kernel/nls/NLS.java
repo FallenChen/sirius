@@ -56,7 +56,7 @@ import java.util.*;
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @see Babelfish
- * @since 1.0
+ * @since 2013/08
  */
 public class NLS {
 

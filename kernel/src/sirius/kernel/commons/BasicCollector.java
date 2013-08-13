@@ -16,7 +16,7 @@ import java.util.List;
  * Provides a simple {@link Collector} which is intended to be subclassed.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public abstract class BasicCollector<T> extends Collector<T> {
 

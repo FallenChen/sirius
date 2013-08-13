@@ -26,7 +26,7 @@ import java.util.Map;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public class Exceptions {
 
@@ -101,7 +101,7 @@ public class Exceptions {
      * </p>
      *
      * @author Andreas Haufler (aha@scireum.de)
-     * @since 1.0
+     * @since 2013/08
      */
     public static class ErrorHandler {
         private Log log = LOG;

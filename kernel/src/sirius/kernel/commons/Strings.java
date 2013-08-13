@@ -29,7 +29,7 @@ import java.util.Map;
  *
  * @author aha
  * @see Value
- * @since 1.0
+ * @since 2013/08
  */
 public class Strings {
 

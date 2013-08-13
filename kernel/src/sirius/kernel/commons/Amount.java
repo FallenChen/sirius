@@ -37,7 +37,7 @@ import java.text.DecimalFormat;
  * @author Andreas Haufler (aha@scireum.de)
  * @see NumberFormat
  * @see BigDecimal
- * @since 1.0
+ * @since 2013/08
  */
 @Immutable
 public class Amount implements Comparable<Amount> {

@@ -12,7 +12,7 @@ package sirius.kernel.health;
  * Represents an average value over a given set of values.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public class Average {
 

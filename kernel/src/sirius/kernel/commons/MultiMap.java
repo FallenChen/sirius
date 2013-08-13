@@ -21,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public class MultiMap<K, V> {
 

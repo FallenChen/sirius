@@ -19,7 +19,7 @@ import java.util.Collection;
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 1.0
+ * @since 2013/08
  */
 public interface PartCollection<P> extends Iterable<P> {
 

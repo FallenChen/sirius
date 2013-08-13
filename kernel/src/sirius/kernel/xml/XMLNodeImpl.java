@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.kernel.xml;
 
 import com.google.common.base.Charsets;
@@ -16,12 +24,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Default implementation for XMLNode
+ * Default implementation of {@link StructuredNode}.
+ *
+ * @author Andreas Haufler
+ * @since 2013/08
  */
-public class XMLNodeImpl implements StructuredNode {
+class XMLNodeImpl implements StructuredNode {
 
+    /*
+     * Cache to improve speed of xpath...
+     */
     private static Cache<Tuple<Thread, String>, XPathExpression> cache;
 
+    /*
+     * Compiles the given xpath by utilizing the internal cache
+     */
     private static XPathExpression compile(String xpath) throws XPathExpressionException {
         Tuple<Thread, String> key = Tuple.create(Thread.currentThread(), xpath);
         if (cache == null) {
@@ -39,7 +56,10 @@ public class XMLNodeImpl implements StructuredNode {
 
     private Node node;
 
-    public XMLNodeImpl(Node root) {
+    /*
+     * Wraps the given node
+     */
+    protected XMLNodeImpl(Node root) {
         node = root;
     }
 
@@ -130,6 +150,5 @@ public class XMLNodeImpl implements StructuredNode {
     public Value queryValue(String path) throws XPathExpressionException {
         return Value.of(queryString(path));
     }
-
 
 }
