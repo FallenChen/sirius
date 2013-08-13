@@ -6,7 +6,7 @@ import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.Injector;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Log;

@@ -3,8 +3,8 @@ package sirius.web.http.dispatch;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.commons.PriorityCollector;
-import sirius.kernel.di.annotations.ConfigValue;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.ConfigValue;
+import sirius.kernel.di.std.Register;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 

@@ -2,7 +2,7 @@ package sirius.web.health.console;
 
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Average;
 import sirius.kernel.health.Microtiming;
 

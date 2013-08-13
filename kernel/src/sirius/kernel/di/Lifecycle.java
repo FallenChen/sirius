@@ -9,7 +9,15 @@
 package sirius.kernel.di;
 
 /**
- * Gets notified when the framework starts up or shuts down.
+ * Classes implementing this interface get notified once the framework is started or being shut down.
+ * <p>
+ * In contrast to {@link Initializable} this might be called a bit later, since the system is first initialized
+ * and then started up. However, one can assume that all annotations have been processed and dependent parts
+ * can be accessed.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public interface Lifecycle {
     /**
@@ -24,6 +32,8 @@ public interface Lifecycle {
 
     /**
      * Returns a short name for this lifecycle.
+     *
+     * @return the name of this component, used for log outputs.
      */
     String getName();
 }

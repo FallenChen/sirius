@@ -9,12 +9,20 @@
 package sirius.kernel.di;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 26.06.13
- * Time: 17:04
- * To change this template use File | Settings | File Templates.
+ * Classes implementing this interface will be invoked, once the {@link Injector} is fully initialized (all annotations
+ * are processed).
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public interface Initializable {
+    /**
+     * Invoked by the injector once the system is completely initialized.
+     * <p>
+     * Can be used to perform initial actions where access to dependent parts is required.
+     * </p>
+     *
+     * @throws Exception in case of any error during the initialization.
+     */
     void initialize() throws Exception;
 }

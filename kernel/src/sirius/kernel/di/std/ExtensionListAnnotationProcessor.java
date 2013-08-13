@@ -10,13 +10,19 @@ package sirius.kernel.di.std;
 
 import sirius.kernel.di.AnnotationProcessor;
 import sirius.kernel.di.MutableGlobalContext;
-import sirius.kernel.di.annotations.ExtensionList;
-import sirius.kernel.di.annotations.Register;
 import sirius.kernel.extensions.Extensions;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 
+/**
+ * Handles the {@link ExtensionList} annotation.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @see sirius.kernel.di.AnnotationProcessor
+ * @see ExtensionList
+ * @since 1.0
+ */
 @Register
 public class ExtensionListAnnotationProcessor implements AnnotationProcessor {
     @Override

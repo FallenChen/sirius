@@ -10,7 +10,7 @@
  * Extension system based on the system configuration, providing simple access to extension lists.
  * <p>
  * Extensions are represented using {@link sirius.kernel.extensions.Extension} and either obtained by calling
- * {@link sirius.kernel.extensions.Extensions} or by placing an {@link sirius.kernel.di.annotations.ExtensionList}
+ * {@link sirius.kernel.extensions.Extensions} or by placing an {@link sirius.kernel.di.std.ExtensionList}
  * annotation on a field.
  * </p>
  * <p>

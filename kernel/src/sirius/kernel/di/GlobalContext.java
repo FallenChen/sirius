@@ -8,52 +8,91 @@
 
 package sirius.kernel.di;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collection;
 
 /**
- * Provides access to basic OCM functions.
- * <p/>
- * Each OCM implementation should provide a way for non-component classes to
- * access an instance of {@link sirius.kernel.di.GlobalContext} in order to interact with OCM.
+ * Used to access parts managed by the {@link Injector}.
+ * <p>
+ * This is the central repository containing all parts managed by the injector. Parts stored inhere can be either
+ * accessed via the <tt>getPart</tt> or <tt>findPart</tt> methods. Also all annotations processed by an appropriate
+ * {@link AnnotationProcessor} (like {@link sirius.kernel.di.std.Part}) will use this context to find the
+ * requested part.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public interface GlobalContext {
 
     /**
-     * Finds the previously registered part for the given service interface. If several parts where
-     * registered for this interface, the first one is chosen. If no part was
-     * registered, <code>null</code> is returned.
+     * Finds the previously registered part for the given lookup class.
+     * <p/>
+     * If several parts where registered for this class, the first one is chosen. If no part was registered,
+     * <tt>null</tt> is returned.
+     *
+     * @param clazz the class used to lookup the requested part.
+     * @return the first part registered for the given class or <tt>null</tt> if no part was registered yet.
      */
-    <P> P getPart(Class<P> clazz);
+    @Nullable
+    <P> P getPart(@Nonnull Class<P> clazz);
 
     /**
-     * Retrieves a part of the requested type with the given well known name. IF
-     * the part is not found, <code>null</code> is returned.
+     * Retrieves a part of the requested type with the given unique name.
+     * <p>
+     * If no matching part is found, <tt>null</tt> is returned.
+     * </p>
+     *
+     * @param uniqueName the name for which the part was registered
+     * @param clazz      one of the lookup classes for which the part was registered
+     * @return the part which the given unique name, registered for the given class, or <tt>null</tt> if no matching
+     *         part was found.
      */
-    <P> P getPart(String uniqueName, Class<P> clazz);
+    @Nullable
+    <P> P getPart(@Nonnull String uniqueName, @Nonnull Class<P> clazz);
 
     /**
-     * Retrieves a part of the requested type with the given well known name. If
-     * the part is not found, an exception is thrown.
+     * Like {@link #getPart(String, Class)} this method tried to find the part with the given name, registered for the
+     * given lookup class. Rather than returning <tt>null</tt> when no part is found, this throws a
+     * {@link sirius.kernel.health.HandledException} with an appropriate message.
+     *
+     * @param uniqueName the name for which the part was registered
+     * @param clazz      one of the lookup classes for which the part was registered
+     * @return the part which the given unique name, registered for the given class.
+     * @thows HandledException if no matching part was found
      */
-    <P> P findPart(String uniqueName, Class<P> clazz);
+    @Nonnull
+    <P> P findPart(@Nonnull String uniqueName, @Nonnull Class<P> clazz);
 
     /**
-     * Returns all parts which are currently registered for the given service
-     * interface. During installation however, not all services may be returned
-     * since not all components are completely installed.
+     * Returns all parts which are currently registered for the given lookup class.
+     *
+     * @param partInterface one of the lookup classes for which the parts of interest were registered
+     * @return a collection of all parts registered for the given class. If no parts were found,
+     *         an empty collection is returned
      */
-    <P> Collection<P> getParts(Class<P> partInterface);
+    @Nonnull
+    <P> Collection<P> getParts(@Nonnull Class<P> partInterface);
 
     /**
-     * Returns a collection which always contains all available parts for the
-     * given service interface which are present at the time of call.
+     * Returns a {@link PartCollection} which contains all parts registered for the given lookup class.
+     *
+     * @param partInterface one of the lookup classes for which the parts of interest were registered
+     * @return a <tt>PartCollection</tt> containing all parts registered for the given class. If no parts were found,
+     *         an empty collection is returned
      */
-    <P> PartCollection<P> getPartCollection(Class<P> partInterface);
+    @Nonnull
+    <P> PartCollection<P> getPartCollection(@Nonnull Class<P> partInterface);
 
     /**
-     * Reads the annotations of the given object and auto-fills annotated
-     * fields.
+     * Processes all annotations of the given objects class (or super classes).
+     *
+     * @param object the object which annotations should be processed to fill the respective fields
+     * @return the "wired" object, which has no filled fields. This is just returned for convenience and will not
+     *         another instance or clone of the given object.
      */
-    <T> T wire(T object);
+    @Nonnull
+    <T> T wire(@Nonnull T object);
 
 }

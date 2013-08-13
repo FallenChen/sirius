@@ -15,7 +15,7 @@ import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.di.Lifecycle;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;

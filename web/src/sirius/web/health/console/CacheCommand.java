@@ -2,7 +2,7 @@ package sirius.web.health.console;
 
 import sirius.kernel.cache.Cache;
 import sirius.kernel.cache.CacheManager;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 
 @Register(name = "cache")
 public class CacheCommand implements Command {

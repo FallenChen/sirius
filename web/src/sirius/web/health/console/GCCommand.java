@@ -1,6 +1,6 @@
 package sirius.web.health.console;
 
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.nls.NLS;
 
 @Register(name = "gc")

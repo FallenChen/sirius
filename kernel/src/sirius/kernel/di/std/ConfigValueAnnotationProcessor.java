@@ -15,13 +15,20 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.di.AnnotationProcessor;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.MutableGlobalContext;
-import sirius.kernel.di.annotations.ConfigValue;
-import sirius.kernel.di.annotations.Register;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.List;
 
+/**
+ * AnnotationProcessor which handles the {@link ConfigValue} annotation.
+ *
+ * @see AnnotationProcessor
+ * @see ConfigValue
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
+ */
 @Register
 public class ConfigValueAnnotationProcessor implements AnnotationProcessor {
     @Override

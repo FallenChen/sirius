@@ -8,18 +8,39 @@
 
 package sirius.kernel.di;
 
+import javax.annotation.Nonnull;
+
 /**
- * Visible for {@link sirius.kernel.di.ClassLoadAction} at start-time to make components visible
- * in the GlobalContext.
+ * Visible for instances of {@link sirius.kernel.di.ClassLoadAction} and {@link AnnotationProcessor} during the system
+ * initialization to make parts visible in the <tt>GlobalContext</tt>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public interface MutableGlobalContext extends GlobalContext {
     /**
-     * Registers the given part for the given lookup interfaces.
+     * Registers the given part for the given lookup classes.
+     * <p>
+     * Note that the given part does not need to implement the given interfaces or classes.
+     * </p>
+     *
+     * @param part          the object to be stored in the global context.
+     * @param lookupClasses the list of classes (don't need to be interfaces) by which this part can be
+     *                      fetched from the global context. At least one class should be given, otherwise the
+     *                      part will be discarded.
      */
-    void registerPart(Object part, Class<?>... implementedInterfaces);
+    void registerPart(@Nonnull Object part, @Nonnull Class<?>... lookupClasses);
 
     /**
-     * Registers the given part for the given name and interfaces.
+     * Registers the given part for the given name and lookup classes.
+     *
+     * @param uniqueName    the name of this part, which can be used to retrieve this part from the global
+     *                      context. This name doesn't have to be globally unique, but within <b>each</b> of
+     *                      the given lookup classes.
+     * @param part          the object to be stored in the global context.
+     * @param lookupClasses the list of classes (don't need to be interfaces) by which this part can be
+     *                      fetched from the global context. At least one class should be given, otherwise the
+     *                      part will be discarded.
      */
-    void registerPart(String uniqueName, Object part, Class<?>... implementedInterfaces);
+    void registerPart(String uniqueName, Object part, Class<?>... lookupClasses);
 }

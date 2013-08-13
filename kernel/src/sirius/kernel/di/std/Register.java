@@ -1,4 +1,4 @@
-package sirius.kernel.di.annotations;
+package sirius.kernel.di.std;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,17 +7,22 @@ import java.lang.annotation.Target;
 
 /**
  * Marks a given class as "self registering".
- * <p/>
+ * <p>
  * If a non empty name is given, the part is registered with the given name and
  * for the given classes. Otherwise, the part is directly registered without any
- * id.
- * <p/>
+ * unique name.
+ * </p>
+ * <p>
+ * If no <tt>classes</tt> are given, the class is registered for its own class, and all implemented interfaces. This
+ * is probably the right choice in many situations, therefore this annotation can be used without any parameters in
+ * most cases.
+ * </p>
+ * <p>
  * Classes wearing this annotations must have a zero args constructor.
- * <p/>
- * Implementations of the OCM are encouraged to create an appropriate
- * {@link com.scireum.ocm.model.ClassLoadAction} for this annotation.
+ * </p>
  *
- * @author aha
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

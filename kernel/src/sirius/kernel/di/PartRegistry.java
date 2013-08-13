@@ -17,7 +17,10 @@ import java.util.*;
 
 /**
  * An instance of PartRegistry is kept by {@link sirius.kernel.di.Injector} to track all registered
- * Parts.
+ * parts.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 class PartRegistry implements MutableGlobalContext {
 
@@ -25,6 +28,7 @@ class PartRegistry implements MutableGlobalContext {
      * Contains all registered parts
      */
     private final MultiMap<Class<?>, Object> parts = MultiMap.createSynchronized();
+
     /**
      * Contains all registered parts with a unique name. These parts will also
      * be contained in parts. This is just a lookup map if searched by unique
@@ -81,8 +85,8 @@ class PartRegistry implements MutableGlobalContext {
         return object;
     }
 
-    /**
-     * Called by Model to initialize all static fields with @Part references.
+    /*
+     * Called to initialize all static fields with annotations
      */
     void wireClass(Class<?> clazz) {
         while (clazz != null) {
@@ -91,6 +95,9 @@ class PartRegistry implements MutableGlobalContext {
         }
     }
 
+    /*
+     * Called to initialize all field of the given class in the given object
+     */
     private void wireClass(Class<?> clazz, Object object) {
         for (Field field : clazz.getDeclaredFields()) {
             if ((!Modifier.isFinal(field.getModifiers())) && (object != null || Modifier.isStatic(field.getModifiers()))) {
@@ -114,6 +121,7 @@ class PartRegistry implements MutableGlobalContext {
         }
     }
 
+    @Override
     public void registerPart(Object part, Class<?>... implementedInterfaces) {
         for (Class<?> iFace : implementedInterfaces) {
             parts.put(iFace, part);
@@ -130,6 +138,7 @@ class PartRegistry implements MutableGlobalContext {
         return (P) partsOfClass.get(uniqueName);
     }
 
+    @Override
     public synchronized void registerPart(String uniqueName, Object part, Class<?>... implementedInterfaces) {
         for (Class<?> clazz : implementedInterfaces) {
             Map<String, Object> partsOfClass = namedParts.get(clazz);
@@ -161,7 +170,9 @@ class PartRegistry implements MutableGlobalContext {
         return part;
     }
 
-
+    /**
+     * Processes all annotations of all known parts.
+     */
     void processAnnotations() {
         for (Collection<?> val : parts.getUnderlyingMap().values()) {
             for (Object part : val) {

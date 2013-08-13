@@ -1,6 +1,6 @@
 package sirius.web.health;
 
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 import sirius.web.http.WebContext;
 import sirius.web.controller.BasicController;
 import sirius.web.controller.Controller;

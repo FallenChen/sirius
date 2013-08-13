@@ -1,7 +1,7 @@
 package sirius.web.health.console;
 
 import com.google.common.hash.Hashing;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 
 @Register(name = "md5")
 public class MD5Command implements Command {

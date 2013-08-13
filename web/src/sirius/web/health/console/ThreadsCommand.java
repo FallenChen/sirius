@@ -1,6 +1,6 @@
 package sirius.web.health.console;
 
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;

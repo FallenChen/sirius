@@ -66,7 +66,7 @@ import java.util.Map;
  * <code>ext.getValue("otherKey").asBoolean()</code>
  * </p>
  * <p>
- * Another way of loading extensions is to place an {@link sirius.kernel.di.annotations.ExtensionList} annotation
+ * Another way of loading extensions is to place an {@link sirius.kernel.di.std.ExtensionList} annotation
  * on a field like:
  * <code>
  * <pre>

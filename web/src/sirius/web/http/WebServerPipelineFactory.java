@@ -8,7 +8,7 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.PartCollection;
-import sirius.kernel.di.annotations.Parts;
+import sirius.kernel.di.std.Parts;
 
 import java.util.List;
 

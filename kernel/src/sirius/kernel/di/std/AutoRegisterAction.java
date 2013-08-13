@@ -11,12 +11,16 @@ package sirius.kernel.di.std;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.ClassLoadAction;
 import sirius.kernel.di.MutableGlobalContext;
-import sirius.kernel.di.annotations.Register;
 
 import java.lang.annotation.Annotation;
 
 /**
- * Handles the {@link sirius.kernel.di.annotations.Register} annotation.
+ * Handles the {@link Register} annotation.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @see ClassLoadAction
+ * @see Register
+ * @since 1.0
  */
 public class AutoRegisterAction implements ClassLoadAction {
 

@@ -1,6 +1,6 @@
 package sirius.web.http.services;
 
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.xml.StructuredOutput;
 
 /**

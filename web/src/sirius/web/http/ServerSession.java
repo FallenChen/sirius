@@ -5,9 +5,9 @@ import org.joda.time.Duration;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Value;
 import sirius.kernel.di.PartCollection;
-import sirius.kernel.di.annotations.ConfigValue;
-import sirius.kernel.di.annotations.Parts;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.ConfigValue;
+import sirius.kernel.di.std.Parts;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.timer.EveryMinute;
 

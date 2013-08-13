@@ -10,12 +10,18 @@ package sirius.kernel.di.std;
 
 import sirius.kernel.di.AnnotationProcessor;
 import sirius.kernel.di.MutableGlobalContext;
-import sirius.kernel.di.annotations.Context;
-import sirius.kernel.di.annotations.Register;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 
+/**
+ * Handles the {@link Context} annotation.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @see sirius.kernel.di.AnnotationProcessor
+ * @see Context
+ * @since 1.0
+ */
 @Register
 public class ContextAnnotationProcessor implements AnnotationProcessor {
     @Override

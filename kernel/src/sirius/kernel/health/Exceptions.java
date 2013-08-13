@@ -12,7 +12,7 @@ import com.google.common.collect.Maps;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.PartCollection;
-import sirius.kernel.di.annotations.Parts;
+import sirius.kernel.di.std.Parts;
 import sirius.kernel.nls.NLS;
 
 import java.util.Map;

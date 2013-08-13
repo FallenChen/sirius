@@ -10,12 +10,18 @@ package sirius.kernel.di.std;
 
 import sirius.kernel.di.AnnotationProcessor;
 import sirius.kernel.di.MutableGlobalContext;
-import sirius.kernel.di.annotations.Part;
-import sirius.kernel.di.annotations.Register;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 
+/**
+ * Handles the {@link Part} annotation.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @see sirius.kernel.di.AnnotationProcessor
+ * @see Part
+ * @since 1.0
+ */
 @Register
 public class PartAnnotationProcessor implements AnnotationProcessor {
     @Override

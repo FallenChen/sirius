@@ -3,8 +3,8 @@ package sirius.web.health.console;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.di.GlobalContext;
-import sirius.kernel.di.annotations.Context;
-import sirius.kernel.di.annotations.Register;
+import sirius.kernel.di.std.Context;
+import sirius.kernel.di.std.Register;
 import sirius.web.http.WebContext;
 
 /**

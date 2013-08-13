@@ -8,21 +8,35 @@
 
 package sirius.kernel.di;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 
 /**
  * Represents a collection, which always contains all registered parts for the
  * given interface (PartCollection{@link #getInterface()}.
+ * <p>
+ * This is the content of a field wearing the {@link sirius.kernel.di.std.Parts} annotation.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 public interface PartCollection<P> extends Iterable<P> {
 
     /**
-     * Returns the interface which are requested by this part collection.
+     * Returns the class which is used to fetch parts from the {@link GlobalContext}
+     *
+     * @return the class which is used to determine which parts should be in this collection.
      */
+    @Nonnull
     Class<P> getInterface();
 
     /**
-     * Returns all parts currently registered for the given service interface.
+     * Returns all parts currently registered for the given class.
+     *
+     * @return all parts in the {@link GlobalContext} which were registered for the given class. If no parts are found,
+     *         and empty collection is returned.
      */
+    @Nonnull
     Collection<P> getParts();
 }
