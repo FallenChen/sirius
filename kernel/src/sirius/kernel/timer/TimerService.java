@@ -17,6 +17,17 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Internal service which is responsible for executing timers.
+ * <p>
+ * Other than for statistical reasons, this class does not need to be called directly. It automatically
+ * discovers all parts registered for one of the timer interfaces (<tt>EveryMinute</tt>, <tt>EveryTenMinutes</tt>,
+ * <tt>EveryHour</tt>, <tt>EveryDay</tt>) and invokes them appropriately.
+ * </p>
+ * <p>
+ * To access this class, a <tt>Part</tt> annotation can be used on a field of type <tt>TimerService</tt>.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 1.0
  */
 @Register(name = "timer", classes = {TimerService.class, Lifecycle.class})
 public class TimerService implements Lifecycle {
@@ -63,6 +74,9 @@ public class TimerService implements Lifecycle {
 
     /**
      * Returns the timestamp of the last execution of the one minute timer.
+     *
+     * @return a textual representation of the last execution of the one minute timer. Returns "-" if the timer didn't
+     *         run yet.
      */
     public String getLastOneMinuteExecution() {
         if (lastOneMinuteExecution == 0) {
@@ -71,6 +85,12 @@ public class TimerService implements Lifecycle {
         return NLS.toUserString(new Date(lastOneMinuteExecution), true);
     }
 
+    /**
+     * Returns the timestamp of the last execution of the ten minutes timer.
+     *
+     * @return a textual representation of the last execution of the ten minutes timer. Returns "-" if the timer didn't
+     *         run yet.
+     */
     public String getLastTenMinutesExecution() {
         if (lastTenMinutesExecution == 0) {
             return "-";
@@ -78,6 +98,12 @@ public class TimerService implements Lifecycle {
         return NLS.toUserString(new Date(lastTenMinutesExecution), true);
     }
 
+    /**
+     * Returns the timestamp of the last execution of the one hour timer.
+     *
+     * @return a textual representation of the last execution of the one hour timer. Returns "-" if the timer didn't
+     *         run yet.
+     */
     public String getLastHourExecution() {
         if (lastHourExecution == 0) {
             return "-";
@@ -127,6 +153,9 @@ public class TimerService implements Lifecycle {
         return "timer (System Timer Services)";
     }
 
+    /**
+     * Executes all one minute timers (implementing <tt>EveryMinute</tt>) now (out of schedule).
+     */
     public void runOneMinuteTimers() {
         for (final TimedTask task : everyMinute.getParts()) {
             executeTask(task);
@@ -152,6 +181,9 @@ public class TimerService implements Lifecycle {
         }).execute();
     }
 
+    /**
+     * Executes all ten minutes timers (implementing <tt>EveryTenMinutes</tt>) now (out of schedule).
+     */
     public void runTenMinuteTimers() {
         for (final TimedTask task : everyTenMinutes.getParts()) {
             executeTask(task);
@@ -159,6 +191,9 @@ public class TimerService implements Lifecycle {
         lastTenMinutesExecution = System.currentTimeMillis();
     }
 
+    /**
+     * Executes all one hour timers (implementing <tt>EveryHour</tt>) now (out of schedule).
+     */
     public void runOneHourTimers() {
         for (final TimedTask task : everyHour.getParts()) {
             executeTask(task);
