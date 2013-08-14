@@ -1,4 +1,4 @@
-package sirius.web.http.services;
+package sirius.web.services;
 
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;

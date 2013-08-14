@@ -1,4 +1,4 @@
-package sirius.web.http.services;
+package sirius.web.services;
 
 import com.google.common.base.Charsets;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;

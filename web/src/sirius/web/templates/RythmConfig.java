@@ -14,7 +14,10 @@ import org.rythmengine.resource.TemplateResourceManager;
 import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.commons.BasicCollector;
+import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.Lifecycle;
+import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
@@ -23,6 +26,7 @@ import sirius.web.controller.UserContext;
 import sirius.web.http.WebContext;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +50,9 @@ public class RythmConfig implements Lifecycle {
             return NLS.apply(key, args);
         }
     }
+
+    @Parts(RythmExtension.class)
+    private Collection<RythmExtension> extensions;
 
     @Override
     public void started() {
@@ -84,11 +91,13 @@ public class RythmConfig implements Lifecycle {
                     return null;
                 }
                 TemplateClass tc = engine.classes().getByTemplate(tr.getKey());
-                if (null == tc) {
+                if (tc != null && engine.getRegisteredTemplateClass(tc.getFullName()) == null) {
+                    tc = null;
+                }
+                if (tc == null) {
                     tc = new TemplateClass(tr, engine);
                     try {
                         tc.asTemplate(engine);
-                        //engine.registerTemplateClass(tc);
                     } catch (Exception e) {
                         throw Exceptions.handle(e);
                     }
@@ -119,7 +128,7 @@ public class RythmConfig implements Lifecycle {
 
             @Override
             public Map<String, ?> getRenderArgDescriptions() {
-                Map<String, Object> map = Maps.newTreeMap();
+                final Map<String, Object> map = Maps.newTreeMap();
                 map.put("ctx", CallContext.class);
                 map.put("user", UserContext.class);
                 map.put("prefix", String.class);
@@ -127,11 +136,19 @@ public class RythmConfig implements Lifecycle {
                 map.put("version", String.class);
                 map.put("isDev", Boolean.class);
                 map.put("call", WebContext.class);
+                for (RythmExtension ext : extensions) {
+                    ext.collectExtensionNames(new BasicCollector<Tuple<String, Class<?>>>() {
+                        @Override
+                        public void add(Tuple<String, Class<?>> entity) {
+                            map.put(entity.getFirst(), entity.getSecond());
+                        }
+                    });
+                }
                 return map;
             }
 
             @Override
-            public void setRenderArgs(ITemplate template) {
+            public void setRenderArgs(final ITemplate template) {
                 CallContext ctx = CallContext.getCurrent();
                 ctx.addToMDC("template", template.__getTemplateClass(true).getFullName());
                 WebContext wc = ctx.get(WebContext.class);
@@ -143,6 +160,14 @@ public class RythmConfig implements Lifecycle {
                 template.__setRenderArg("version", Sirius.getProductVersion());
                 template.__setRenderArg("isDev", Sirius.isDev());
                 template.__setRenderArg("call", wc);
+                for (RythmExtension ext : extensions) {
+                    ext.collectExtensionValues(new BasicCollector<Tuple<String, Object>>() {
+                        @Override
+                        public void add(Tuple<String, Object> entity) {
+                            template.__setRenderArg(entity.getFirst(), entity.getSecond());
+                        }
+                    });
+                }
             }
         });
         Rythm.init(config);

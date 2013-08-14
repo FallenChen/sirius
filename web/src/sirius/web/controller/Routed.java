@@ -21,6 +21,4 @@ public @interface Routed {
     int priority() default PriorityCollector.DEFAULT_PRIORITY;
 
     String value();
-
-    boolean defaultHandler() default false;
 }

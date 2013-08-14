@@ -49,6 +49,10 @@ import java.util.regex.Pattern;
  * <p>
  * This class can be also used as superclass for jUnit-Tests as it starts the framework when required.
  * </p>
+ * <p>
+ * To make a jar or other classpath-root visible to SIRIUS an empty file called "component.marker" must be placed in
+ * its root directory.
+ * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08

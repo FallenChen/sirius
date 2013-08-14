@@ -3,18 +3,18 @@ package sirius.web.controller;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.CallContext;
-import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.Injector;
+import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
-import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Log;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
-import sirius.web.http.WebServer;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -31,11 +31,13 @@ public class ControllerDispatcher implements WebDispatcher {
 
     private List<Route> routes;
 
+    @Parts(Interceptor.class)
+    private Collection<Interceptor> interceptors;
+
     @Override
     public int getPriority() {
         return PriorityCollector.DEFAULT_PRIORITY + 10;
     }
-
 
     @Override
     public boolean dispatch(WebContext ctx) throws Exception {
@@ -56,11 +58,16 @@ public class ControllerDispatcher implements WebDispatcher {
                         public void run() {
                             try {
                                 params.add(0, ctx);
-                                route.getSuccessCallback().invoke(params);
+                                for (Interceptor interceptor : interceptors) {
+                                    if (interceptor.before(ctx, route.getController(), route.getSuccessCallback())) {
+                                        return;
+                                    }
+                                }
+                                route.getSuccessCallback().invoke(route.getController(), params.toArray());
+                            } catch (InvocationTargetException ex) {
+                                handleFailure(ctx, route, ex.getTargetException());
                             } catch (Throwable ex) {
-                                ctx.respondWith()
-                                   .error(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                          Exceptions.handle(WebServer.LOG, ex));
+                                handleFailure(ctx, route, ex);
                             }
                         }
                     }).dropOnOverload(new Runnable() {
@@ -76,12 +83,7 @@ public class ControllerDispatcher implements WebDispatcher {
                 Async.executor("web-mvc").fork(new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            route.getFailureCallback().invoke(Exceptions.handle(WebServer.LOG, e));
-                        } catch (Throwable ex) {
-                            ctx.respondWith()
-                               .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
-                        }
+                        handleFailure(ctx, route, e);
                     }
 
 
@@ -92,31 +94,29 @@ public class ControllerDispatcher implements WebDispatcher {
         return false;
     }
 
+    private void handleFailure(WebContext ctx, Route route, Throwable ex) {
+        try {
+            CallContext.getCurrent()
+                       .addToMDC("controller",
+                                 route.getController().getClass().getName() + "." + route.getSuccessCallback()
+                                                                                         .getName());
+            route.getController().onError(ctx, Exceptions.handle(ControllerDispatcher.LOG, ex));
+        } catch (Throwable t) {
+            ctx.respondWith()
+               .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(ControllerDispatcher.LOG, t));
+        }
+    }
+
     private void buildRouter() {
         PriorityCollector<Route> collector = PriorityCollector.create();
         for (final Controller controller : Injector.context().getParts(Controller.class)) {
-            Method defaultHandler = null;
             for (final Method m : controller.getClass().getMethods()) {
-                if (m.isAnnotationPresent(Routed.class) && m.getAnnotation(Routed.class).defaultHandler()) {
-                    if (m.getParameterTypes().length == 1 && WebContext.class.equals(m.getParameterTypes()[0])) {
-                        defaultHandler = m;
-                    } else {
-                        LOG.WARN(
-                                "Cannot used '%s' as default route in controller '%s' - Method need to be accessible and must have exactly one parameter of type: %s",
-                                m.getName(),
-                                controller.getClass().getName(),
-                                WebContext.class.getName());
+                if (m.isAnnotationPresent(Routed.class)) {
+                    Routed routed = m.getAnnotation(Routed.class);
+                    Route route = compileMethod(routed.value(), controller, m);
+                    if (route != null) {
+                        collector.add(routed.priority(), route);
                     }
-                }
-            }
-            for (final Method m : controller.getClass().getMethods()) {
-                if (!m.isAnnotationPresent(Routed.class)) {
-                    break;
-                }
-                Routed routed = m.getAnnotation(Routed.class);
-                Route route = compileMethod(routed.value(), controller, m, defaultHandler);
-                if (route != null) {
-                    collector.add(routed.priority(), route);
                 }
             }
         }
@@ -124,40 +124,11 @@ public class ControllerDispatcher implements WebDispatcher {
         routes = collector.getData();
     }
 
-    private Route compileMethod(String uri, final Controller controller, final Method m, final Method defaultHandler) {
+    private Route compileMethod(String uri, final Controller controller, final Method m) {
         try {
             final Route route = Route.compile(uri, m.getParameterTypes());
-            route.setFailureCallback(new Callback<HandledException>() {
-                @Override
-                public void invoke(HandledException value) throws Exception {
-                    CallContext.getCurrent()
-                               .addToMDC("controller", controller.getClass().getName() + "." + m.getName());
-                    WebContext ctx = CallContext.getCurrent().get(WebContext.class);
-                    if (defaultHandler != null) {
-                        //ctx. TODO add error
-                        try {
-                            defaultHandler.invoke(controller, ctx);
-                        } catch (Throwable e) {
-                            CallContext.getCurrent()
-                                       .addToMDC("handler",
-                                                 controller.getClass().getName() + "." + defaultHandler.getName());
-                            controller.onError(ctx, Exceptions.handle(ControllerDispatcher.LOG, e));
-                        }
-                    } else {
-                        controller.onError(ctx, value);
-                    }
-                }
-            });
-            route.setSuccessCallback(new Callback<List<Object>>() {
-                @Override
-                public void invoke(List<Object> params) throws Exception {
-                    try {
-                        m.invoke(controller, params.toArray());
-                    } catch (Throwable e) {
-                        route.getFailureCallback().invoke(Exceptions.handle(ControllerDispatcher.LOG, e));
-                    }
-                }
-            });
+            route.setController(controller);
+            route.setSuccessCallback(m);
             return route;
         } catch (Throwable e) {
             LOG.WARN("Skipping '%s' in controller '%s' - Cannot compile route '%s': %s (%s)",

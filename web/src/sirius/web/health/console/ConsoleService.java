@@ -8,8 +8,8 @@ import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredOutput;
-import sirius.web.http.services.ServiceCall;
-import sirius.web.http.services.StructuredService;
+import sirius.web.services.ServiceCall;
+import sirius.web.services.StructuredService;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

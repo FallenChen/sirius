@@ -35,6 +35,7 @@ import java.util.*;
  */
 public class WebContext {
 
+
     public static enum ServerSessionSource {
         UNKNOWN, PARAMETER, COOKIE;
     }
@@ -202,6 +203,13 @@ public class WebContext {
             initSession();
         }
         return Value.of(session.get(key));
+    }
+
+    public void clearSession() {
+        if (session != null) {
+            session.clear();
+            sessionModified = true;
+        }
     }
 
     public ServerSession getServerSession(boolean create) {
@@ -438,6 +446,11 @@ public class WebContext {
     public HttpPostRequestDecoder getPostDecoder() {
         return postDecoder;
     }
+
+    public boolean isPOST() {
+        return request.getMethod() == HttpMethod.POST;
+    }
+
 
     void setPostDecoder(HttpPostRequestDecoder postDecoder) {
         this.postDecoder = postDecoder;

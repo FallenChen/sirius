@@ -1,4 +1,4 @@
-package sirius.web.http.dispatch;
+package sirius.web.dispatch;
 
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;

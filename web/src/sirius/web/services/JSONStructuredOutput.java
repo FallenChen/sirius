@@ -6,7 +6,7 @@
  * http://www.scireum.de - info@scireum.de
  */
 
-package sirius.web.http.services;
+package sirius.web.services;
 
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;

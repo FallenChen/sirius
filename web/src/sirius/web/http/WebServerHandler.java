@@ -97,7 +97,7 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
     private boolean handlePOSTandPUT(HttpRequest req) throws Exception {
         try {
             HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(), req);
-            if (postDecoder.isMultipart()) {
+            if (!postDecoder.getBodyHttpDatas().isEmpty()) {
                 currentContext.setPostDecoder(postDecoder);
             } else {
                 currentContext.setContent(WebServer.getHttpDataFactory().createAttribute(req, "body"));

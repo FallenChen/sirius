@@ -3,17 +3,16 @@ package sirius.web.controller;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import sirius.kernel.async.CallContext;
-import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.commons.Value;
 import sirius.kernel.health.Exceptions;
-import sirius.kernel.health.HandledException;
 import sirius.kernel.nls.NLS;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebServer;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +32,10 @@ public class Route {
     private String format;
     private Pattern pattern;
     private List<Tuple<String, Object>> expressions = Lists.newArrayList();
-    private Callback<List<Object>> successCallback;
-    private Callback<HandledException> failureCallback;
+    private Method successCallback;
     private String uri;
     private Class<?>[] parameterTypes;
+    private Controller controller;
 
     public static Route compile(String uri, Class<?>[] parameterTypes) {
         Route result = new Route();
@@ -124,20 +123,20 @@ public class Route {
         }
     }
 
-    public Callback<List<Object>> getSuccessCallback() {
+    public Method getSuccessCallback() {
         return successCallback;
     }
 
-    public void setSuccessCallback(Callback<List<Object>> successCallback) {
+    public void setSuccessCallback(Method successCallback) {
         this.successCallback = successCallback;
     }
 
-    public Callback<HandledException> getFailureCallback() {
-        return failureCallback;
+    public void setController(Controller controller) {
+        this.controller = controller;
     }
 
-    public void setFailureCallback(Callback<HandledException> failureCallback) {
-        this.failureCallback = failureCallback;
+    public Controller getController() {
+        return controller;
     }
 }
 
