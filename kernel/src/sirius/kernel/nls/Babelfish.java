@@ -132,10 +132,10 @@ public class Babelfish {
                     }
                 } catch (Throwable ex) {
                     Exceptions.handle()
-                            .error(ex)
-                            .to(LOG)
-                            .withSystemErrorMessage("Error writing properties of: %s - %s (%s)", entry.getKey())
-                            .handle();
+                              .error(ex)
+                              .to(LOG)
+                              .withSystemErrorMessage("Error writing properties of: %s - %s (%s)", entry.getKey())
+                              .handle();
                 }
                 totalFiles++;
             }
@@ -285,7 +285,9 @@ public class Babelfish {
                             if (lastModified > entry.getValue()) {
                                 LOG.FINE("Reloading: %s", entry.getKey());
                                 Matcher m = PROPERTIES_FILE.matcher(entry.getKey());
-                                importProperties(entry.getKey(), m.group(1), m.group(2), lastModified);
+                                if (m.matches()) {
+                                    importProperties(entry.getKey(), m.group(1), m.group(2), lastModified);
+                                }
                             }
                         }
                     }

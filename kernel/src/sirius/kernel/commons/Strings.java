@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.SecureRandom;
 import java.util.Map;
 
 /**
@@ -243,6 +244,32 @@ public class Strings {
             sb.append(": ");
             sb.append(entry.getValue());
             sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Generates a random password with 7 characters length.
+     *
+     * @return a randomly generated password.
+     */
+    public static String generatePassword() {
+        return generateCode(7);
+    }
+
+    private static char[] validCodeChars = new char[]{'1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'z'};
+
+    /**
+     * Generates a string of the given length, containing random character.
+     *
+     * @param length the desired length of the generated string.
+     * @return a string with the given length, consisting of random characters.
+     */
+    public static String generateCode(int length) {
+        StringBuilder sb = new StringBuilder();
+        SecureRandom rnd = new SecureRandom();
+        for (int i = 0; i < length; i++) {
+            sb.append(validCodeChars[rnd.nextInt(validCodeChars.length)]);
         }
         return sb.toString();
     }

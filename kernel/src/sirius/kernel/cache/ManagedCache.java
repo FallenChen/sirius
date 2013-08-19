@@ -187,20 +187,22 @@ class ManagedCache<K, V> implements Cache<K, V> {
                 init();
             }
             long now = System.currentTimeMillis();
-            CacheEntry<K, V> entry = data.get(key, new Callable<CacheEntry<K, V>>() {
-                @Override
-                public CacheEntry<K, V> call() throws Exception {
-                    misses.inc();
-                    if (computer != null) {
-                        V value = computer.compute(key);
-                        return new CacheEntry<K, V>(key,
-                                                    value,
-                                                    timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
-                                                    verificationInterval + System.currentTimeMillis());
+            CacheEntry<K, V> entry = null;
+            if (computer != null) {
+               entry = data.get(key, new Callable<CacheEntry<K, V>>() {
+                    @Override
+                    public CacheEntry<K, V> call() throws Exception {
+                        misses.inc();
+                            V value = computer.compute(key);
+                            return new CacheEntry<K, V>(key,
+                                                        value,
+                                                        timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
+                                                        verificationInterval + System.currentTimeMillis());
                     }
-                    return null;
-                }
-            });
+                });
+            } else {
+                entry = data.getIfPresent(key);
+            }
             if (entry != null && entry.getMaxAge() > 0 && entry.getMaxAge() < now) {
                 data.invalidate(key);
                 entry = null;

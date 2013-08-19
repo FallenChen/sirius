@@ -1,10 +1,7 @@
 package sirius.web.http;
 
 import org.jboss.netty.channel.*;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.*;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
@@ -96,8 +93,9 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
 
     private boolean handlePOSTandPUT(HttpRequest req) throws Exception {
         try {
-            HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(), req);
-            if (!postDecoder.getBodyHttpDatas().isEmpty()) {
+            String contentType = req.getHeader(HttpHeaders.Names.CONTENT_TYPE);
+            if (Strings.isFilled(contentType) && contentType.startsWith("multipart/form-data")) {
+                HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(), req);
                 currentContext.setPostDecoder(postDecoder);
             } else {
                 currentContext.setContent(WebServer.getHttpDataFactory().createAttribute(req, "body"));
@@ -147,7 +145,7 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
                 currentContext.getContent().addContent(chunk.getContent(), chunk.isLast());
                 if (!currentContext.getContent().isInMemory()) {
                     File file = currentContext.getContent().getFile();
-                     checkUploadFileLimits(file);
+                    checkUploadFileLimits(file);
                 }
             }
             if (chunk.isLast()) {

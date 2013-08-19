@@ -562,9 +562,9 @@ public class NLS {
         }
         if (data instanceof DateTime) {
             if (fullDateConversion) {
-                return getFullTimeFormat(lang).format(((DateTime) data).toDate());
-            } else {
                 return getDateTimeFormat(lang).format(((DateTime) data).toDate());
+            } else {
+                return getDateFormat(lang).format(((DateTime) data).toDate());
             }
         }
         if (data instanceof LocalDate) {

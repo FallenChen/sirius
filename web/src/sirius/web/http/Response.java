@@ -426,11 +426,27 @@ public class Response {
         }
     }
 
+    public void direct(HttpResponseStatus status, String content) {
+        try {
+            setDateAndCacheHeaders(System.currentTimeMillis(),
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
+            ChannelBuffer channelBuffer = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8);
+            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
+            HttpResponse response = createResponse(status, true);
+            commit(response);
+            complete(ctx.getChannel().write(channelBuffer));
+        } catch (Throwable e) {
+            WebServer.LOG.FINE(e);
+            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
+        }
+    }
+
     public void template(String name, Object... params) {
         String content = null;
         try {
             if (params.length == 1 && params[0] instanceof Object[]) {
-                params = (Object[])params[0];
+                params = (Object[]) params[0];
             }
             content = Rythm.render(name, params);
         } catch (Throwable e) {
@@ -464,7 +480,7 @@ public class Response {
         String content = null;
         try {
             if (params.length == 1 && params[0] instanceof Object[]) {
-                params = (Object[])params[0];
+                params = (Object[]) params[0];
             }
             content = Rythm.renderIfTemplateExists(name + "_" + NLS.getCurrentLang() + ".html", params);
             if (Strings.isEmpty(content)) {
@@ -615,4 +631,6 @@ public class Response {
             }
         };
     }
+
+
 }

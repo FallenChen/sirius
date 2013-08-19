@@ -1,5 +1,6 @@
 package sirius.web.templates;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.rythmengine.Rythm;
@@ -26,10 +27,7 @@ import sirius.web.controller.UserContext;
 import sirius.web.http.WebContext;
 
 import java.io.File;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -118,7 +116,11 @@ public class RythmConfig implements Lifecycle {
         config.put(RythmConfigurationKey.CODEGEN_SOURCE_CODE_ENHANCER.getKey(), new ISourceCodeEnhancer() {
             @Override
             public List<String> imports() {
-                return Collections.emptyList();
+                List<String> result = Lists.newArrayList();
+                result.add("sirius.kernel.commons.Strings");
+                result.add("sirius.kernel.nls.NLS");
+
+                return result;
             }
 
             @Override

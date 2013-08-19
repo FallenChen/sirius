@@ -258,6 +258,12 @@ public class Value {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> T coerce(Class<T> targetClazz, T defaultValue) {
+        if (boolean.class.equals(targetClazz) && defaultValue == null) {
+            if (Strings.isEmpty(data)) {
+                return (T) Boolean.FALSE;
+            }
+            return (T) (Boolean) Boolean.parseBoolean(String.valueOf(data));
+        }
         if (data == null) {
             return defaultValue;
         }
@@ -266,9 +272,6 @@ public class Value {
         }
         if (String.class.equals(targetClazz)) {
             return (T) NLS.toMachineString(data);
-        }
-        if (Boolean.class.equals(targetClazz) || boolean.class.equals(targetClazz)) {
-            return (T) (Boolean) Boolean.parseBoolean(String.valueOf(data));
         }
         if (BigDecimal.class.equals(targetClazz)) {
             return (T) getBigDecimal(null);

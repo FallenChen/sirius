@@ -2,6 +2,7 @@ package sirius.web.http;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -269,11 +270,31 @@ public class WebContext {
         if (queryString == null) {
             decodeQueryString();
         }
-        List<String> result = queryString.get(key);
-        if (result == null) {
-            return Collections.emptyList();
+        if (queryString.containsKey(key)) {
+            List<String> result = queryString.get(key);
+            if (result == null) {
+                return Collections.emptyList();
+            }
+            return result;
         }
-        return result;
+        if (postDecoder != null) {
+            try {
+                List<InterfaceHttpData> data = postDecoder.getBodyHttpDatas(key);
+                if (data == null || data.isEmpty()) {
+                    return Collections.emptyList();
+                }
+                List<String> result = new ArrayList<String>();
+                for (InterfaceHttpData dataItem : data) {
+                    if (dataItem != null && dataItem instanceof Attribute) {
+                        result.add(((Attribute) dataItem).getValue());
+                    }
+                }
+                return result;
+            } catch (Throwable e) {
+                Exceptions.handle(WebServer.LOG, e);
+            }
+        }
+        return Collections.emptyList();
     }
 
     private void decodeQueryString() {
@@ -386,6 +407,7 @@ public class WebContext {
             String[] l = arr[0].split("_");
             if (l.length > 0 && q > bestQ) {
                 lang = l[0];
+                bestQ = q;
             }
         }
 
@@ -432,7 +454,18 @@ public class WebContext {
         if (queryString == null) {
             decodeQueryString();
         }
-        return queryString.keySet();
+        Set<String> names = Sets.newTreeSet(queryString.keySet());
+        if (postDecoder != null) {
+            try {
+                for (InterfaceHttpData data : postDecoder.getBodyHttpDatas()) {
+                    names.add(data.getName());
+                }
+            } catch (Throwable e) {
+                Exceptions.handle(WebServer.LOG, e);
+            }
+        }
+
+        return names;
     }
 
     public String getQueryString() {
