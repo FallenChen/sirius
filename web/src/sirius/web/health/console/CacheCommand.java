@@ -13,7 +13,7 @@ public class CacheCommand implements Command {
             output.apply("Flushing: %s", params[0]);
             output.blankLine();
         }
-        output.apply("%-53s %8d %8d %8d", "NAME", "SIZE", "MAX-SIZE", "HIT-RATE");
+        output.apply("%-53s %8s %8s %8s", "NAME", "SIZE", "MAX-SIZE", "HIT-RATE");
         output.separator();
         for (Cache<?, ?> c : CacheManager.getCaches()) {
             output.apply("%-53s %8d %8d %8d", c.getName(), c.getSize(), c.getMaxSize(), c.getHitRate());

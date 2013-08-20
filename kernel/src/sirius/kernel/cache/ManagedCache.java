@@ -101,6 +101,9 @@ class ManagedCache<K, V> implements Cache<K, V> {
 
     @Override
     public int getSize() {
+        if (data == null) {
+            return 0;
+        }
         return (int) data.size();
     }
 

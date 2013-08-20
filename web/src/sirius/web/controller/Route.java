@@ -138,6 +138,11 @@ public class Route {
     public Controller getController() {
         return controller;
     }
+
+    @Override
+    public String toString() {
+        return uri;
+    }
 }
 
 

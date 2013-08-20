@@ -94,7 +94,8 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
     private boolean handlePOSTandPUT(HttpRequest req) throws Exception {
         try {
             String contentType = req.getHeader(HttpHeaders.Names.CONTENT_TYPE);
-            if (Strings.isFilled(contentType) && contentType.startsWith("multipart/form-data")) {
+            if (Strings.isFilled(contentType) && (contentType.startsWith("multipart/form-data") || contentType.startsWith(
+                    "application/x-www-form-urlencoded"))) {
                 HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(), req);
                 currentContext.setPostDecoder(postDecoder);
             } else {

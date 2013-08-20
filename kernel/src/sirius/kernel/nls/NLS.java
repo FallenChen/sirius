@@ -228,7 +228,7 @@ public class NLS {
      */
     public static enum CommonKeys {
         // Common terms
-        YES, NO, OK, CANCEL, NAME, EDIT, DELETE, SEARCH, REFRESH, CLOSE, DESCRIPTION, SAVE, NEW,
+        YES, NO, OK, CANCEL, NAME, EDIT, DELETE, SEARCH, SEARCHKEY, REFRESH, CLOSE, DESCRIPTION, SAVE, NEW, BACK,
         // Weekdays
         MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY,
         // Months

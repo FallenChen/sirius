@@ -756,6 +756,7 @@ public class Value {
      *
      * @return a string representing the wrapped value without leading or trailing spaces.
      */
+    @Nonnull
     public String trim() {
         return asString().trim();
     }
