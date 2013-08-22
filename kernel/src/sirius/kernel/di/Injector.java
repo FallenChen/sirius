@@ -143,13 +143,14 @@ public class Injector {
             }
         }
 
-        LOG.INFO("Stage 4: Initializing parts...");
-        ctx.processAnnotations();
-
-        LOG.INFO("Stage 5: Initializing static parts-references...");
+        LOG.INFO("Stage 4: Initializing static parts-references...");
         for (Class<?> clazz : classes) {
             ctx.wireClass(clazz);
         }
+
+        LOG.INFO("Stage 5: Initializing parts...");
+        ctx.processAnnotations();
+
     }
 
     /**

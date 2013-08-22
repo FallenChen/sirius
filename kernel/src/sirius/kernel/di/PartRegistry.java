@@ -8,6 +8,7 @@
 
 package sirius.kernel.di;
 
+import com.google.common.collect.Sets;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
 
@@ -174,11 +175,13 @@ class PartRegistry implements MutableGlobalContext {
      * Processes all annotations of all known parts.
      */
     void processAnnotations() {
+        Set<Object> initializedObjects = Sets.newHashSet();
         for (Collection<?> val : parts.getUnderlyingMap().values()) {
             for (Object part : val) {
                 wire(part);
-                if (part instanceof Initializable) {
+                if (part instanceof Initializable && !initializedObjects.contains(part)) {
                     try {
+                        initializedObjects.add(part);
                         ((Initializable) part).initialize();
                     } catch (Exception e) {
                         Injector.LOG.WARN("Error initializing %s (%s)", part, part.getClass().getName());

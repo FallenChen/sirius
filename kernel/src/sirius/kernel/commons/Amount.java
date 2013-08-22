@@ -588,6 +588,66 @@ public class Amount implements Comparable<Amount> {
         return convertToString(format, true);
     }
 
+    private static final String[] METRICS = new String[]{"f", "n", "u", "m", "", "K", "M", "G"};
+    private static int NEUTRAL_METRIC = 4;
+
+    /**
+     * Creates a "scientific" representation of the amount.
+     * <p>
+     * This representation will shift the value in the range 0..999 and represent the decimal shift by a well
+     * known unit prefix. The following prefixes will be used:
+     * <ul>
+     * <li>f - femto</li>
+     * <li>n - nano</li>
+     * <li>u - micro</li>
+     * <li>m - milli</li>
+     * <li>K - kilo</li>
+     * <li>M - mega</li>
+     * <li>G - giga</li>
+     * </ul>
+     * </p>
+     * <p>
+     * An input of <tt>0.0341 V</tt> will be represented as <tt>34.1 mV</tt> if digits was 4 or 34 mV is digits was 2
+     * or less.
+     * </p>
+     *
+     * @param digits the number of decimal digits to display
+     * @param unit   the unit to be appended to the generated string
+     * @return a scientific string representation of the amount.
+     */
+    @Nonnull
+    public String toScientificString(int digits, String unit) {
+        if (isEmpty()) {
+            return "";
+        }
+        int metric = NEUTRAL_METRIC;
+        double value = amount.doubleValue();
+        if (value != 0d) {
+            while (Math.abs(value) >= 1000d && metric < METRICS.length - 1) {
+                value /= 1000d;
+                metric += 1;
+            }
+            while (Math.abs(value) < 1 && metric > 0) {
+                value *= 1000d;
+                metric -= 1;
+                // We loose accuracy, therefore we limit our decimal digits...
+                digits -= 3;
+            }
+        }
+        DecimalFormat df = new DecimalFormat();
+        df.setMinimumFractionDigits(Math.max(0, digits));
+        df.setMaximumFractionDigits(Math.max(0, digits));
+        df.setDecimalFormatSymbols(NLS.getDecimalFormatSymbols());
+        df.setGroupingUsed(true);
+        if (unit != null) {
+            return df.format(value) + " " + METRICS[metric] + unit;
+        } else if (metric != NEUTRAL_METRIC) {
+            return df.format(value) + " " + METRICS[metric];
+        } else {
+            return df.format(value);
+        }
+    }
+
     /**
      * Returns the number of decimal digits (ignoring decimal places after the decimal separator).
      *

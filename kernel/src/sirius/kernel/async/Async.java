@@ -10,6 +10,8 @@ package sirius.kernel.async;
 
 import com.google.common.collect.Maps;
 import sirius.kernel.commons.ValueProvider;
+import sirius.kernel.di.Lifecycle;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.extensions.Extension;
 import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Log;
@@ -238,5 +240,28 @@ public class Async {
      */
     public static Collection<AsyncExecutor> getExecutors() {
         return Collections.unmodifiableCollection(executors.values());
+    }
+
+    /**
+     * Ensures that all thread pools are halted, when the system shuts down.
+     */
+    @Register
+    public static class AsyncLifecycle implements Lifecycle {
+
+        @Override
+        public void started() {
+        }
+
+        @Override
+        public void stopped() {
+            for (AsyncExecutor exec : executors.values()) {
+                exec.shutdownNow();
+            }
+        }
+
+        @Override
+        public String getName() {
+            return "async (Async Execution Engine)";
+        }
     }
 }

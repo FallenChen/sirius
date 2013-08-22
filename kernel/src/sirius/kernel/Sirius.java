@@ -98,11 +98,11 @@ public class Sirius {
      * loggers
      */
     private static void setupLogLevels() {
-        if (!config.hasPath("health")) {
+        if (!config.hasPath("logging")) {
             return;
         }
         LOG.INFO("Initializing the log system:");
-        Config logging = config.getConfig("health");
+        Config logging = config.getConfig("logging");
         for (Map.Entry<String, com.typesafe.config.ConfigValue> entry : logging.entrySet()) {
             LOG.INFO("* Setting %s to: %s", entry.getKey(), logging.getString(entry.getKey()));
 
@@ -273,6 +273,18 @@ public class Sirius {
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("System is UP and RUNNING - %s", w.duration());
         LOG.INFO("---------------------------------------------------------");
+
+        if (!startedAsTest) {
+            MainLoop loop = Injector.context().getPart(MainLoop.class);
+            if (loop != null) {
+                try {
+                    loop.run();
+                } catch (Exception e) {
+                    Exceptions.handle().to(LOG).error(e).withSystemErrorMessage("Error in MainLoop: %s (%s)").handle();
+                }
+            }
+        }
+
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
