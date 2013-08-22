@@ -1,9 +1,14 @@
 package sirius.web.http;
 
+
+import com.google.common.base.Charsets;
+import com.ning.http.client.*;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.handler.codec.http.Cookie;
 import org.jboss.netty.handler.codec.http.*;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedStream;
@@ -16,6 +21,8 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.nls.NLS;
+import sirius.kernel.xml.StructuredOutput;
+import sirius.web.services.JSONStructuredOutput;
 import sirius.web.templates.RythmConfig;
 
 import java.io.File;
@@ -23,6 +30,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.URLConnection;
+import java.nio.channels.ClosedChannelException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +44,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Response {
     public static final int HTTP_CACHE = 60 * 60;
+    public static final int HTTP_CACHE_INIFINITE = 60 * 60 * 24 * 356 * 20;
     public static final int BUFFER_SIZE = 8192;
 
     private WebContext wc;
@@ -46,6 +55,7 @@ public class Response {
     private boolean isPrivate = false;
     private String name;
     private String timing = null;
+    private SimpleDateFormat dateFormatter;
 
     protected Response(WebContext wc) {
         this.wc = wc;
@@ -177,6 +187,12 @@ public class Response {
         return this;
     }
 
+    public Response infinitelyCached() {
+        this.isPrivate = false;
+        this.cacheSeconds = HTTP_CACHE_INIFINITE;
+        return this;
+    }
+
     public Response setHeader(String name, Object value) {
         if (headers == null) {
             headers = MultiMap.create();
@@ -216,6 +232,7 @@ public class Response {
 
     public void status(HttpResponseStatus status) {
         HttpResponse response = createResponse(status, true);
+        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
         complete(commit(response));
     }
 
@@ -223,12 +240,14 @@ public class Response {
     public void redirectTemporarily(String url) {
         HttpResponse response = createResponse(HttpResponseStatus.TEMPORARY_REDIRECT, true);
         response.setHeader(HttpHeaders.Names.LOCATION, url);
+        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
         complete(commit(response));
     }
 
     public void redirectPermanently(String url) {
         HttpResponse response = createResponse(HttpResponseStatus.MOVED_PERMANENTLY, true);
         response.setHeader(HttpHeaders.Names.LOCATION, url);
+        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
         complete(commit(response));
     }
 
@@ -290,15 +309,14 @@ public class Response {
      * Sets the Date and Cache headers for the HTTP Response
      */
     private void setDateAndCacheHeaders(long lastModifiedMillis, int cacheSeconds, boolean isPrivate) {
+        Set<String> keySet = null;
         if (headers != null) {
-            Set<String> keySet = headers.keySet();
-            if (keySet.contains(HttpHeaders.Names.EXPIRES) || keySet.contains(HttpHeaders.Names.CACHE_CONTROL) || keySet
-                    .contains(HttpHeaders.Names.LAST_MODIFIED)) {
+            keySet = headers.keySet();
+            if (keySet.contains(HttpHeaders.Names.EXPIRES) || keySet.contains(HttpHeaders.Names.CACHE_CONTROL)) {
                 return;
             }
         }
-        SimpleDateFormat dateFormatter = new SimpleDateFormat(WebContext.HTTP_DATE_FORMAT, Locale.US);
-        dateFormatter.setTimeZone(TimeZone.getTimeZone(WebContext.HTTP_DATE_GMT_TIMEZONE));
+        SimpleDateFormat dateFormatter = getHTTPDateFormat();
 
         if (cacheSeconds > 0) {
             // Date header
@@ -316,10 +334,18 @@ public class Response {
         } else {
             addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, HttpHeaders.Values.NO_CACHE);
         }
-        if (lastModifiedMillis > 0) {
+        if (lastModifiedMillis > 0 && (keySet == null || !keySet.contains(HttpHeaders.Names.LAST_MODIFIED))) {
             addHeaderIfNotExists(HttpHeaders.Names.
                                          LAST_MODIFIED, dateFormatter.format(new Date(lastModifiedMillis)));
         }
+    }
+
+    private SimpleDateFormat getHTTPDateFormat() {
+        if (dateFormatter == null) {
+            dateFormatter = new SimpleDateFormat(WebContext.HTTP_DATE_FORMAT, Locale.US);
+            dateFormatter.setTimeZone(TimeZone.getTimeZone(WebContext.HTTP_DATE_GMT_TIMEZONE));
+        }
+        return dateFormatter;
     }
 
     /**
@@ -472,9 +498,137 @@ public class Response {
             complete(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
             WebServer.LOG.FINE(e);
-            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
+            if (!(e instanceof ClosedChannelException)) {
+                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
+            }
         }
     }
+
+    public void tunnel(final String url) {
+        try {
+            AsyncHttpClient c = new AsyncHttpClient();
+            AsyncHttpClient.BoundRequestBuilder brb = c.prepareGet(url);
+
+            // Support caching...
+            long ifModifiedSince = wc.getDateHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
+            if (ifModifiedSince > 0) {
+                brb.addHeader(HttpHeaders.Names.IF_MODIFIED_SINCE, getHTTPDateFormat().format(ifModifiedSince));
+            }
+
+            // Support range requests...
+            String range = wc.getHeader(HttpHeaders.Names.RANGE);
+            if (Strings.isFilled(range)) {
+                brb.addHeader(HttpHeaders.Names.RANGE, range);
+            }
+
+            // Tunnel it through...
+            brb.execute(new AsyncHandler<String>() {
+
+                ChannelFuture lastFuture;
+                boolean isChucked;
+                boolean contentLengthFound = false;
+
+                @Override
+                public AsyncHandler.STATE onHeadersReceived(HttpResponseHeaders h) throws Exception {
+                    FluentCaseInsensitiveStringsMap headers = h.getHeaders();
+
+                    boolean contentTypeFound = false;
+                    long lastModified = 0;
+
+                    for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                        if (!entry.getKey().startsWith("x-") && !entry.getKey().equals("Server")) {
+                            for (String value : entry.getValue()) {
+                                setHeader(entry.getKey(), value);
+                                if (HttpHeaders.Names.LAST_MODIFIED.equals(entry.getKey())) {
+                                    try {
+                                        lastModified = getHTTPDateFormat().parse(value).getTime();
+                                    } catch (Throwable e) {
+                                        Exceptions.ignore(e);
+                                    }
+                                } else if (HttpHeaders.Names
+                                        .TRANSFER_ENCODING
+                                        .equals(entry.getKey()) && "chunked".equals(value)) {
+                                    isChucked = true;
+                                }
+                            }
+                            if (HttpHeaders.Names.CONTENT_TYPE.equals(entry.getKey())) {
+                                contentTypeFound = true;
+                            } else if (HttpHeaders.Names.CONTENT_LENGTH.equals(entry.getKey())) {
+                                contentLengthFound = true;
+                            }
+                        }
+                    }
+
+                    if (!wasModified(lastModified)) {
+                        return STATE.ABORT;
+                    }
+
+                    if (!contentTypeFound) {
+                        setContentTypeHeader(name != null ? name : url);
+                    }
+                    setDateAndCacheHeaders(lastModified, cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
+                    if (name != null) {
+                        setContentDisposition(name, download);
+                    }
+
+                    HttpResponse response = createResponse(HttpResponseStatus.OK, true);
+                    lastFuture = commit(response);
+
+                    return STATE.CONTINUE;
+                }
+
+                @Override
+                public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
+                    if (isChucked) {
+                        if (bodyPart.isLast()) {
+                            ctx.getChannel()
+                               .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                            lastFuture = ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER));
+                        } else {
+                            lastFuture = ctx.getChannel()
+                                            .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                        }
+                    } else {
+                        lastFuture = ctx.getChannel().write(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer()));
+                    }
+                    return STATE.CONTINUE;
+                }
+
+                @Override
+                public STATE onStatusReceived(com.ning.http.client.HttpResponseStatus httpResponseStatus) throws Exception {
+                    if (httpResponseStatus.getStatusCode() == HttpResponseStatus.OK.getCode()) {
+                        return STATE.CONTINUE;
+                    }
+                    if (httpResponseStatus.getStatusCode() == HttpResponseStatus.NOT_MODIFIED.getCode()) {
+                        status(HttpResponseStatus.NOT_MODIFIED);
+                        return STATE.ABORT;
+                    }
+                    error(HttpResponseStatus.valueOf(httpResponseStatus.getStatusCode()));
+                    return STATE.ABORT;
+                }
+
+                @Override
+                public String onCompleted() throws Exception {
+                    if (!wc.responseCommitted) {
+                        if (lastFuture != null) {
+                            complete(lastFuture, isChucked || contentLengthFound);
+                        } else {
+                            error(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                        }
+                    }
+                    return "";
+                }
+
+                @Override
+                public void onThrowable(Throwable t) {
+                    error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+                }
+            });
+        } catch (Throwable t) {
+            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+        }
+    }
+
 
     public void nlsTemplate(String name, Object... params) {
         String content = null;
@@ -510,6 +664,15 @@ public class Response {
             WebServer.LOG.FINE(e);
             error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
         }
+    }
+
+    public StructuredOutput json() {
+        String callback = wc.get("callback").getString();
+        String encoding = wc.get("encoding")
+                            .asString(Strings.isEmpty(callback) ? Charsets.UTF_8.name() : Charsets.ISO_8859_1.name());
+        return new JSONStructuredOutput(outputStream(HttpResponseStatus.OK,
+                                                     "application/json;charset=" + encoding,
+                                                     null), callback, encoding);
     }
 
     public OutputStream outputStream(final HttpResponseStatus status,
@@ -549,7 +712,7 @@ public class Response {
                 if (wc.responseCommitted) {
                     if (last) {
                         ctx.getChannel().write(new DefaultHttpChunk(buffer));
-                        completeAndClose(ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER)));
+                        complete(ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER)));
                     } else {
                         waitAndClearBuffer(ctx.getChannel().write(new DefaultHttpChunk(buffer)));
                     }
@@ -560,7 +723,7 @@ public class Response {
                     setDateAndCacheHeaders(System.currentTimeMillis(),
                                            cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                            isPrivate);
-                    HttpResponse response = createResponse(status, last || contentLength != null);
+                    HttpResponse response = createResponse(status, true);
                     if (last) {
                         if (buffer == null) {
                             HttpHeaders.setContentLength(response, 0);

@@ -14,8 +14,8 @@ package sirius.kernel.timer;
  * An implementing class can be inserted into the {@link sirius.kernel.di.GlobalContext} using the
  * {@link sirius.kernel.di.std.Register} annotation. Once the system is started, the method
  * {@link sirius.kernel.timer.TimedTask#runTimer()} is invoked once per day. The hour within the call will take place
- * is determined by {@link #getDefaultHourOfExecution()} and can be overridden by the config value named in
- * {@link #getConfigKeyName()}.
+ * is determined by the config value named in {@link #getConfigKeyName()}. (The full path in the config
+ * will be <tt>timer.daily.[getConfigKeyName]</tt>).
  * </p>
  * <p>
  * The call interval will not be exactly one day, as the time of invocation will vary from day to day. The system
@@ -29,11 +29,6 @@ package sirius.kernel.timer;
  * @since 2013/08
  */
 public interface EveryDay extends TimedTask {
-    /**
-     * If no config value is given, this will return the default hour, in which
-     * the task will be executed.
-     */
-    int getDefaultHourOfExecution();
 
     /**
      * Returns the name of the config key, which stores the hour of execution.

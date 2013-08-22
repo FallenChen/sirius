@@ -1,6 +1,7 @@
 package sirius.web.http;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
@@ -21,8 +22,7 @@ import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredInput;
 import sirius.kernel.xml.XMLStructuredInput;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
+import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -49,6 +49,8 @@ public class WebContext {
     private Map<String, Cookie> cookiesIn;
     private Map<String, Cookie> cookiesOut;
     private HttpPostRequestDecoder postDecoder;
+    private List<File> filesToCleanup;
+    private File contentAsFile;
     private Attribute content;
     private Map<String, String> session;
     private boolean sessionModified;
@@ -497,6 +499,30 @@ public class WebContext {
         return content;
     }
 
+    public File getFileContent() throws IOException {
+        if (!content.isInMemory()) {
+            return content.getFile();
+        }
+        if (contentAsFile == null) {
+            contentAsFile = File.createTempFile("http", "");
+            addFileToCleanup(contentAsFile);
+            FileOutputStream outputStream = new FileOutputStream(contentAsFile);
+            try {
+                outputStream.write(content.get());
+            } finally {
+                outputStream.close();
+            }
+        }
+        return contentAsFile;
+    }
+
+    public void addFileToCleanup(File file) {
+        if (filesToCleanup == null) {
+            filesToCleanup = Lists.newArrayList();
+        }
+        filesToCleanup.add(file);
+    }
+
     public StructuredInput getXMLContent() {
         try {
             if (content == null) {
@@ -577,6 +603,20 @@ public class WebContext {
                 Exceptions.handle(WebServer.LOG, e);
             }
             content = null;
+            contentAsFile = null;
+        }
+        if (filesToCleanup != null) {
+            for (File file : filesToCleanup) {
+                try {
+                    if (file != null && file.exists()) {
+                        file.delete();
+                    }
+                } catch (Exception e) {
+                    Exceptions.handle(WebServer.LOG, e);
+                }
+
+            }
+            filesToCleanup = null;
         }
     }
 }

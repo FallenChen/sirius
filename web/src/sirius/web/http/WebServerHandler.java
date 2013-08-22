@@ -13,7 +13,7 @@ import java.util.List;
 public class WebServerHandler extends SimpleChannelUpstreamHandler {
 
     private List<WebDispatcher> sortedDispatchers;
-    private int numKeepAlive = 3;
+    private int numKeepAlive = 5;
     private boolean readingChunks;
 
     private WebContext currentContext;

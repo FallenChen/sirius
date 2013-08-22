@@ -21,13 +21,6 @@ public class JSONServiceCall extends ServiceCall {
 
     @Override
     protected StructuredOutput createOutput() {
-        String callback = get("callback").getString();
-        String encoding = get("encoding").asString(Strings.isEmpty(callback) ? Charsets.UTF_8
-                                                                                       .name() : Charsets.ISO_8859_1
-                                                                                                         .name());
-        return new JSONStructuredOutput(ctx.respondWith().outputStream(HttpResponseStatus.OK,
-                                                                       "application/json;charset=" + encoding, null),
-                                        callback,
-                                        encoding);
+        return ctx.respondWith().json();
     }
 }

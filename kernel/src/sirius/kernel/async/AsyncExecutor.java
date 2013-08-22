@@ -36,7 +36,7 @@ public class AsyncExecutor extends ThreadPoolExecutor implements RejectedExecuti
               poolSize,
               10L,
               TimeUnit.SECONDS,
-              queueLength > 0 ? new LinkedBlockingQueue<Runnable>(queueLength) : new PriorityBlockingQueue<Runnable>());
+              queueLength > 0 ? new LinkedBlockingQueue<Runnable>(queueLength) : new LinkedBlockingQueue<Runnable>());
         this.category = category;
         setThreadFactory(new ThreadFactoryBuilder().setNameFormat(category + "-%d").build());
         setRejectedExecutionHandler(this);
