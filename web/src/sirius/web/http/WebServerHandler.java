@@ -8,6 +8,7 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 
 import java.io.File;
+import java.nio.channels.ClosedChannelException;
 import java.util.List;
 
 public class WebServerHandler extends SimpleChannelUpstreamHandler {
@@ -32,8 +33,12 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         if (ctx.getAttachment() != null) {
             CallContext.setCurrent((CallContext) ctx.getAttachment());
         }
-        Exceptions.handle(WebServer.LOG, e.getCause());
-        e.getChannel().close();
+        if (e instanceof ClosedChannelException) {
+            WebServer.LOG.FINE(e);
+        } else {
+            Exceptions.handle(WebServer.LOG, e.getCause());
+            e.getChannel().close();
+        }
     }
 
     private WebContext setupContext(ChannelHandlerContext ctx, HttpRequest req) {

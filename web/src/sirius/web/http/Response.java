@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.URLConnection;
-import java.nio.channels.ClosedChannelException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -498,9 +497,7 @@ public class Response {
             complete(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
             WebServer.LOG.FINE(e);
-            if (!(e instanceof ClosedChannelException)) {
-                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
-            }
+            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
         }
     }
 
