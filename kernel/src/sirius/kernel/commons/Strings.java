@@ -10,6 +10,7 @@ package sirius.kernel.commons;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
+import sirius.kernel.nls.NLS;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -246,6 +247,36 @@ public class Strings {
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    /**
+     * Returns a string concatenation of the given lists items.
+     * <p>
+     * Generates a string which contains the string representation of each item separated by the given separator.
+     * The conversion method for the list items used is {@link NLS#toMachineString(Object)}.
+     * </p>
+     *
+     * @param list      the list items to join
+     * @param separator the separator to place between the items
+     * @return a string of all items joined together and separated by the given separator. Returns "" is the list was
+     *         <tt>null</tt> or empty.
+     */
+    @Nonnull
+    public static String join(@Nullable Iterable<?> list, @Nonnull String separator) {
+        StringBuilder result = new StringBuilder();
+        if (list != null) {
+            boolean first = true;
+            for (Object item : list) {
+                if (first) {
+                    first = false;
+                } else {
+                    result.append(separator);
+                }
+                result.append(NLS.toMachineString(item));
+            }
+        }
+
+        return result.toString();
     }
 
     /**

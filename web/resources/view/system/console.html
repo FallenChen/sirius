@@ -10,9 +10,22 @@
             $('#term').terminal('@prefix/service/json/system-console', {
                 greetings: '@product / @version - Type "help" for a list of available commands.'
             });
-            $('body').css('background-color', '#000000');
         });
     </script>
+    <style>
+        body {
+            background: url('@prefix/assets/system/images/low_contrast_linen.png');
+        }
+
+        .terminal, .terminal .terminal-output, .terminal .terminal-output div, .terminal .terminal-output div div,
+        .cmd, .terminal .cmd span, .terminal .cmd div
+        {
+            background-color: inherit;
+            color: #CCCCCC;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
     <div id="term"></div>
