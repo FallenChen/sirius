@@ -154,7 +154,7 @@ public class WebContext {
         return null;
     }
 
-    public FileUpload getFileUData(String key) {
+    public FileUpload getFileData(String key) {
         if (postDecoder == null) {
             return null;
         }

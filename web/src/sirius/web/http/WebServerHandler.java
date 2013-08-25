@@ -72,8 +72,8 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
             HttpRequest req = (HttpRequest) e.getMessage();
             currentContext = setupContext(ctx, req);
             try {
-                if (req.getMethod() == HttpMethod.GET) {
-                    handleGET(req);
+                if (req.getMethod() == HttpMethod.GET || req.getMethod() == HttpMethod.HEAD || req.getMethod() == HttpMethod.DELETE) {
+                    handleGETorHEADorDELETE(req);
                 } else if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.PUT) {
                     handlePOSTandPUT(req);
                 } else {
@@ -121,7 +121,7 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         return false;
     }
 
-    private boolean handleGET(HttpRequest req) throws Exception {
+    private boolean handleGETorHEADorDELETE(HttpRequest req) throws Exception {
         if (req.isChunked()) {
             currentContext.respondWith()
                           .error(HttpResponseStatus.BAD_REQUEST, "Cannot handle chunked GET. Use POST or PUT");
@@ -143,10 +143,6 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         try {
             if (currentContext.getPostDecoder() != null) {
                 currentContext.getPostDecoder().offer(chunk);
-                //TODO
-//                if (currentContext.getPostDecoder().hasNext()) {
-//                    currentContext.getPostDecoder().next().
-//                }
             } else {
                 currentContext.getContent().addContent(chunk.getContent(), chunk.isLast());
                 if (!currentContext.getContent().isInMemory()) {

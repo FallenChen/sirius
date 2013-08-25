@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.URLConnection;
+import java.nio.channels.ClosedChannelException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -298,8 +299,17 @@ public class Response {
                 writeFuture = ctx.getChannel().write(region);
             }
             complete(writeFuture);
-        } catch (IOException e) {
-            WebServer.LOG.FINE(e);
+        } catch (Throwable e) {
+            internalServerError(e);
+        }
+    }
+
+    private void internalServerError(Throwable t) {
+        WebServer.LOG.FINE(t);
+        if (!(t instanceof ClosedChannelException)) {
+            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(t).handle());
+        }
+        if (!ctx.getChannel().isOpen()) {
             ctx.getChannel().close();
         }
     }
@@ -391,10 +401,8 @@ public class Response {
             // Write the content.
             ChannelFuture writeFuture = ctx.getChannel().write(new ChunkedStream(urlConnection.getInputStream(), 8192));
             complete(writeFuture);
-        } catch (IOException e) {
-            WebServer.LOG.FINE(e);
-            ctx.getChannel().close();
-            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
+        } catch (Throwable e) {
+            internalServerError(e);
         }
     }
 
@@ -462,8 +470,7 @@ public class Response {
             commit(response);
             complete(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
-            WebServer.LOG.FINE(e);
-            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
+            internalServerError(e);
         }
     }
 
@@ -496,8 +503,7 @@ public class Response {
             commit(response);
             complete(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
-            WebServer.LOG.FINE(e);
-            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
+            internalServerError(e);
         }
     }
 
@@ -618,11 +624,15 @@ public class Response {
 
                 @Override
                 public void onThrowable(Throwable t) {
-                    error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+                    if (!(t instanceof ClosedChannelException)) {
+                        error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+                    }
                 }
             });
         } catch (Throwable t) {
-            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+            if (!(t instanceof ClosedChannelException)) {
+                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+            }
         }
     }
 
@@ -658,8 +668,7 @@ public class Response {
             commit(response);
             complete(ctx.getChannel().write(channelBuffer));
         } catch (Throwable e) {
-            WebServer.LOG.FINE(e);
-            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(e).handle());
+            internalServerError(e);
         }
     }
 
