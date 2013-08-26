@@ -6,8 +6,6 @@
  * http://www.scireum.de - info@scireum.de
  */
 
-package sirius.kernel;
-
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -24,7 +22,7 @@ import java.util.List;
  * </p>
  * <p>
  * This class only generates a <tt>ClassLoader</tt> which is then used to load
- * {@link Sirius#initializeEnvironment(ClassLoader)} as stage2.
+ * {@link sirius.kernel.Sirius#initializeEnvironment(ClassLoader)} as stage2.
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
@@ -43,39 +41,46 @@ public class IPL {
         boolean debug = Boolean.parseBoolean(System.getProperty("debug"));
         boolean ide = Boolean.parseBoolean(System.getProperty("ide"));
         File home = new File(System.getProperty("user.dir"));
-        if (debug) {
-            System.out.println();
-            System.out.println("I N I T I A L   P R O G R A M   L O A D");
-            System.out.println("---------------------------------------");
-            System.out.println("IPL from: " + home.getAbsolutePath());
-        }
+        System.out.println();
+        System.out.println("I N I T I A L   P R O G R A M   L O A D");
+        System.out.println("---------------------------------------");
+        System.out.println("IPL from: " + home.getAbsolutePath());
 
         if (!ide) {
+            List<URL> urls = new ArrayList<URL>();
             try {
                 File jars = new File(home, "lib");
                 if (jars.exists()) {
-                    loader = new URLClassLoader(allJars(jars), loader);
+                    for (URL url : allJars(jars)) {
+                        if (debug) {
+                            System.out.println(" - Classpath: " + url);
+                        }
+                        urls.add(url);
+                    }
                 }
             } catch (Throwable e) {
                 e.printStackTrace();
             }
             try {
-                File classes = new File(home, "classes");
+                File classes = new File(home, "app");
                 if (classes.exists()) {
-                    loader = new URLClassLoader(new URL[]{classes.toURI().toURL()}, loader);
+                    if (debug) {
+                        System.out.println(" - Classpath: " + classes.toURI().toURL());
+                    }
+                    urls.add(classes.toURI().toURL());
                 }
             } catch (Throwable e) {
                 e.printStackTrace();
             }
+            loader = new URLClassLoader(urls.toArray(new URL[urls.size()]), loader);
+            Thread.currentThread().setContextClassLoader(loader);
         } else {
             System.out.println("IPL from IDE: not loading any classes or jars!");
         }
 
         try {
-            if (debug) {
-                System.out.println("IPL completed - Loading Sirius as stage2...");
-                System.out.println();
-            }
+            System.out.println("IPL completed - Loading Sirius as stage2...");
+            System.out.println();
             Class.forName("sirius.kernel.Sirius", true, loader)
                  .getMethod("initializeEnvironment", ClassLoader.class)
                  .invoke(null, loader);
@@ -84,13 +89,13 @@ public class IPL {
         }
     }
 
-    private static URL[] allJars(File libs) throws MalformedURLException {
+    private static List<URL> allJars(File libs) throws MalformedURLException {
         List<URL> urls = new ArrayList<URL>();
         for (File file : libs.listFiles()) {
             if (file.getName().endsWith(".jar")) {
                 urls.add(file.toURI().toURL());
             }
         }
-        return urls.toArray(new URL[urls.size()]);
+        return urls;
     }
 }

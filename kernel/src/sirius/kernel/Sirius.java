@@ -153,7 +153,8 @@ public class Sirius {
     /*
      * Discovers all components in the class path and initializes the {@link Injector}
      */
-    private static void init(ClassLoader loader) {
+    private static void init(final ClassLoader loader) {
+
         initialized = true;
         classpath = new Classpath(loader, "component.marker");
 
@@ -162,7 +163,7 @@ public class Sirius {
             classpath.find(Pattern.compile("component-test\\.conf"), new BasicCollector<Matcher>() {
                 @Override
                 public void add(Matcher value) {
-                    config = config.withFallback(ConfigFactory.load(value.group()));
+                    config = config.withFallback(ConfigFactory.load(loader, value.group()));
                 }
             });
         }
@@ -172,7 +173,7 @@ public class Sirius {
             @Override
             public void add(Matcher value) {
                 if (!"test".equals(value.group(1))) {
-                    config = config.withFallback(ConfigFactory.load(value.group()));
+                    config = config.withFallback(ConfigFactory.load(loader, value.group()));
                 }
             }
         });
@@ -243,7 +244,7 @@ public class Sirius {
     /**
      * Initializes the framework.
      * <p>
-     * This is called by {@link IPL#main(String[])} once the classloader is fully populated.
+     * This is called by <tt>IPL.main</tt> once the classloader is fully populated.
      * </p>
      *
      * @param loader the class loader containing all class files and jars used to build the system
@@ -265,11 +266,12 @@ public class Sirius {
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("Loading config...");
         LOG.INFO("---------------------------------------------------------");
-        setupConfiguration();
+        setupConfiguration(loader);
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("Starting the system...");
         LOG.INFO("---------------------------------------------------------");
         init(loader);
+        //init(Sirius.class.getClassLoader());
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("System is UP and RUNNING - %s", w.duration());
         LOG.INFO("---------------------------------------------------------");
@@ -298,11 +300,11 @@ public class Sirius {
     /*
      * Loads all relevant .conf files
      */
-    private static void setupConfiguration() {
+    private static void setupConfiguration(ClassLoader loader) {
         config = ConfigFactory.empty();
         if (Sirius.class.getResource("/application.conf") != null) {
             LOG.INFO("using application.conf from classpath...");
-            config = ConfigFactory.load("application.conf").withFallback(config);
+            config = ConfigFactory.load(loader, "application.conf").withFallback(config);
         } else {
             LOG.INFO("application.conf not present in classpath");
         }

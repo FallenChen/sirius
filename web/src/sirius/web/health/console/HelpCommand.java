@@ -1,11 +1,9 @@
 package sirius.web.health.console;
 
 import sirius.kernel.Sirius;
-import sirius.kernel.async.CallContext;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Context;
 import sirius.kernel.di.std.Register;
-import sirius.web.http.WebContext;
 
 /**
  * Created with IntelliJ IDEA.
@@ -21,10 +19,6 @@ public class HelpCommand implements Command {
 
     @Override
     public void execute(Output output, String... params) throws Exception {
-        System.out.println(CallContext.getCurrent().get(WebContext.class).getRequestedURI());
-        System.out.println(CallContext.getCurrent().get(WebContext.class).getSessionValue("TEST"));
-        CallContext.getCurrent().get(WebContext.class).setSessionValue("TEST", System.currentTimeMillis());
-        System.out.println(CallContext.getCurrent().get(WebContext.class).getSessionValue("TEST"));
         output.blankLine();
         output.apply("C O N S O L E  -  %s / %s", Sirius.getProductName(), Sirius.getProductVersion());
         output.blankLine();
