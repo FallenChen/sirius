@@ -84,8 +84,7 @@
     <!-- =========================================================================================================== -->
     <!-- Runs ivy to resolve and retrieve all dependencies -->
     <!-- =========================================================================================================== -->
-<!--    <target name="make" depends="ivy">-->
-    <target name="make">
+    <target name="make" depends="ivy">
 
         <!-- Create distribution directory -->
         <mkdir dir="${dist.dir}" />
