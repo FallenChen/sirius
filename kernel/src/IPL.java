@@ -8,6 +8,7 @@
 
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -38,6 +39,38 @@ public class IPL {
      * @param args currently the command line arguments are ignored.
      */
     public static void main(String[] args) {
+        boolean kill = Boolean.parseBoolean(System.getProperty("kill"));
+        int port = 0;
+        if (kill && System.getProperty("port") != null) {
+            port = Integer.parseInt(System.getProperty("port"));
+        }
+        if (kill && port > 0) {
+            kill(port);
+        } else {
+            kickstart();
+        }
+    }
+
+    /**
+     * Kills a sirius app by opening a connection to the lethal port.
+     */
+    private static void kill(int port) {
+        try {
+            System.out.println("Killing localhost:" + port);
+            long now = System.currentTimeMillis();
+            Socket socket = new Socket("localhost", port);
+            socket.getInputStream().read();
+            System.out.println("Kill succeeded after: " + (System.currentTimeMillis() - now) + " ms");
+        } catch (Exception e) {
+            System.out.println("Kill failed: ");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Sets up a classloader and loads <tt>Sirius</tt> to initialize the framework.
+     */
+    private static void kickstart() {
         boolean debug = Boolean.parseBoolean(System.getProperty("debug"));
         boolean ide = Boolean.parseBoolean(System.getProperty("ide"));
         File home = new File(System.getProperty("user.dir"));

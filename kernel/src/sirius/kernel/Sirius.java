@@ -18,10 +18,7 @@ import org.apache.log4j.spi.LoggerRepository;
 import org.junit.BeforeClass;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.Barrier;
-import sirius.kernel.commons.BasicCollector;
-import sirius.kernel.commons.Callback;
-import sirius.kernel.commons.Value;
-import sirius.kernel.commons.Watch;
+import sirius.kernel.commons.*;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.MutableGlobalContext;
@@ -33,6 +30,10 @@ import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
@@ -211,6 +212,8 @@ public class Sirius {
         if (!started) {
             return;
         }
+        LOG.INFO("Stopping Sirius");
+        LOG.INFO("---------------------------------------------------------");
         for (Lifecycle lifecycle : lifecycleParticipants.getParts()) {
             LOG.INFO("Stopping: %s", lifecycle.getName());
             try {
@@ -222,6 +225,16 @@ public class Sirius {
                           .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
                           .handle();
             }
+        }
+        if (Sirius.isDev()) {
+            LOG.INFO("---------------------------------------------------------");
+            LOG.INFO("Thread State");
+            LOG.INFO("---------------------------------------------------------");
+            LOG.INFO("%-15s %10s %53s", "STATE", "ID", "NAME");
+            for (ThreadInfo info : ManagementFactory.getThreadMXBean().dumpAllThreads(false, false)) {
+                LOG.INFO("%-15s %10s %53s", info.getThreadState().name(), info.getThreadId(), info.getThreadName());
+            }
+            LOG.INFO("---------------------------------------------------------");
         }
         started = false;
     }
@@ -279,22 +292,57 @@ public class Sirius {
         if (!startedAsTest) {
             MainLoop loop = Injector.context().getPart(MainLoop.class);
             if (loop != null) {
-                try {
-                    loop.run();
-                } catch (Exception e) {
-                    Exceptions.handle().to(LOG).error(e).withSystemErrorMessage("Error in MainLoop: %s (%s)").handle();
-                }
+                runMainLoop(loop);
+            } else {
+                waitForLethalConnection();
             }
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
             public void run() {
-                LOG.INFO("Stopping Sirius");
-                LOG.INFO("---------------------------------------------------------");
                 stop();
             }
         }));
+    }
+
+    /**
+     * Waits until a connection to thee port specified in <tt>sirius.shutdownPort</tt> is made.
+     */
+    private static void waitForLethalConnection() {
+        try {
+            ServerSocket socket = new ServerSocket(config.getInt("sirius.shutdownPort"));
+            LOG.INFO(Strings.apply("Opening port %d as shutdown listener", socket.getLocalPort()));
+            try {
+                Socket client = socket.accept();
+                stop();
+                client.close();
+            } finally {
+                socket.close();
+            }
+        } catch (Exception e) {
+            Exceptions.handle()
+                      .to(LOG)
+                      .error(e)
+                      .withSystemErrorMessage("Error while waiting for shutdown-ping: %s (%s)")
+                      .handle();
+        }
+    }
+
+    /**
+     * Runs the given main loop
+     * <p>
+     * This can be used to run SWT app, since these need to be started in the main thread (at least on OSX).
+     * </p>
+     *
+     * @param loop the main loop to execute.
+     */
+    private static void runMainLoop(MainLoop loop) {
+        try {
+            loop.run();
+        } catch (Exception e) {
+            Exceptions.handle().to(LOG).error(e).withSystemErrorMessage("Error in MainLoop: %s (%s)").handle();
+        }
     }
 
     /*

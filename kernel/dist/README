@@ -1,0 +1,16 @@
+# Made with all the love in the world
+# by scireum in Remshalden, Germany
+#
+# Copyright by scireum GmbH
+# http://www.scireum.de - info@scireum.de
+
+This application is using the SIRIUS framework. Use the sirius.sh script to
+start or stop the application. Create a file named config.sh to override
+the startup variables.
+
+The application can be further configured by create a file named instance.conf
+in the base directory (where this file is). Have a look at the main config
+in app/application.conf or the module config (app/component-*.conf) but
+never modify those, as all changes will be reverted by the next release. Use
+the instance.conf to override or extend the configuration. This file has
+precendence over all others.

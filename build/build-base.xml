@@ -13,6 +13,13 @@
      * ivy  - to update all dependencies
      * make - to build a release version of the application
 
+    You must specify the following properties:
+     * app.name - Name of the application
+     * app.version - Current version of the app
+     * app.filename - File-compatible name of the app
+
+    You can provide: no-app, no-web or no-kernel to disable the respective modules.
+
 -->
 <project name="sirius" default="ivy" xmlns:ivy="antlib:org.apache.ivy.ant">
 
@@ -27,6 +34,9 @@
 
     <!-- Path to the target distribution directory of the main project -->
     <property name="dist.dir" value="${build.dir}/dist"/>
+
+    <!-- Path to the directory containing the website -->
+    <property name="site.dir" value="${build.dir}/site"/>
 
     <!-- Path to directory which contains sirius -->
     <property name="sirius.dir" value="${build.dir}/../sirius"/>
@@ -109,8 +119,44 @@
         <antcall target="make-app" />
         <antcall target="make-main-app" />
 
+        <!-- Replace version number and product name in config files -->
+        <replace dir="${dist.dir}/app"
+                 token="@PRODUCT@"
+                 value="${app.name}">
+            <include name="*.conf" />
+         </replace>
+        <replace dir="${dist.dir}/app"
+                 token="@VERSION@"
+                 value="${app.version}">
+            <include name="*.conf" />
+        </replace>
+        <replace dir="${dist.dir}/app"
+                 token="@PRODUCT_FILE_NAME@"
+                 value="${app.filename}"
+                 includes="conf">
+            <include name="*.conf" />
+        </replace>
+
         <!-- Make love (and a .zip) -->
-        <zip destfile="${dist.dir}/dist.zip" basedir="${dist.dir}" />
+        <zip destfile="${dist.dir}/${app.filename}.zip" basedir="${dist.dir}" />
+        <copy file="${dist.dir}/${app.filename}.zip" todir="${site.dir}" />
+
+        <!-- Replace version number and product name in the generate site -->
+        <replace dir="${site.dir}"
+                 token="@PRODUCT@"
+                 value="${app.name}">
+            <include name="**/*.html" />
+        </replace>
+        <replace dir="${site.dir}"
+                 token="@VERSION@"
+                 value="${app.version}">
+            <include name="**/*.html" />
+        </replace>
+        <replace dir="${site.dir}"
+                 token="@PRODUCT_FILE_NAME@"
+                 value="${app.filename}">
+            <include name="**/*.html" />
+        </replace>
     </target>
 
     <!-- =========================================================================================================== -->
@@ -202,5 +248,10 @@
         <copy todir="${dist.dir}" failonerror="false">
             <fileset dir="${main.dir}/dist" />
         </copy>
+        <copy todir="${site.dir}" failonerror="false">
+            <fileset dir="${main.dir}/site" />
+        </copy>
+        <mkdir dir="${site.dir}/docs" />
+        <javadoc sourcepath="${main.dir}/src" destdir="${site.dir}/docs" classpathref="compile.path" />
     </target>
 </project>

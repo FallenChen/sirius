@@ -43,6 +43,7 @@ public class WebServer implements Lifecycle {
     private ThreadPoolExecutor bossExecutor;
     private ThreadPoolExecutor workerExecutor;
     private ServerBootstrap bootstrap;
+    private NioServerSocketChannelFactory channelFactory;
 
 
     protected static long getMinUploadFreespace() {
@@ -75,23 +76,13 @@ public class WebServer implements Lifecycle {
         // Keep our sexy thread names..
         ThreadRenamingRunnable.setThreadNameDeterminer(ThreadNameDeterminer.CURRENT);
 
-        // Std-Header
-        // Web-stats
-        // Web-Timing
-        // Service-Stats
-        // Bind to request
-        // @Description
-        // Help-System
-        // I18n-System
-        // Async-Engine
-        // JDBC
-
         // Configure the server.
         bossExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         bossExecutor.setThreadFactory(new ThreadFactoryBuilder().setNameFormat("http-boss-%d").build());
         workerExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
         workerExecutor.setThreadFactory(new ThreadFactoryBuilder().setNameFormat("http-%d").build());
-        bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(bossExecutor, workerExecutor));
+        channelFactory = new NioServerSocketChannelFactory(bossExecutor, workerExecutor);
+        bootstrap = new ServerBootstrap(channelFactory);
 
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(ctx.wire(new WebServerPipelineFactory()));
@@ -103,6 +94,10 @@ public class WebServer implements Lifecycle {
     @Override
     public void stopped() {
         bootstrap.shutdown();
+        channelFactory.shutdown();
+        bossExecutor.shutdown();
+        workerExecutor.shutdown();
+        channelFactory.releaseExternalResources();
     }
 
     @Override
