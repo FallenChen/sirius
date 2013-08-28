@@ -2,8 +2,6 @@ package sirius.web.services;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.async.Async;
-import sirius.kernel.async.CallContext;
-import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
@@ -48,12 +46,6 @@ public class ServiceDispatcher implements WebDispatcher {
                          Strings.apply("Invalid call format: %s. Use /service/<type>/<service>.", uri));
             return true;
         } else {
-            ctx.onComplete(new Callback<CallContext>() {
-                @Override
-                public void invoke(CallContext value) throws Exception {
-                    value.getWatch().submitMicroTiming(ctx.getRequestedURI());
-                }
-            });
             Async.executor("web-services").fork(new Runnable() {
                 @Override
                 public void run() {

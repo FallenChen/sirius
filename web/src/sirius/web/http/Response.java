@@ -28,11 +28,13 @@ import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
+import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredOutput;
 import sirius.web.services.JSONStructuredOutput;
 import sirius.web.templates.RythmConfig;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -69,15 +71,51 @@ public class Response {
      */
     public static final int BUFFER_SIZE = 8192;
 
+    /*
+     * Stores the associated request
+     */
     private WebContext wc;
+
+    /*
+     * Stores the underlying channel
+     */
     private ChannelHandlerContext ctx;
+
+    /*
+     * Stores the outgoing headers to be sent
+     */
     private MultiMap<String, Object> headers;
+
+    /*
+     * Stores the max expiration of this response. A null value indicates to use the defaults suggested
+     * by the content creator.
+     */
     private Integer cacheSeconds = null;
-    private boolean download = false;
+
+    /*
+     * Stores if this response should be considered "private" by intermediate caches and proxies
+     */
     private boolean isPrivate = false;
+
+    /*
+     * Determines if the response should be marked as download
+     */
+    private boolean download = false;
+
+    /*
+     * Contains the name of the downloadable file
+     */
     private String name;
-    private String timing = null;
-    private SimpleDateFormat dateFormatter;
+
+    /*
+     * Specifies the microtiming key used for this request. If null, no microtiming will be recorded.
+     */
+    private String microtimingKey;
+
+    /*
+     * Caches the date formatter used to output http date headers
+     */
+    private static SimpleDateFormat dateFormatter;
 
     /**
      * Creates a new response for the given request.
@@ -90,7 +128,7 @@ public class Response {
     }
 
     /*
-     * Creates an initializes a HttpResonse. Takes care of the keep alive logic, cookies and other default
+     * Creates an initializes a HttpResponse. Takes care of the keep alive logic, cookies and other default
      * headers
      */
     private HttpResponse createResponse(HttpResponseStatus status, boolean keepalive) {
@@ -168,8 +206,8 @@ public class Response {
                         Exceptions.handle(WebServer.LOG, e);
                     }
                 }
-                if (timing != null) {
-                    cc.getWatch().submitMicroTiming(timing);
+                if (microtimingKey != null && Microtiming.isEnabled()) {
+                    cc.getWatch().submitMicroTiming(microtimingKey);
                 }
                 if (!keepalive || !isKeepalive()) {
                     future.getChannel().close();
@@ -346,6 +384,25 @@ public class Response {
         return this;
     }
 
+    /**
+     * Enables microtiming for this request.
+     * <p>If <tt>null</tt> is passed in as key, the request uri is used.</p>
+     * <p>If the microtiming was already enabled, it will remain enabled, with the original key</p>
+     *
+     * @param key the key used to pass to the microtiming framework.
+     * @return <tt>this</tt> to fluently create the response
+     */
+    public Response enableTiming(String key) {
+        if (microtimingKey == null) {
+            if (key == null) {
+                microtimingKey = wc.getRequestedURI();
+            } else {
+                microtimingKey = key;
+            }
+        }
+
+        return this;
+    }
 
     /**
      * Completes this response by sending the given status code without any content
@@ -499,7 +556,7 @@ public class Response {
     /*
      * Creates a DateFormat to parse HTTP dates.
      */
-    private SimpleDateFormat getHTTPDateFormat() {
+    private static SimpleDateFormat getHTTPDateFormat() {
         if (dateFormatter == null) {
             dateFormatter = new SimpleDateFormat(WebContext.HTTP_DATE_FORMAT, Locale.US);
             dateFormatter.setTimeZone(TimeZone.getTimeZone(WebContext.HTTP_DATE_GMT_TIMEZONE));
@@ -672,8 +729,20 @@ public class Response {
         }
     }
 
+    /**
+     * Renders the given Rythm template and sends the output as response.
+     * <p>
+     * By default caching will be disabled. If the file ends with .html, <tt>text/html; charset=UTF-8</tt> will be set
+     * as content type. Otherwise the content type will be guessed from the filename.
+     * </p>
+     *
+     * @param name   the name of the template to render. It's recommended to use files in /view/... and to place them
+     *               in the resources directory.
+     * @param params contains the parameters sent to the template
+     */
     public void template(String name, Object... params) {
         String content = null;
+        enableTiming(null);
         try {
             if (params.length == 1 && params[0] instanceof Object[]) {
                 params = (Object[]) params[0];
@@ -705,6 +774,67 @@ public class Response {
         }
     }
 
+    /**
+     * Tries to find an appropriate Rythm template for the current language and sends the output as response.
+     * <p>
+     * Based on the given name, <tt>name_LANG.html</tt> or as fallback <tt>name.html</tt> will be loaded. As
+     * language, the two-letter language code of {@link sirius.kernel.async.CallContext#getLang()} will be used.
+     * </p>
+     * <p>
+     * By default caching will be disabled. If the file ends with .html, <tt>text/html; charset=UTF-8</tt> will be set
+     * as content type. Otherwise the content type will be guessed from the filename.
+     * </p>
+     *
+     * @param name   the name of the template to render. It's recommended to use files in /view/... and to place them
+     *               in the resources directory.
+     * @param params contains the parameters sent to the template
+     */
+    public void nlsTemplate(String name, Object... params) {
+        String content = null;
+        enableTiming(null);
+        try {
+            if (params.length == 1 && params[0] instanceof Object[]) {
+                params = (Object[]) params[0];
+            }
+            content = Rythm.renderIfTemplateExists(name + "_" + NLS.getCurrentLang() + ".html", params);
+            if (Strings.isEmpty(content)) {
+                content = Rythm.renderIfTemplateExists(name + "_" + NLS.getDefaultLanguage() + ".html", params);
+            }
+            if (Strings.isEmpty(content)) {
+                content = Rythm.render(name + ".html", params);
+            }
+        } catch (Throwable e) {
+            throw Exceptions.handle()
+                            .to(RythmConfig.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
+                            .handle();
+        }
+        try {
+            setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
+            setDateAndCacheHeaders(System.currentTimeMillis(),
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
+            ChannelBuffer channelBuffer = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8);
+            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
+            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
+            commit(response);
+            complete(ctx.getChannel().write(channelBuffer));
+        } catch (Throwable e) {
+            internalServerError(e);
+        }
+    }
+
+    /**
+     * Tunnels the contents retrieved from the given URL as result of this response.
+     * <p>
+     * Caching and range headers will be forwarded and adhered.
+     * </p>
+     * <p>Uses non-blocking APIs in order to maximize throughput. Therefore this can be called in an unforked
+     * dispatcher.</p>
+     *
+     * @param url the url to tunnel through.
+     */
     public void tunnel(final String url) {
         try {
             AsyncHttpClient c = new AsyncHttpClient();
@@ -834,42 +964,13 @@ public class Response {
         }
     }
 
-
-    public void nlsTemplate(String name, Object... params) {
-        String content = null;
-        try {
-            if (params.length == 1 && params[0] instanceof Object[]) {
-                params = (Object[]) params[0];
-            }
-            content = Rythm.renderIfTemplateExists(name + "_" + NLS.getCurrentLang() + ".html", params);
-            if (Strings.isEmpty(content)) {
-                content = Rythm.renderIfTemplateExists(name + "_" + NLS.getDefaultLanguage() + ".html", params);
-            }
-            if (Strings.isEmpty(content)) {
-                content = Rythm.render(name + ".html", params);
-            }
-        } catch (Throwable e) {
-            throw Exceptions.handle()
-                            .to(RythmConfig.LOG)
-                            .error(e)
-                            .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
-                            .handle();
-        }
-        try {
-            setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
-            setDateAndCacheHeaders(System.currentTimeMillis(),
-                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                                   isPrivate);
-            ChannelBuffer channelBuffer = ChannelBuffers.copiedBuffer(content, CharsetUtil.UTF_8);
-            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
-            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
-            commit(response);
-            complete(ctx.getChannel().write(channelBuffer));
-        } catch (Throwable e) {
-            internalServerError(e);
-        }
-    }
-
+    /**
+     * Creates a JSON output which can be used to generate well formed json.
+     * <p>
+     * By default, caching will be disabled. If the generated JSON is small enough, it will be transmitted in
+     * one go. Otherwise a chunked response will be sent.
+     * </p>
+     */
     public StructuredOutput json() {
         String callback = wc.get("callback").getString();
         String encoding = wc.get("encoding")
@@ -879,9 +980,25 @@ public class Response {
                                                      null), callback, encoding);
     }
 
+    /**
+     * Creates an OutputStream which is sent to the client.
+     * <p>
+     * If the contents are small enough, everything will be sent in one response. Otherwise a chunked response
+     * will be sent. The size of the underlying buffer will be determined by {@link #BUFFER_SIZE}.
+     * </p>
+     * <p>
+     * By default, caching will be supported.
+     * </p>
+     *
+     * @param status        the HTTP status to send
+     * @param contentType   the content type to use. If <tt>null</tt>, we rely on a previously set header.
+     * @param contentLength the expected content length (if known in advance). Can be left <tt>null</tt> as
+     *                      we support chunked responses.
+     */
     public OutputStream outputStream(final HttpResponseStatus status,
-                                     final String contentType,
-                                     final Integer contentLength) {
+                                     @Nullable final String contentType,
+                                     @Nullable final Integer contentLength) {
+        enableTiming(null);
         return new OutputStream() {
             volatile boolean open = true;
             volatile long bytesWritten = 0;
@@ -998,6 +1115,5 @@ public class Response {
             }
         };
     }
-
 
 }
