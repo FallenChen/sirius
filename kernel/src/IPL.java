@@ -67,7 +67,7 @@ public class IPL {
         }
     }
 
-    /**
+    /*
      * Sets up a classloader and loads <tt>Sirius</tt> to initialize the framework.
      */
     private static void kickstart() {
@@ -122,6 +122,9 @@ public class IPL {
         }
     }
 
+    /*
+     * Enumerates all jars in the given directory
+     */
     private static List<URL> allJars(File libs) throws MalformedURLException {
         List<URL> urls = new ArrayList<URL>();
         for (File file : libs.listFiles()) {

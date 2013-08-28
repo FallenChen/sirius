@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.http;
 
 
@@ -36,15 +44,29 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 15.07.13
- * Time: 17:27
- * To change this template use File | Settings | File Templates.
+ * Represents a response which is used to reply to a HTTP request.
+ * <p>
+ * Responses are created by calling {@link sirius.web.http.WebContext#respondWith()}.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @see WebContext
+ * @since 2012/08
  */
 public class Response {
+    /**
+     * Default cache duration for responses which can be cached
+     */
     public static final int HTTP_CACHE = 60 * 60;
+
+    /**
+     * Expires value used to indicate that a resource can be infinitely long cached
+     */
     public static final int HTTP_CACHE_INIFINITE = 60 * 60 * 24 * 356 * 20;
+
+    /**
+     * Size of the internally used transfer buffers
+     */
     public static final int BUFFER_SIZE = 8192;
 
     private WebContext wc;
@@ -57,11 +79,20 @@ public class Response {
     private String timing = null;
     private SimpleDateFormat dateFormatter;
 
+    /**
+     * Creates a new response for the given request.
+     *
+     * @param wc the context representing the request for which this response is created
+     */
     protected Response(WebContext wc) {
         this.wc = wc;
         this.ctx = wc.getCtx();
     }
 
+    /*
+     * Creates an initializes a HttpResonse. Takes care of the keep alive logic, cookies and other default
+     * headers
+     */
     private HttpResponse createResponse(HttpResponseStatus status, boolean keepalive) {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
@@ -100,6 +131,9 @@ public class Response {
         return response;
     }
 
+    /*
+     * Commits the response. Once this was called, no other response can be created for this request (WebContext).
+     */
     private ChannelFuture commit(HttpResponse response) {
         if (wc.responseCommitted) {
             throw Exceptions.handle()
@@ -112,10 +146,16 @@ public class Response {
         return ctx.getChannel().write(response);
     }
 
+    /*
+     * Determines if keepalive is requested by the client and wanted by the server
+     */
     private boolean isKeepalive() {
         return HttpHeaders.isKeepAlive(wc.getRequest()) && ((WebServerHandler) ctx.getHandler()).shouldKeepAlive();
     }
 
+    /*
+     * Completes the response and closes the underlying channel if necessary
+     */
     private void complete(ChannelFuture future, final boolean keepalive) {
         final CallContext cc = CallContext.getCurrent();
         future.addListener(new ChannelFutureListener() {
@@ -138,14 +178,26 @@ public class Response {
         });
     }
 
+    /*
+     * Completes the response once the given future completed while supporting keepalive (response size must be known
+     * or response must be chunked).
+     */
     private void complete(ChannelFuture future) {
         complete(future, true);
     }
 
+    /*
+     * Completes the response once the given future completed without supporting keepalive (which is either unwanted
+     * or the response size is not known yet).
+     */
     private void completeAndClose(ChannelFuture future) {
         complete(future, false);
     }
 
+    /*
+     * Determines if the given modified date is past the If-Modified-Since header of the request. If not the
+     * request is auto-completed with a 304 status (NOT_MODIFIED)
+     */
     private boolean wasModified(long lastModifiedInMillis) {
         long ifModifiedSinceDateSeconds = wc.getDateHeader(HttpHeaders.Names.IF_MODIFIED_SINCE) / 1000;
         if (ifModifiedSinceDateSeconds > 0 && lastModifiedInMillis > 0) {
@@ -158,41 +210,83 @@ public class Response {
         return true;
     }
 
+    /**
+     * Instructs the browser to treat the response as download with the given file name.
+     *
+     * @param name the file name to send to the browser
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response download(String name) {
         this.name = name;
         this.download = true;
         return this;
     }
 
+    /**
+     * Instructs the browser to treat the response as inline-download with the given file name.
+     *
+     * @param name the file name to send to the browser
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response inline(String name) {
         this.name = name;
         this.download = false;
         return this;
     }
 
+    /**
+     * Marks this response as not-cachable.
+     *
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response notCached() {
         this.cacheSeconds = 0;
         return this;
     }
 
+    /**
+     * Marks this response as only privately cachable (only the browser may cache it, but not a proxy etc.)
+     *
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response privateCached() {
         this.isPrivate = true;
         this.cacheSeconds = HTTP_CACHE;
         return this;
     }
 
+    /**
+     * Marks this response as cachable.
+     *
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response cached() {
         this.isPrivate = false;
         this.cacheSeconds = HTTP_CACHE;
         return this;
     }
 
+    /**
+     * Marks this response as infinitely cachable.
+     * <p>
+     * This suggests that it will never change.
+     * </p>
+     *
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response infinitelyCached() {
         this.isPrivate = false;
         this.cacheSeconds = HTTP_CACHE_INIFINITE;
         return this;
     }
 
+    /**
+     * Sets the specified header.
+     *
+     * @param name  name of the header
+     * @param value value of the header
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response setHeader(String name, Object value) {
         if (headers == null) {
             headers = MultiMap.create();
@@ -201,6 +295,17 @@ public class Response {
         return this;
     }
 
+    /**
+     * Adds the specified header.
+     * <p>
+     * In contrast to {@link #setHeader(String, Object)} this method can be called multiple times for the same
+     * header and its values will be concatenated as specified in the HTTP protocol.
+     * </p>
+     *
+     * @param name  name of the header
+     * @param value value of the header
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response addHeader(String name, Object value) {
         if (headers == null) {
             headers = MultiMap.create();
@@ -209,6 +314,13 @@ public class Response {
         return this;
     }
 
+    /**
+     * Only adds the given header if no header with the given name does exist yet.
+     *
+     * @param name  name of the header
+     * @param value value of the header
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response addHeaderIfNotExists(String name, Object value) {
         if (headers == null) {
             headers = MultiMap.create();
@@ -219,7 +331,12 @@ public class Response {
         return this;
     }
 
-
+    /**
+     * Adds all given headers
+     *
+     * @param inputHeaders headers to add
+     * @return <tt>this</tt> to fluently create the response
+     */
     public Response headers(MultiMap<String, Object> inputHeaders) {
         for (Map.Entry<String, Collection<Object>> e : inputHeaders.getUnderlyingMap().entrySet()) {
             for (Object value : e.getValue()) {
@@ -230,6 +347,11 @@ public class Response {
     }
 
 
+    /**
+     * Completes this response by sending the given status code without any content
+     *
+     * @param status the HTTP status to sent
+     */
     public void status(HttpResponseStatus status) {
         HttpResponse response = createResponse(status, true);
         response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
@@ -237,6 +359,11 @@ public class Response {
     }
 
 
+    /**
+     * Sends a 302 (temporary redirect) to the given url as result.
+     *
+     * @param url the URL to redirect to
+     */
     public void redirectTemporarily(String url) {
         HttpResponse response = createResponse(HttpResponseStatus.TEMPORARY_REDIRECT, true);
         response.setHeader(HttpHeaders.Names.LOCATION, url);
@@ -244,6 +371,11 @@ public class Response {
         complete(commit(response));
     }
 
+    /**
+     * Sends a 301 (permanent redirect) to the given url as result.
+     *
+     * @param url the URL to redirect to
+     */
     public void redirectPermanently(String url) {
         HttpResponse response = createResponse(HttpResponseStatus.MOVED_PERMANENTLY, true);
         response.setHeader(HttpHeaders.Names.LOCATION, url);
@@ -251,6 +383,18 @@ public class Response {
         complete(commit(response));
     }
 
+    /**
+     * Sends the given file as response.
+     * <p>
+     * Based on the file, full HTTP caching is supported taking care of If-Modified-Since headers etc.
+     * </p>
+     * <p>
+     * If the request does not use HTTPS, the server tries to support a zero-copy approach leading to maximal
+     * throughput as no copying between user space and kernel space buffers is required.
+     * </p>
+     *
+     * @param file the file to send
+     */
     public void file(File file) {
         if (file.isHidden() || !file.exists()) {
             error(HttpResponseStatus.NOT_FOUND);
@@ -304,6 +448,9 @@ public class Response {
         }
     }
 
+    /*
+     * Signals an internal server error if one of the response method fails.
+     */
     private void internalServerError(Throwable t) {
         WebServer.LOG.FINE(t);
         if (!(t instanceof ClosedChannelException)) {
@@ -314,7 +461,7 @@ public class Response {
         }
     }
 
-    /**
+    /*
      * Sets the Date and Cache headers for the HTTP Response
      */
     private void setDateAndCacheHeaders(long lastModifiedMillis, int cacheSeconds, boolean isPrivate) {
@@ -349,6 +496,9 @@ public class Response {
         }
     }
 
+    /*
+     * Creates a DateFormat to parse HTTP dates.
+     */
     private SimpleDateFormat getHTTPDateFormat() {
         if (dateFormatter == null) {
             dateFormatter = new SimpleDateFormat(WebContext.HTTP_DATE_FORMAT, Locale.US);
@@ -357,7 +507,7 @@ public class Response {
         return dateFormatter;
     }
 
-    /**
+    /*
      * Sets the content disposition header for the HTTP Response
      */
     private void setContentDisposition(String name, boolean download) {
@@ -367,13 +517,21 @@ public class Response {
                                      "_") + "\"");
     }
 
-    /**
+    /*
      * Sets the content type header for the HTTP Response
      */
     private void setContentTypeHeader(String name) {
         addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, MimeHelper.guessMimeType(name));
     }
 
+    /**
+     * Sends the given resource (potentially from classpath) as result.
+     * <p>
+     * This will support HTTP caching if enabled (default).
+     * </p>
+     *
+     * @param urlConnection the connection to get the data from.
+     */
     public void resource(URLConnection urlConnection) {
         HttpResponse response = null;
         try {
@@ -406,14 +564,44 @@ public class Response {
         }
     }
 
+    /**
+     * Sends the given HTTP status as error.
+     * <p>
+     * If possible a specific template /view/errors/ERRORCODE.html. If not available, /view/errors/default.html
+     * will be rendered.
+     * </p>
+     *
+     * @param status the HTTP status to send.
+     */
     public void error(HttpResponseStatus status) {
         error(status, "");
     }
 
+    /**
+     * Sends the given HTTP status as error. Uses the given exception to provide further insight what went wrong.
+     * <p>
+     * If possible a specific template /view/errors/ERRORCODE.html. If not available, /view/errors/default.html
+     * will be rendered.
+     * </p>
+     *
+     * @param status the HTTP status to send
+     * @param t      the exception to display. Use {@link sirius.kernel.health.Exceptions} to create a
+     *               handled exception.
+     */
     public void error(HttpResponseStatus status, HandledException t) {
         error(status, NLS.toUserString(t));
     }
 
+    /**
+     * Sends the given HTTP status as error. Uses the given message to provide further insight what went wrong.
+     * <p>
+     * If possible a specific template /view/errors/ERRORCODE.html. If not available, /view/errors/default.html
+     * will be rendered.
+     * </p>
+     *
+     * @param status  the HTTP status to send
+     * @param message A message or description of what went wrong
+     */
     public void error(HttpResponseStatus status, String message) {
         try {
             if (wc.responseCommitted) {
@@ -459,6 +647,16 @@ public class Response {
         }
     }
 
+    /**
+     * Directly sends the given string as response, without any content type.
+     * <p>
+     * This should only be used when really required (meaning when you really know what you're doing.
+     * The encoding used will be UTF-8).
+     * </p>
+     *
+     * @param status  the HTTP status to send
+     * @param content the string contents to send.
+     */
     public void direct(HttpResponseStatus status, String content) {
         try {
             setDateAndCacheHeaders(System.currentTimeMillis(),

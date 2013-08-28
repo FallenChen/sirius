@@ -13,4 +13,12 @@ in the base directory (where this file is). Have a look at the main config
 in app/application.conf or the module config (app/component-*.conf) but
 never modify those, as all changes will be reverted by the next release. Use
 the instance.conf to override or extend the configuration. This file has
-precendence over all others.
+precedence over all others.
+
+To run the app as a different (non-root) user, specify the username in config.sh as USER_ID. You also might
+wand to enable authbind (e.g. for port 80) by running:
+
+cd /etc/authbind/byport
+touch 80
+chown USER:USER
+chmod 700 80

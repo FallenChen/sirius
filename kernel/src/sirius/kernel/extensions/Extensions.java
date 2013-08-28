@@ -81,7 +81,7 @@ import java.util.Map;
  * @author Andreas Haufler (aha@scireum.de)
  * @see Extension
  * @see Value
- * @see sirius.kernel.Sirius#setupConfiguration()
+ * @see sirius.kernel.Sirius#setupConfiguration(ClassLoader)
  * @since 2013/08
  */
 @ParametersAreNonnullByDefault

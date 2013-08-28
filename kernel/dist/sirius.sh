@@ -25,10 +25,11 @@ echo ""
 # By default, we assume that java is present in the PATH and can therefore
 # be directly started.
 JAVA_CMD="java"
+CMD_SUFFIX=""
 
 # Java options to use. This should probably be customized according to the
 # applications heap requirements
-JAVA_OPTS="-Xmx1024m -XX:MaxPermSize=128M"
+JAVA_OPTS="-Xmx1024m -XX:MaxPermSize=128M -Djava.net.preferIPv4Stack=true"
 
 # Shutdown port used to signal the application to shut down. Used different
 # ports for different apps or disaster will strike !
@@ -36,6 +37,23 @@ SHUTDOWN_PORT="9191"
 
 # File used to pipe all stdout and stderr output to
 STDOUT="logs/stdout.txt"
+
+# Set this to a user which runs the app. If not set, the call will run the app
+USER_ID="$USER"
+
+# Enable authbind so that apps can use ports < 1024
+# To enabled port 80:
+# cd /etc/authbind/byport
+# touch 80
+# chown USER:USER
+# chmod 700 80
+LD_PRELOAD="/usr/lib/authbind/libauthbind.so.1"
+
+if [ -n "$USER_ID" ]
+then
+    JAVA_CMD="su $USER_ID -c \"$JAVA_CMD"
+    CMD_SUFFIX="\""
+fi
 
 if [ -f config.sh ] 
 then
@@ -50,7 +68,7 @@ echo "JAVA_CMD:      $JAVA_CMD"
 echo "JAVA_OPTS:     $JAVA_OPTS"
 echo "SHUTDOWN_PORT: $SHUTDOWN_PORT"
 echo "STDOUT:        $STDOUT"
-
+echo "USER_ID:       $USER_ID"
 echo ""
 
 case "$1" in
@@ -60,28 +78,28 @@ start)
 		rm $STDOUT 
 	fi
 	echo "Starting Application..."
-	$JAVA_CMD $JAVA_OPTS IPL >> $STDOUT &
-        ;;
+	$JAVA_CMD $JAVA_OPTS IPL >> $STDOUT $CMD_SUFFIX &
+    ;;
 
 stop) 
-        echo "Stopping Application..."
+    echo "Stopping Application..."
 	$JAVA_CMD -Dkill=true -Dport=$SHUTDOWN_PORT IPL
-        ;;
+    ;;
 
 restart)
-        echo "Stopping Application..."
-        java -Dkill=true -Dport=$SHUTDOWN_PORT IPL
+    echo "Stopping Application..."
+    java -Dkill=true -Dport=$SHUTDOWN_PORT IPL
 	if [ -f $STDOUT ] 
 	then 
 		rm $STDOUT 
 	fi
-        echo "Starting Application..."
-        $JAVA_CMD $JAVA_OPTS IPL >> $STDOUT &
+    echo "Starting Application..."
+    $JAVA_CMD $JAVA_OPTS IPL >> $STDOUT $CMD_SUFFIX &
 	;;
 
 *)
-        echo "Usage: sirius.sh start|stop|restart"
-        exit 1
-        ;;
+    echo "Usage: sirius.sh start|stop|restart"
+    exit 1
+    ;;
 
 esac

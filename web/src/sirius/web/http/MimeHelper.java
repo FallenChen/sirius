@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.http;
 
 import com.google.common.io.Files;
@@ -6,12 +14,44 @@ import sirius.kernel.commons.Strings;
 import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * Guesses mime types based on file extensions.
+ * <p>
+ * Contains an internal table of the most common file extensions along with their mime type.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
+ */
 public class MimeHelper {
-    private static final String APPLICATION_X_SHOCKWAVE_FLASH = "application/x-shockwave-flash";
-    private static final String IMAGE_PNG = "image/png";
-    private static final String IMAGE_JPEG = "image/jpeg";
+    /**
+     * Mime type of flash (swf) files.
+     */
+    public static final String APPLICATION_X_SHOCKWAVE_FLASH = "application/x-shockwave-flash";
+
+    /**
+     * Mime type of PNG images
+     */
+    public static final String IMAGE_PNG = "image/png";
+
+    /**
+     * Mime type of JPEG images
+     */
+    public static final String IMAGE_JPEG = "image/jpeg";
+
+    /**
+     * Mime type of PDF files
+     */
     public static final String APPLICATION_PDF = "application/pdf".intern();
+
+    /**
+     * Mime type of CSS files
+     */
     public static final String TEXT_CSS = "text/css".intern();
+
+    /**
+     * Mime type of javascript (JS) files
+     */
     public static final String TEXT_JAVASCRIPT = "text/javascript".intern();
 
     private static final Map<String, String> mimeTable = new TreeMap<String, String>();
@@ -195,6 +235,12 @@ public class MimeHelper {
 
     }
 
+    /**
+     * Tries to guess the mime type for the given file, path or url based on its file ending.
+     *
+     * @param name the filename, path or URL to use to detect the mime type
+     * @return the mime type or <tt>null</tt> if the input was <tt>null</tt>
+     */
     public static String guessMimeType(String name) {
         if (Strings.isEmpty(name)) {
             return null;
