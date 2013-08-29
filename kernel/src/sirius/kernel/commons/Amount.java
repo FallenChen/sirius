@@ -194,7 +194,7 @@ public class Amount implements Comparable<Amount> {
      */
     @Nonnull
     public static Amount of(@Nullable Double amount) {
-        if (amount == null) {
+        if (amount == null || Double.isInfinite(amount) || Double.isNaN(amount)) {
             return NOTHING;
         }
         return of(new BigDecimal(amount));
@@ -623,15 +623,17 @@ public class Amount implements Comparable<Amount> {
         int metric = NEUTRAL_METRIC;
         double value = amount.doubleValue();
         if (value != 0d) {
-            while (Math.abs(value) >= 1000d && metric < METRICS.length - 1) {
+            while (Math.abs(value) >= 990d && metric < METRICS.length - 1) {
                 value /= 1000d;
                 metric += 1;
             }
-            while (Math.abs(value) < 1 && metric > 0) {
-                value *= 1000d;
-                metric -= 1;
-                // We loose accuracy, therefore we limit our decimal digits...
-                digits -= 3;
+            if (metric == NEUTRAL_METRIC) {
+                while (Math.abs(value) < 1.01 && metric > 0) {
+                    value *= 1000d;
+                    metric -= 1;
+                    // We loose accuracy, therefore we limit our decimal digits...
+                    digits -= 3;
+                }
             }
         }
         DecimalFormat df = new DecimalFormat();
