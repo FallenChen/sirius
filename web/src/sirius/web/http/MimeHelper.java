@@ -246,7 +246,7 @@ public class MimeHelper {
             return null;
         }
         // Fast lookup for common types....
-        if (name.charAt(name.length() - 4) == '.') {
+        if (name.length() >= 4 && name.charAt(name.length() - 4) == '.') {
             String ending = name.substring(name.length() - 3).toLowerCase().intern();
             if ("jpg" == ending) {
                 return IMAGE_JPEG;
