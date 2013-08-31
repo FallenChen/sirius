@@ -7,7 +7,8 @@
  */
 
 /**
- * Helper classes to read and write XML
+ * Helper classes to read and write XML.
+ *
  * <p>
  *     One central class in here is the {@link sirius.kernel.xml.XMLReader} which is responsible for reading
  *     large XML files, by splitting them into sub DOMs and processing them via xpath

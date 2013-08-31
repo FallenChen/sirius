@@ -138,7 +138,7 @@ public class XMLStructuredOutput extends AbstractStructuredOutput {
     }
 
     /**
-     * Creates a {@link TagBuilder} used to fluently create the root element.
+     * Creates a {@link AbstractStructuredOutput.TagBuilder} used to fluently create the root element.
      *
      * @param rootElement name of the root element
      * @return a tag builder which can be used to build the root element

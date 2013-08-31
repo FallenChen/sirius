@@ -254,4 +254,23 @@
         <mkdir dir="${site.dir}/docs" />
         <javadoc sourcepath="${main.dir}/src" destdir="${site.dir}/docs" classpathref="compile.path" />
     </target>
+
+    <!-- =========================================================================================================== -->
+    <!-- Generates the javadocs for the sirius-lib.net site -->
+    <!-- =========================================================================================================== -->
+    <target name="sirius-site" depends="make">
+        <!-- Create distribution directory -->
+        <mkdir dir="${sirius.dir}/site/docs" />
+        <delete>
+            <fileset dir="${sirius.dir}/site/docs">
+                <include name="**/*"/>
+            </fileset>
+        </delete>
+
+        <javadoc destdir="${sirius.dir}/site/docs" classpathref="compile.path">
+            <fileset dir="${sirius.dir}/kernel/src" />
+            <fileset dir="${sirius.dir}/web/src" />
+            <fileset dir="${sirius.dir}/app/src" />
+        </javadoc>
+    </target>
 </project>
