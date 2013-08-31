@@ -108,11 +108,6 @@ public class Response {
     private String name;
 
     /*
-     * Specifies the microtiming key used for this request. If null, no microtiming will be recorded.
-     */
-    private String microtimingKey;
-
-    /*
      * Caches the date formatter used to output http date headers
      */
     private static SimpleDateFormat dateFormatter;
@@ -206,8 +201,8 @@ public class Response {
                         Exceptions.handle(WebServer.LOG, e);
                     }
                 }
-                if (microtimingKey != null && Microtiming.isEnabled()) {
-                    cc.getWatch().submitMicroTiming(microtimingKey);
+                if (wc.microtimingKey != null && Microtiming.isEnabled()) {
+                    cc.getWatch().submitMicroTiming(wc.microtimingKey);
                 }
                 if (!keepalive || !isKeepalive()) {
                     future.getChannel().close();
@@ -381,26 +376,6 @@ public class Response {
                 addHeader(e.getKey(), value);
             }
         }
-        return this;
-    }
-
-    /**
-     * Enables microtiming for this request.
-     * <p>If <tt>null</tt> is passed in as key, the request uri is used.</p>
-     * <p>If the microtiming was already enabled, it will remain enabled, with the original key</p>
-     *
-     * @param key the key used to pass to the microtiming framework.
-     * @return <tt>this</tt> to fluently create the response
-     */
-    public Response enableTiming(String key) {
-        if (microtimingKey == null) {
-            if (key == null) {
-                microtimingKey = wc.getRequestedURI();
-            } else {
-                microtimingKey = key;
-            }
-        }
-
         return this;
     }
 
@@ -742,7 +717,7 @@ public class Response {
      */
     public void template(String name, Object... params) {
         String content = null;
-        enableTiming(null);
+        wc.enableTiming(null);
         try {
             if (params.length == 1 && params[0] instanceof Object[]) {
                 params = (Object[]) params[0];
@@ -791,7 +766,7 @@ public class Response {
      */
     public void nlsTemplate(String name, Object... params) {
         String content = null;
-        enableTiming(null);
+        wc.enableTiming(null);
         try {
             if (params.length == 1 && params[0] instanceof Object[]) {
                 params = (Object[]) params[0];
@@ -998,7 +973,7 @@ public class Response {
     public OutputStream outputStream(final HttpResponseStatus status,
                                      @Nullable final String contentType,
                                      @Nullable final Integer contentLength) {
-        enableTiming(null);
+        wc.enableTiming(null);
         return new OutputStream() {
             volatile boolean open = true;
             volatile long bytesWritten = 0;

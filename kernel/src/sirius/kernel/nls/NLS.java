@@ -8,6 +8,7 @@
 
 package sirius.kernel.nls;
 
+import com.google.common.collect.Sets;
 import org.joda.time.DateMidnight;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
@@ -62,7 +63,7 @@ public class NLS {
 
     private static final Babelfish blubb = new Babelfish();
     private static String defaultLanguage;
-    private static List<String> supportedLanguages;
+    private static Set<String> supportedLanguages;
 
     /**
      * Returns the currently active langauge as two-letter code.
@@ -93,12 +94,22 @@ public class NLS {
      *
      * @return a list of supported language codes
      */
-    public static List<String> getSupportedLanguages() {
+    public static Set<String> getSupportedLanguages() {
         if (supportedLanguages == null && Sirius.getConfig() != null) {
-            supportedLanguages = Sirius.getConfig().getStringList("nls.languages");
+            supportedLanguages = Sets.newLinkedHashSet(Sirius.getConfig().getStringList("nls.languages"));
         }
         // Returns the default language or (for very early access we default to en)
-        return supportedLanguages == null ? Collections.singletonList("en") : supportedLanguages;
+        return supportedLanguages == null ? Collections.singleton("en") : Collections.unmodifiableSet(supportedLanguages);
+    }
+
+    /**
+     * Determines if the given language code is supported or not.
+     *
+     * @param twoLetterLanguageCode the language as two-letter code
+     * @return <tt>true</tt> if the language is listed in <tt>nls.langauges</tt>, <tt>false</tt> otherwise.
+     */
+    public static boolean isSupportedLanguage(String twoLetterLanguageCode) {
+        return getSupportedLanguages().contains(twoLetterLanguageCode);
     }
 
     /**

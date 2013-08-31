@@ -23,7 +23,7 @@ import java.util.Map;
  * Time: 13:58
  * To change this template use File | Settings | File Templates.
  */
-@Register(name = "system-console")
+@Register(name = "system/console")
 public class ConsoleService implements StructuredService {
 
     @Context

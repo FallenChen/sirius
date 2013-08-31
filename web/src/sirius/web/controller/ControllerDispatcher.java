@@ -69,7 +69,7 @@ public class ControllerDispatcher implements WebDispatcher {
                             } catch (Throwable ex) {
                                 handleFailure(ctx, route, ex);
                             }
-                            CallContext.getCurrent().getWatch().submitMicroTiming(route.toString());
+                            ctx.enableTiming(route.toString());
                         }
                     }).dropOnOverload(new Runnable() {
                         @Override

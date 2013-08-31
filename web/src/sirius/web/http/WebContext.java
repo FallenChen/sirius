@@ -30,67 +30,174 @@ import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredInput;
 import sirius.kernel.xml.XMLStructuredInput;
 
+import javax.annotation.Nonnull;
 import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 14.07.13
- * Time: 20:39
- * To change this template use File | Settings | File Templates.
+ * Provides access to a request received by the WebServer.
+ * <p>
+ * This can be used to obtain all infos received for a HTTP request and also to create an appropriate response.
+ * </p>
+ * <p>
+ * This context can either be passed along as variable or be accessed using {@link CallContext#get(Class)}
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
  */
 public class WebContext {
 
-
+    /**
+     * Used to specify the source of a server session
+     */
     public static enum ServerSessionSource {
         UNKNOWN, PARAMETER, COOKIE;
     }
 
+    /*
+     * Underlying channel to send and receive data
+     */
     private ChannelHandlerContext ctx;
+
+    /*
+     * Internal attributes which can be set and read back during processing. This will not contain any posted or
+     * other parameters.
+     */
     private Map<String, Object> attribute;
+
+    /*
+     * The underlying request created by netty
+     */
     private HttpRequest request;
+
+    /*
+     * The effective request uri (without the query string)
+     */
     private String requestedURI;
+
+    /*
+     * Contains the parameters submitted in the query string (?param=value...)
+     */
     private Map<String, List<String>> queryString;
+
+    /*
+     * Contains decoded cookies which where sent by the client
+     */
     private Map<String, Cookie> cookiesIn;
+
+    /*
+     * Contains cookies which will be sent to the client
+     */
     private Map<String, Cookie> cookiesOut;
+
+    /*
+     * Stores the decoder which was used to process a POST or PUT request
+     */
     private HttpPostRequestDecoder postDecoder;
+
+    /*
+     * A list of files to deleted once this call is handled
+     */
     private List<File> filesToCleanup;
+
+    /*
+     * If the submitted data (from the client) was stored to a file, this will be stored here
+     */
     private File contentAsFile;
+
+    /*
+     * Raw content submitted via POST or PUT
+     */
     private Attribute content;
+
+    /*
+     * Contains decoded data of the client session - this is sent back and forth using a cookie. This data
+     * will not be stored on the server.
+     */
     private Map<String, String> session;
+
+    /*
+     * Determines if the client session was modified and should be re-set via a cookie
+     */
     private boolean sessionModified;
+
+    /*
+     * Contains the decoded language as two-letter code
+     */
     private String lang;
 
-    // Used by Response - but stored here, since a new Response might be created....
+    /*
+     * Specifies the microtiming key used for this request. If null, no microtiming will be recorded.
+     */
+    protected String microtimingKey;
+
+    /*
+     * Used by Response - but stored here, since a new Response might be created....
+     */
     protected boolean responseCommitted;
+
+    /*
+     * Invoked once the call is completely handled
+     */
     protected Callback<CallContext> completionCallback;
 
-
+    /*
+     * Stores the source of the server session
+     */
     private ServerSessionSource serverSessionSource;
+
+    /*
+     * Stores the requested session id
+     */
     private String requestedSessionId;
+
+    /*
+     * Stores the server session once it was fetched
+     */
     private ServerSession serverSession;
 
+    /*
+     * Name of the cookie used to store and load the client session
+     */
     @ConfigValue("http.sessionCookieName")
     private static String sessionCookieName;
 
+    /*
+     * Shared secret used to protect the client session. If empty one will be created on startup.
+     */
     @ConfigValue("http.sessionSecret")
     private static String sessionSecret;
 
+    /*
+     * Parameter name in which the server session is expected
+     */
     @ConfigValue("http.serverSessionParameterName")
     private static String serverSessionParameterName;
 
+    /*
+     * Cookie name used to store the server session
+     */
     @ConfigValue("http.serverSessionCookieName")
     private static String serverSessionCookieName;
 
+    /*
+     * Context prefix (constant path prefix) used for this server
+     */
     @ConfigValue("http.contextPrefix")
     private static String contextPrefix;
 
+    /*
+     * Input size limit for structured data (as this is loaded into heap)
+     */
     @ConfigValue("http.maxStructuredInputSize")
     private static long maxStructuredInputSize;
 
+    /*
+     * Determines if a dummy P3P header should be created to disable P3P handling.
+     */
     @ConfigValue("http.addP3PHeader")
     protected static boolean addP3PHeader;
 
@@ -100,26 +207,85 @@ public class WebContext {
     public WebContext() {
     }
 
-    public ChannelHandlerContext getCtx() {
+    /**
+     * Provides access to the underlying ChannelHandlerContext
+     *
+     * @return the underlying channel handler context
+     */
+    protected ChannelHandlerContext getCtx() {
         return ctx;
     }
 
+    /**
+     * Enables microtiming for this request.
+     * <p>If <tt>null</tt> is passed in as key, the request uri is used.</p>
+     * <p>If the microtiming was already enabled, it will remain enabled, with the original key</p>
+     *
+     * @param key the key used to pass to the microtiming framework.
+     * @return <tt>this</tt> to fluently work with this context
+     */
+    public WebContext enableTiming(String key) {
+        if (microtimingKey == null) {
+            if (key == null) {
+                microtimingKey = getRequestedURI();
+            } else {
+                microtimingKey = key;
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Used to provide a handle which is invoked once the call is completely handled.
+     * <p>
+     * Note that calling this method, removes the last completion handler.
+     * </p>
+     *
+     * @param onComplete the handler to be invoked once the request is completely handled
+     */
     public void onComplete(Callback<CallContext> onComplete) {
         completionCallback = onComplete;
     }
 
+    /**
+     * Sets the ChannelHandlerContext for this context.
+     *
+     * @param ctx the channel handler context to use
+     */
     protected void setCtx(ChannelHandlerContext ctx) {
         this.ctx = ctx;
     }
 
+    /**
+     * Provides access to the underlying netty HttpRequest
+     *
+     * @return the underlying request
+     */
     public HttpRequest getRequest() {
         return request;
     }
 
-    public void setRequest(HttpRequest request) {
+    /**
+     * Sets the underlying HttpRequest
+     *
+     * @param request the request on which this context is based
+     */
+    protected void setRequest(HttpRequest request) {
         this.request = request;
     }
 
+    /**
+     * Returns a value or parameter supplied by the  request.
+     * <p>
+     * This method first checks if an attribute with the given key exists. If not, the query string is scanned. After
+     * that, the posted content is looked through to find an appropriate value.
+     * </p>
+     *
+     * @param key the key used to look for the value
+     * @return a Value representing the provided data.
+     */
+    @Nonnull
     public Value get(String key) {
         if (attribute != null && attribute.containsKey(key)) {
             return Value.of(attribute.get(key));
@@ -147,6 +313,12 @@ public class WebContext {
         return Value.of(null);
     }
 
+    /**
+     * Returns the posted part with the given key.
+     *
+     * @param key used to specify which part of the post request should be returned.
+     * @return the data provided for the given key or <tt>null</tt> if no data was supplied.
+     */
     public HttpData getHttpData(String key) {
         if (postDecoder == null) {
             return null;
@@ -162,6 +334,12 @@ public class WebContext {
         return null;
     }
 
+    /**
+     * Returns the file upload supplied for the given key.
+     *
+     * @param key used to specify which part of the post request should be used.
+     * @return a file upload sent for the given key or <tt>null</tt> if no upload data is available
+     */
     public FileUpload getFileData(String key) {
         if (postDecoder == null) {
             return null;
@@ -177,6 +355,16 @@ public class WebContext {
         return null;
     }
 
+    /**
+     * Sets an attribute for the current request.
+     * <p>
+     * Attributes are neither stored nor transmitted to the client. Therefore they are only visible during the
+     * processing of this request.
+     * </p>
+     *
+     * @param key   name of the attribute
+     * @param value value of the attribute
+     */
     public void setAttribute(String key, Object value) {
         if (attribute == null) {
             attribute = Maps.newTreeMap();
@@ -184,6 +372,9 @@ public class WebContext {
         attribute.put(key, value);
     }
 
+    /*
+     * Loads and parses the client session (cookie)
+     */
     private void initSession() {
         session = Maps.newHashMap();
         String encodedSession = getCookieValue(sessionCookieName);
@@ -201,6 +392,16 @@ public class WebContext {
         }
     }
 
+    /**
+     * Stores a value in the client session.
+     * <p>
+     * As this session is transmitted to the client, the given value should not be large and needs a parseable
+     * string representation
+     * </p>
+     *
+     * @param key   the name of th value to set
+     * @param value the value to set
+     */
     public void setSessionValue(String key, Object value) {
         if (session == null) {
             initSession();
@@ -209,6 +410,12 @@ public class WebContext {
         sessionModified = true;
     }
 
+    /**
+     * Loads a value from the client session
+     *
+     * @param key the name of the value to load
+     * @return the value previously set in the session or an empty Value if no data is present
+     */
     public Value getSessionValue(String key) {
         if (session == null) {
             initSession();
@@ -216,6 +423,9 @@ public class WebContext {
         return Value.of(session.get(key));
     }
 
+    /**
+     * Clears (invalidated) the client session by removing all values.
+     */
     public void clearSession() {
         if (session != null) {
             session.clear();
@@ -223,6 +433,17 @@ public class WebContext {
         }
     }
 
+    /**
+     * Returns the server sided session based on the session parameter or cookie.
+     * <p>
+     * If no session was found, a new one is created if create is <tt>true</tt>. Otherwise <tt>null</tt> is
+     * returned.
+     * </p>
+     *
+     * @param create determines if a new session should be created if no active session was found
+     * @return the session associated with the client (based on session id parameter or cookie) or <tt>null</tt> if
+     *         neither an active session was found nor a new one was created.
+     */
     public ServerSession getServerSession(boolean create) {
         if (serverSession != null) {
             return serverSession;
@@ -248,11 +469,41 @@ public class WebContext {
         return serverSession;
     }
 
+    /**
+     * Returns the server sided session based on the session parameter or cookie.
+     * <p>
+     * This method will create a new session if no active session was found.
+     * </p>
+     * <p>
+     * This is a shortcut for <code>getServerSession(true)</code>
+     * </p>
+     *
+     * @return the currently active session for this client. Will create a new session if no active session was found
+     */
+    public ServerSession getServerSession() {
+        return getServerSession(true);
+    }
+
+    /**
+     * Returns the session id requested by the client.
+     *
+     * @return the session id (server session) sent by the client.
+     */
     public String getRequestedSessionId() {
+        if (serverSession == null) {
+            getServerSession(false);
+        }
         return requestedSessionId;
     }
 
-
+    /**
+     * Returns the source from which the server session id was obtained.
+     * <p>
+     * If a session id is submitted via cookie and via parameter, the parameter always has precedence.
+     * </p>
+     *
+     * @return the source from which the session id for the current server session was obtained.
+     */
     public ServerSessionSource getServerSessionSource() {
         if (serverSessionSource == null && serverSession == null) {
             getServerSession(false);
@@ -261,10 +512,11 @@ public class WebContext {
         return serverSessionSource;
     }
 
-    public ServerSession getServerSession() {
-        return getServerSession(true);
-    }
-
+    /**
+     * Returns the requested URI of the underlying HTTP request, without the query string
+     *
+     * @return the uri of the underlying request
+     */
     public String getRequestedURI() {
         if (requestedURI == null) {
             decodeQueryString();
@@ -272,10 +524,29 @@ public class WebContext {
         return requestedURI;
     }
 
+    /**
+     * Returns the query string or POST parameter with the given name.
+     * <p>
+     * If a POST request with query string is present, parameters in the query string have precedence.
+     * </p>
+     *
+     * @param key the name of the parameter to fetch
+     * @return the first value or <tt>null</tt> if the parameter was not set or empty
+     */
     public String getParameter(String key) {
         return Iterables.getFirst(getParameters(key), null);
     }
 
+    /**
+     * Returns all query string or POST parameters with the given name.
+     * <p>
+     * If a POST request with query string is present, parameters in the query string have precedence. If values
+     * in the query string are found, the POST parameters are discarded and not added to the resulting list.
+     * </p>
+     *
+     * @param key the name of the parameter to fetch
+     * @return all values in the query string
+     */
     public List<String> getParameters(String key) {
         if (queryString == null) {
             decodeQueryString();
@@ -307,23 +578,40 @@ public class WebContext {
         return Collections.emptyList();
     }
 
+    /*
+     * Decodes the query string on demand
+     */
     private void decodeQueryString() {
         QueryStringDecoder qsd = new QueryStringDecoder(request.getUri(), CharsetUtil.UTF_8);
         requestedURI = qsd.getPath();
         queryString = qsd.getParameters();
     }
 
+    /**
+     * Returns all cookies submitted by the client
+     *
+     * @return a list of cookies sent by the client
+     */
     public Collection<Cookie> getCookies() {
         fillCookies();
         return Collections.unmodifiableCollection(cookiesIn.values());
     }
 
+    /**
+     * Returns a cookie with the given name, sent by the client
+     *
+     * @param name the cookie to fetch
+     * @return the client cookie with the given name, or nzl<tt>null</tt> if no matching cookie was found
+     */
     public Cookie getCookie(String name) {
         fillCookies();
 
         return cookiesIn.get(name);
     }
 
+    /*
+     * Loads the cookies sent by the client
+     */
     private void fillCookies() {
         if (cookiesIn == null) {
             cookiesIn = Maps.newHashMap();
@@ -337,6 +625,13 @@ public class WebContext {
         }
     }
 
+    /**
+     * Returns the data of the given client cookie wrapped as <tt>Value</tt>
+     *
+     * @param name the cookie to fetch
+     * @return the contents of the cookie wrapped as <tt>Value</tt>
+     */
+    @Nonnull
     public String getCookieValue(String name) {
         Cookie c = getCookie(name);
         if (c == null) {
@@ -345,6 +640,11 @@ public class WebContext {
         return c.getValue();
     }
 
+    /**
+     * Sets the given cookie to be sent back to the client
+     *
+     * @param cookie the cookie to send to the client
+     */
     public void setCookie(Cookie cookie) {
         if (cookiesOut == null) {
             cookiesOut = Maps.newTreeMap();
@@ -352,10 +652,25 @@ public class WebContext {
         cookiesOut.put(cookie.getName(), cookie);
     }
 
+    /**
+     * Sets a cookie value to be sent back to the client
+     * <p>The generated cookie will be a session cookie and varnish once the user agent is closed</p>
+     *
+     * @param name  the cookie to create
+     * @param value the contents of the cookie
+     */
     public void setSessionCookie(String name, String value) {
         setCookie(name, value, Integer.MIN_VALUE);
     }
 
+    /**
+     * Sets a http only cookie value to be sent back to the client.
+     * <p>The generated cookie will be a session cookie and varnish once the user agent is closed. Also this cookie
+     * will not be accessible by JavaScript and therefore slightly more secure.</p>
+     *
+     * @param name  the cookie to create
+     * @param value the contents of the cookie
+     */
     public void setHTTPSessionCookie(String name, String value) {
         DefaultCookie cookie = new DefaultCookie(name, value);
         cookie.setMaxAge((int) Integer.MIN_VALUE);
@@ -363,12 +678,23 @@ public class WebContext {
         setCookie(cookie);
     }
 
+    /**
+     * Sets a http only cookie value to be sent back to the client.
+     *
+     * @param name  the cookie to create
+     * @param value the contents of the cookie
+     */
     public void setCookie(String name, String value, int maxAgeSeconds) {
         DefaultCookie cookie = new DefaultCookie(name, value);
         cookie.setMaxAge((int) maxAgeSeconds);
         setCookie(cookie);
     }
 
+    /**
+     * Returns all cookies to be sent to the client. Used by {@link Response} to construct an appropriate header.
+     *
+     * @return a list of all cookies to be sent to the client.
+     */
     protected Collection<Cookie> getOutCookies() {
         if (serverSession != null && serverSession.isNew()) {
             setHTTPSessionCookie(serverSessionCookieName, serverSession.getId());
@@ -385,6 +711,12 @@ public class WebContext {
         return cookiesOut == null ? null : cookiesOut.values();
     }
 
+    /**
+     * Returns the accepted language of the client as two-letter language code.
+     *
+     * @return the two-letter code of the accepted language of the user agent. Returns the current language, if no
+     *         supported language was submitted.
+     */
     public String getLang() {
         if (lang == null) {
             lang = parseAcceptLanguage();
@@ -392,6 +724,9 @@ public class WebContext {
         return lang;
     }
 
+    /*
+     * Parses the accept language header
+     */
     private String parseAcceptLanguage() {
         double bestQ = 0;
         String lang = CallContext.getCurrent().getLang();
@@ -399,6 +734,7 @@ public class WebContext {
         if (Strings.isEmpty(header)) {
             return lang;
         }
+        header = header.toLowerCase();
         for (String str : header.split(",")) {
             String[] arr = str.trim().replace("-", "_").split(";");
 
@@ -415,7 +751,7 @@ public class WebContext {
             //Parse the locale
             Locale locale = null;
             String[] l = arr[0].split("_");
-            if (l.length > 0 && q > bestQ) {
+            if (l.length > 0 && q > bestQ && NLS.isSupportedLanguage(l[0])) {
                 lang = l[0];
                 bestQ = q;
             }
@@ -424,29 +760,61 @@ public class WebContext {
         return lang;
     }
 
-
+    /*
+     * Secret used to compute the protection keys for client sessions
+     */
     private String getSessionSecret() {
-        if (Strings.isFilled(sessionSecret)) {
+        if (Strings.isEmpty(sessionSecret)) {
             sessionSecret = UUID.randomUUID().toString();
         }
         return sessionSecret;
     }
 
+    /**
+     * Creates a response for this request.
+     *
+     * @return a new response used to send data to the client.
+     */
     public Response respondWith() {
         return new Response(this);
     }
 
+    /**
+     * Date format used by HTTP date headers
+     */
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
+
+    /**
+     * The default timezone used by HTTP dates.
+     */
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
 
+    /**
+     * Returns the request header with the given name
+     *
+     * @param header name of the header to fetch.
+     * @return the value of the given header or <tt>null</tt> if no such header is present
+     */
     public String getHeader(String header) {
         return request.getHeader(header);
     }
 
+    /**
+     * Returns the request header wrapped as <tt>Value</tt>
+     *
+     * @param header name of the header to fetch.
+     * @return the contents of the named header wrapped as <tt>Value</tt>
+     */
     public Value getHeaderValue(String header) {
         return Value.of(request.getHeader(header));
     }
 
+    /**
+     * Returns the value of a date header as UNIX timestamp in milliseconds.
+     *
+     * @param header the name of the header to fetch
+     * @return the value in milliseconds of the submitted date or 0 if the header was not present.
+     */
     public long getDateHeader(String header) {
         String value = request.getHeader(header);
         if (Strings.isEmpty(value)) {
@@ -460,6 +828,14 @@ public class WebContext {
         }
     }
 
+    /**
+     * Returns a collection of all parameters names.
+     * <p>
+     * This will combine both, the query string and POST parameters.
+     * </p>
+     *
+     * @return a collection of all parameters sent by the client
+     */
     public Collection<String> getParameterNames() {
         if (queryString == null) {
             decodeQueryString();
@@ -478,35 +854,80 @@ public class WebContext {
         return names;
     }
 
+    /**
+     * Returns the original query string sent by the client
+     *
+     * @return the query string (?x=y&z=a...)
+     */
     public String getQueryString() {
         return request.getUri().substring(getRequestedURI().length());
     }
 
+    /**
+     * Returns the context prefix (constant path prefix).
+     * <p>
+     * Can be used to let the app behave like it would be hosted in a sub directory.
+     * </p>
+     *
+     * @return the content prefix or "" if no prefix is set
+     */
     public String getContextPrefix() {
         return contextPrefix;
     }
 
+    /**
+     * Returns the post decoder used to decode the posted data.
+     *
+     * @return the post decoder or <tt>null</tt>, if no post request is available
+     */
     public HttpPostRequestDecoder getPostDecoder() {
         return postDecoder;
     }
 
+    /**
+     * Determines if the current request is a POST request.
+     * <p>
+     * A POST request signal the server to alter its state, knowing that side effects will occur.
+     * </p>
+     *
+     * @return <tt>true</tt> if the method of the current request is POST, false otherwise
+     */
     public boolean isPOST() {
         return request.getMethod() == HttpMethod.POST;
     }
 
-
+    /*
+     * Sets the post decoder used to decode the posted data
+     */
     void setPostDecoder(HttpPostRequestDecoder postDecoder) {
         this.postDecoder = postDecoder;
     }
 
+    /*
+     * Sets the content sent as POST or PUT
+     */
     void setContent(Attribute content) {
         this.content = content;
     }
 
+    /**
+     * Provides raw access to the body of the HTTP request.
+     *
+     * @return the content of the HTTP request.
+     */
     public Attribute getContent() {
         return content;
     }
 
+    /**
+     * Returns the content of the HTTP request as file on disk.
+     * <p>
+     * Note that the file will be deleted once the request is completely handled.
+     * </p>
+     *
+     * @return the file pointing to the content sent by the client
+     * @throws IOException in case of an IO error
+     */
     public File getFileContent() throws IOException {
         if (!content.isInMemory()) {
             return content.getFile();
@@ -524,6 +945,15 @@ public class WebContext {
         return contentAsFile;
     }
 
+    /**
+     * Adds a file to the cleanup list.
+     * <p>
+     * All files in this list will be deleted once the request is completely handled. This can be used to wipe
+     * any intermediate files created while handling this request.
+     * </p>
+     *
+     * @param file the file to be deleted once the request is completed.
+     */
     public void addFileToCleanup(File file) {
         if (filesToCleanup == null) {
             filesToCleanup = Lists.newArrayList();
@@ -531,6 +961,15 @@ public class WebContext {
         filesToCleanup.add(file);
     }
 
+    /**
+     * Returns the body of the HTTP request as XML data.
+     * <p>
+     * Note that all data is loaded into the heap. Therefore certain limits apply. If the data is too large, an
+     * exception will be thrown.
+     * </p>
+     *
+     * @return the body of the HTTP request as XML input
+     */
     public StructuredInput getXMLContent() {
         try {
             if (content == null) {
@@ -563,6 +1002,15 @@ public class WebContext {
         }
     }
 
+    /**
+     * Returns the body of the HTTP request as JSON data.
+     * <p>
+     * Note that all data is loaded into the heap. Therefore certain limits apply. If the data is too large, an
+     * exception will be thrown.
+     * </p>
+     *
+     * @return the body of the HTTP request as JSON input
+     */
     public Map<String, Object> getJSONContent() {
         try {
             if (content == null) {
@@ -595,7 +1043,10 @@ public class WebContext {
         }
     }
 
-    public void release() {
+    /**
+     * Releases all data associated with this request.
+     */
+    void release() {
         if (postDecoder != null) {
             try {
                 postDecoder.cleanFiles();

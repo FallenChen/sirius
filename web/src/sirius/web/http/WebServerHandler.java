@@ -8,9 +8,14 @@
 
 package sirius.web.http;
 
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.*;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
+import org.jboss.netty.handler.timeout.IdleStateAwareChannelUpstreamHandler;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
@@ -18,22 +23,53 @@ import sirius.kernel.health.Exceptions;
 import java.io.File;
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
-public class WebServerHandler extends SimpleChannelUpstreamHandler {
+/**
+ * Handles incoming HTTP requests.
+ * <p>
+ * Takes care of gluing together chunks, handling file uploads etc. In order to participate in handling HTTP requests,
+ * one has to provide a {@link WebDispatcher} rather than modifying this class.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
+ */
+class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
 
     private List<WebDispatcher> sortedDispatchers;
     private int numKeepAlive = 5;
     private boolean readingChunks;
-
+    //    private String proxyAddress;
     private WebContext currentContext;
+    private AtomicLong openConnections = new AtomicLong();
 
-    public WebServerHandler(List<WebDispatcher> sortedDispatchers) {
+    /**
+     * Creates a new instance based on a pre sorted list of dispatchers.
+     *
+     * @param sortedDispatchers the sorted list of dispatchers responsible for handling HTTP requests.
+     */
+    WebServerHandler(List<WebDispatcher> sortedDispatchers) {
         this.sortedDispatchers = sortedDispatchers;
+    }
+
+    @Override
+    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        openConnections.incrementAndGet();
+//        if (firewall.isActive()) {
+//            InetSocketAddress address = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
+//            if (!firewall.accepts(address)) {
+//                ctx.getChannel().close();
+//            } else {
+//                super.channelOpen(ctx, e);
+//            }
+//        }
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         cleanup();
+        openConnections.decrementAndGet();
     }
 
     @Override
@@ -49,6 +85,9 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
+    /*
+     * Binds the request to the CallContext
+     */
     private WebContext setupContext(ChannelHandlerContext ctx, HttpRequest req) {
         CallContext cc = CallContext.initialize();
         cc.addToMDC("uri", req.getUri());
@@ -59,6 +98,20 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         return wc;
     }
 
+    @Override
+    public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) throws Exception {
+        // TODO handle
+    }
+
+    /**
+     * Used by responses to determine if keepalive is supported.
+     * <p>
+     * Internally we used a countdown, to limit the max number of keepalives for a connection. Calling this method
+     * decrements the internal counter, therefore this must not be called several times per request.
+     * </p>
+     *
+     * @return <tt>true</tt> if keepalive is still supported, <tt>false</tt> otherwise.
+     */
     public boolean shouldKeepAlive() {
         return numKeepAlive-- > 0;
     }
@@ -74,12 +127,21 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
+    /*
+     * Handles a new request - called once the first chunk of data of a request is available.
+     */
     private void handleNewRequest(ChannelHandlerContext ctx, MessageEvent e) {
         try {
             cleanup();
             HttpRequest req = (HttpRequest) e.getMessage();
             currentContext = setupContext(ctx, req);
             try {
+//                if (firewall.isActive() && proxyAddress != null) {
+//                    if (firewall.accepts(currentContext.getRemoteAddress())) {
+//                        ctx.getChannel().close();
+//                        return;
+//                    }
+//                }
                 if (req.getMethod() == HttpMethod.GET || req.getMethod() == HttpMethod.HEAD || req.getMethod() == HttpMethod.DELETE) {
                     handleGETorHEADorDELETE(req);
                 } else if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.PUT) {
@@ -87,7 +149,7 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
                 } else {
                     currentContext.respondWith()
                                   .error(HttpResponseStatus.BAD_REQUEST,
-                                         Strings.apply("Cannot %s as method. Use GET, POST or PUT",
+                                         Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
                                                        req.getMethod().getName()));
                 }
             } catch (Throwable t) {
@@ -104,6 +166,9 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
+    /*
+     * Handles POST or PUT request - those are the only methods where we expect uploaded content.
+     */
     private boolean handlePOSTandPUT(HttpRequest req) throws Exception {
         try {
             String contentType = req.getHeader(HttpHeaders.Names.CONTENT_TYPE);
@@ -129,16 +194,23 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         return false;
     }
 
+    /*
+     * Handles GET, HEAD or DELETE requests, where we don't expect any content
+     */
     private boolean handleGETorHEADorDELETE(HttpRequest req) throws Exception {
         if (req.isChunked()) {
             currentContext.respondWith()
-                          .error(HttpResponseStatus.BAD_REQUEST, "Cannot handle chunked GET. Use POST or PUT");
+                          .error(HttpResponseStatus.BAD_REQUEST,
+                                 "Cannot handle chunked GET, HEAD or DELETE. Use POST or PUT");
             return true;
         }
         dispatch();
         return false;
     }
 
+    /*
+     * Releases the last context (request) which was processed by this handler.
+     */
     private void cleanup() {
         if (currentContext != null) {
             currentContext.release();
@@ -146,6 +218,9 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
+    /*
+     * Reads another chunk of data for a previously started request
+     */
     private void continueChunkedRequest(ChannelHandlerContext ctx, MessageEvent e) {
         HttpChunk chunk = (HttpChunk) e.getMessage();
         try {
@@ -168,6 +243,9 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
+    /*
+     * Checks if the can still upload more date
+     */
     private void checkUploadFileLimits(File file) {
         if (file.getFreeSpace() < WebServer.getMinUploadFreespace() && WebServer.getMinUploadFreespace() > 0) {
             currentContext.respondWith()
@@ -190,10 +268,17 @@ public class WebServerHandler extends SimpleChannelUpstreamHandler {
         }
     }
 
+    /*
+     * Dispatches the completely read request.
+     */
     private void dispatch() throws Exception {
         for (WebDispatcher wd : sortedDispatchers) {
-            if (wd.dispatch(currentContext)) {
-                return;
+            try {
+                if (wd.dispatch(currentContext)) {
+                    return;
+                }
+            } catch (Exception e) {
+                Exceptions.handle(WebServer.LOG, e);
             }
         }
     }

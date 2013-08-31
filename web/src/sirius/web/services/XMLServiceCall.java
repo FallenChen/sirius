@@ -14,8 +14,8 @@ import sirius.web.http.WebContext;
  * To change this template use File | Settings | File Templates.
  */
 public class XMLServiceCall extends ServiceCall {
-    public XMLServiceCall(String[] subURI, WebContext ctx) {
-        super(subURI, ctx);
+    public XMLServiceCall(WebContext ctx) {
+        super(ctx);
     }
 
     @Override

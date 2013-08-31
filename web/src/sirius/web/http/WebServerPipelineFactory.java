@@ -14,35 +14,60 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.timeout.IdleStateHandler;
+import org.jboss.netty.util.Timer;
+import org.joda.time.Duration;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.PartCollection;
+import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Parts;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 14.07.13
- * Time: 15:08
- * To change this template use File | Settings | File Templates.
+ * Setup of the netty pipeline used by the {@link WebServer}
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
  */
-public class WebServerPipelineFactory implements ChannelPipelineFactory {
+class WebServerPipelineFactory implements ChannelPipelineFactory {
 
     @Parts(WebDispatcher.class)
     private PartCollection<WebDispatcher> dispatchers;
-    private List<WebDispatcher> sortedDispatchers;
 
+    @ConfigValue("http.idleTimeout")
+    private Duration idleTimeout;
+
+    private List<WebDispatcher> sortedDispatchers;
+    private Timer timer;
+
+    protected WebServerPipelineFactory(Timer timer) {
+        this.timer = timer;
+    }
+
+    @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("encoder", new HttpResponseEncoder());
+        if (idleTimeout != null && idleTimeout.getMillis() > 0) {
+            pipeline.addLast("idler",
+                             new IdleStateHandler(timer,
+                                                  idleTimeout.getMillis(),
+                                                  idleTimeout.getMillis(),
+                                                  idleTimeout.getMillis(),
+                                                  TimeUnit.MILLISECONDS));
+        }
         pipeline.addLast("deflater", new HttpContentCompressor());
         pipeline.addLast("handler", new WebServerHandler(getSortedDispatchers()));
 
         return pipeline;
     }
 
+    /*
+     * Sorts all available dispatchers by their priority ascending
+     */
     private List<WebDispatcher> getSortedDispatchers() {
         if (sortedDispatchers == null) {
             PriorityCollector<WebDispatcher> collector = PriorityCollector.create();

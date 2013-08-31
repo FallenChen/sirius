@@ -22,24 +22,10 @@ public abstract class ServiceCall {
 
     protected static Log LOG = Log.get("services");
 
-    protected String[] path;
     protected WebContext ctx;
 
-    public ServiceCall(String[] path, WebContext ctx) {
-        this.path = path;
+    public ServiceCall(WebContext ctx) {
         this.ctx = ctx;
-    }
-
-    public String[] getPath() {
-        return path;
-    }
-
-    public Value getPathElement(int index) {
-        if (index < 0 || index >= path.length) {
-            return Value.of(null);
-        }
-
-        return Value.of(path[index]);
     }
 
     public void handle(String errorCode, Throwable error) {
