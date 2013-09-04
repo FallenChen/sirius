@@ -265,11 +265,9 @@ public class Strings {
     public static String join(@Nullable Iterable<?> list, @Nonnull String separator) {
         StringBuilder result = new StringBuilder();
         if (list != null) {
-            boolean first = true;
+            Monoflop mf = Monoflop.create();
             for (Object item : list) {
-                if (first) {
-                    first = false;
-                } else {
+                if (mf.successiveCall()) {
                     result.append(separator);
                 }
                 result.append(NLS.toMachineString(item));
