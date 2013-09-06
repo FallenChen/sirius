@@ -117,4 +117,9 @@ public class Monoflop {
         return toggled;
     }
 
+    @Override
+    public String toString() {
+        return "Monoflop (Toggled: " + toggled + ")";
+    }
+
 }

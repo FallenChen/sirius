@@ -18,6 +18,7 @@ public class Message {
     private String message;
     private String details;
     private String type;
+    private String action;
 
     public Message(String message, String details, String type) {
         this.message = message;
@@ -35,6 +36,15 @@ public class Message {
 
     public String getType() {
         return type;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public Message withAction(String link) {
+        this.action = link;
+        return this;
     }
 
     public static Message info(String message) {
