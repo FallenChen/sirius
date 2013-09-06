@@ -14,6 +14,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.codec.http.*;
 import org.jboss.netty.handler.codec.http.multipart.*;
@@ -111,7 +112,7 @@ public class WebContext {
     /*
      * Raw content submitted via POST or PUT
      */
-    private Attribute content;
+    protected Attribute content;
 
     /*
      * Contains decoded data of the client session - this is sent back and forth using a cookie. This data
@@ -903,20 +904,44 @@ public class WebContext {
         this.postDecoder = postDecoder;
     }
 
-    /*
-     * Sets the content sent as POST or PUT
+    /**
+     * Provides to body of the request as stream.
+     *
+     * @return an input stream reading from the body of the request.
      */
-    void setContent(Attribute content) {
-        this.content = content;
+    public InputStream getContent() throws IOException {
+        if (!content.isInMemory()) {
+            return new FileInputStream(content.getFile());
+        }
+        //Backup the original size...
+        contentSize = (long) content.getChannelBuffer().readableBytes();
+        return new ChannelBufferInputStream(content.getChannelBuffer());
     }
 
-    /**
-     * Provides raw access to the body of the HTTP request.
-     *
-     * @return the content of the HTTP request.
+    /*
+     * Caches the content size as the "readableBytes" value changes once a stream is on it.
      */
-    public Attribute getContent() {
-        return content;
+    private Long contentSize;
+
+    /**
+     * Returns the size in bytes of the body of the request.
+     *
+     * @return the size in bytes of the http body.
+     */
+    public long getContentSize() {
+        if (contentSize == null) {
+            try {
+                if (!content.isInMemory()) {
+                    contentSize = content.getFile().length();
+                } else {
+                    contentSize = (long) content.getChannelBuffer().readableBytes();
+                }
+            } catch (IOException e) {
+                Exceptions.handle(WebServer.LOG, e);
+                return 0;
+            }
+        }
+        return contentSize;
     }
 
     /**

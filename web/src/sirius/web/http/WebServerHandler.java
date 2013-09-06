@@ -13,6 +13,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.*;
+import org.jboss.netty.handler.codec.http.multipart.Attribute;
 import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import org.jboss.netty.handler.timeout.IdleStateAwareChannelUpstreamHandler;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
@@ -188,8 +189,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                 HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(), req);
                 currentContext.setPostDecoder(postDecoder);
             } else {
-                currentContext.setContent(WebServer.getHttpDataFactory().createAttribute(req, "body"));
-                currentContext.getContent().setContent(req.getContent());
+                Attribute body = WebServer.getHttpDataFactory().createAttribute(req, "body");
+                body.setContent(req.getContent());
+                currentContext.content = body;
             }
 
         } catch (Throwable ex) {
@@ -238,9 +240,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
             if (currentContext.getPostDecoder() != null) {
                 currentContext.getPostDecoder().offer(chunk);
             } else {
-                currentContext.getContent().addContent(chunk.getContent(), chunk.isLast());
-                if (!currentContext.getContent().isInMemory()) {
-                    File file = currentContext.getContent().getFile();
+                currentContext.content.addContent(chunk.getContent(), chunk.isLast());
+                if (!currentContext.content.isInMemory()) {
+                    File file = currentContext.content.getFile();
                     checkUploadFileLimits(file);
                 }
             }
