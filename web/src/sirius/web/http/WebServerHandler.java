@@ -143,8 +143,14 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
 //                    }
 //                }
                 if (req.getMethod() == HttpMethod.GET || req.getMethod() == HttpMethod.HEAD || req.getMethod() == HttpMethod.DELETE) {
+                    if (HttpHeaders.is100ContinueExpected(req)) {
+                        send100Continue(e);
+                    }
                     handleGETorHEADorDELETE(req);
                 } else if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.PUT) {
+                    if (HttpHeaders.is100ContinueExpected(req)) {
+                        send100Continue(e);
+                    }
                     handlePOSTandPUT(req);
                 } else {
                     currentContext.respondWith()
@@ -164,6 +170,11 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                 Exceptions.ignore(ex);
             }
         }
+    }
+
+    private void send100Continue(MessageEvent e) {
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
+        e.getChannel().write(response);
     }
 
     /*
