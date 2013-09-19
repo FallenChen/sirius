@@ -49,6 +49,7 @@ class WebServerPipelineFactory implements ChannelPipelineFactory {
     @Override
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
+        pipeline.addFirst("lowlevel", LowLevelHandler.INSTANCE);
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("encoder", new HttpResponseEncoder());
         if (idleTimeout != null && idleTimeout.getMillis() > 0) {

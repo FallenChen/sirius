@@ -24,7 +24,6 @@ import sirius.kernel.health.Exceptions;
 import java.io.File;
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Handles incoming HTTP requests.
@@ -43,7 +42,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     private boolean readingChunks;
     //    private String proxyAddress;
     private WebContext currentContext;
-    private AtomicLong openConnections = new AtomicLong();
+
 
     /**
      * Creates a new instance based on a pre sorted list of dispatchers.
@@ -56,7 +55,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
 
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        openConnections.incrementAndGet();
+        WebServer.openConnections.incrementAndGet();
 //        if (firewall.isActive()) {
 //            InetSocketAddress address = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
 //            if (!firewall.accepts(address)) {
@@ -70,7 +69,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         cleanup();
-        openConnections.decrementAndGet();
+        WebServer.openConnections.decrementAndGet();
     }
 
     @Override
@@ -122,9 +121,17 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         if (readingChunks) {
             continueChunkedRequest(ctx, e);
+            WebServer.chunks++;
+            if (WebServer.chunks < 0) {
+                WebServer.chunks = 0;
+            }
             return;
         } else {
             handleNewRequest(ctx, e);
+            WebServer.requests++;
+            if (WebServer.requests < 0) {
+                WebServer.requests = 0;
+            }
         }
     }
 
@@ -295,4 +302,6 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
             }
         }
     }
+
+
 }

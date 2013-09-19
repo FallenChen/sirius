@@ -206,6 +206,11 @@ public class Response {
                 }
                 if (!keepalive || !isKeepalive()) {
                     future.getChannel().close();
+                } else {
+                    WebServer.keepalives++;
+                    if (WebServer.keepalives < 0) {
+                        WebServer.keepalives = 0;
+                    }
                 }
             }
         });

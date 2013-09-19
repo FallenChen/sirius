@@ -32,11 +32,11 @@ public class Average {
     public void addValue(long value) {
         synchronized (values) {
             values[index++] = value;
-            if (index >= values.length - 1) {
-                index = 0;
-            }
             if (index > filled) {
                 filled = index;
+            }
+            if (index >= values.length - 1) {
+                index = 0;
             }
         }
         if (count >= Long.MAX_VALUE - 1) {

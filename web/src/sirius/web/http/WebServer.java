@@ -18,6 +18,8 @@ import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
+import sirius.kernel.commons.Amount;
+import sirius.kernel.commons.Collector;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
@@ -25,10 +27,14 @@ import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Context;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Log;
+import sirius.web.health.Metric;
+import sirius.web.health.MetricProvider;
+import sirius.web.health.Metrics;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Responsible for setting up and starting netty as HTTP server.
@@ -37,7 +43,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @since 2013/08
  */
 @Register
-public class WebServer implements Lifecycle {
+public class WebServer implements Lifecycle, MetricProvider {
 
     /**
      * Used to log all web / http relevant messages
@@ -89,6 +95,27 @@ public class WebServer implements Lifecycle {
     private ServerBootstrap bootstrap;
     private NioServerSocketChannelFactory channelFactory;
     private HashedWheelTimer timer;
+
+    /*
+     * Statistics
+     */
+    protected static volatile long bytesIn = 0;
+    protected static volatile long bytesOut = 0;
+    protected static volatile long messagesIn = 0;
+    protected static volatile long messagesOut = 0;
+    protected static volatile long connections = 0;
+    protected static volatile long requests = 0;
+    protected static volatile long chunks = 0;
+    protected static volatile long keepalives = 0;
+    protected static AtomicLong openConnections = new AtomicLong();
+
+    /*
+     * Cached values of the last metrics run
+     */
+    protected static volatile long lastBytesIn = 0;
+    protected static volatile long lastBytesOut = 0;
+    protected static volatile long lastConnections = 0;
+    protected static volatile long lastRequests = 0;
 
     /**
      * Returns the minimal value of free disk space accepted until an upload is aborted.
@@ -171,5 +198,112 @@ public class WebServer implements Lifecycle {
     @Override
     public String getName() {
         return "web (netty HTTP Server)";
+    }
+
+    /**
+     * Returns the total bytes received so far
+     *
+     * @return the total bytes received via the http port
+     */
+    public static long getBytesIn() {
+        return bytesIn;
+    }
+
+    /**
+     * Returns the total bytes sent so far
+     *
+     * @return the total bytes sent via the http port
+     */
+    public static long getBytesOut() {
+        return bytesOut;
+    }
+
+    /**
+     * Returns the total messages (packets) sent so far
+     *
+     * @return the total messages sent via the http port
+     */
+    public static long getMessagesIn() {
+        return messagesIn;
+    }
+
+    /**
+     * Returns the total messages (packets) received so far
+     *
+     * @return the total messages received via the http port
+     */
+    public static long getMessagesOut() {
+        return messagesOut;
+    }
+
+    /**
+     * Returns the total number of connections opened so far
+     *
+     * @return the total number of connections opened on the http port
+     */
+    public static long getConnections() {
+        return connections;
+    }
+
+    /**
+     * Returns the number of currently open connection
+     *
+     * @return the number of open connections on the http port
+     */
+    public static AtomicLong getOpenConnections() {
+        return openConnections;
+    }
+
+    /**
+     * Returns the total number of HTTP requests received by the web server
+     *
+     * @return the total number of requests received
+     */
+    public static long getRequests() {
+        return requests;
+    }
+
+    /**
+     * Returns the total number of HTTP chunks received
+     *
+     * @return the total number of chunks received
+     */
+    public static long getChunks() {
+        return chunks;
+    }
+
+    /**
+     * Returns the number of keepalives supported
+     *
+     * @return the number of connections not closed in order to keep them alive.
+     */
+    public static long getKeepalives() {
+        return keepalives;
+    }
+
+    @Override
+    public void gather(Collector<Metric> collector) {
+        collector.add(differenceMetric("Bytes In", bytesIn, lastBytesIn, "b"));
+        lastBytesIn = bytesIn;
+        collector.add(differenceMetric("Bytes Out", bytesOut, lastBytesOut, "b"));
+        lastBytesOut = bytesOut;
+        collector.add(differenceMetric("Connects", connections, lastConnections, null));
+        lastConnections = connections;
+        collector.add(differenceMetric("Requests", requests, lastRequests, null));
+        lastRequests = requests;
+        collector.add(new Metric("HTTP",
+                                 "Open Connections",
+                                 String.valueOf(openConnections.get()),
+                                 Metrics.MetricState.GREEN));
+    }
+
+    private Metric differenceMetric(String name, long currentValue, long lastValue, String unit) {
+        if (lastValue > currentValue) {
+            return null;
+        }
+        return new Metric("HTTP",
+                          name,
+                          Amount.of((currentValue - lastValue) / 10d).toScientificString(0, unit),
+                          Metrics.MetricState.GREEN);
     }
 }

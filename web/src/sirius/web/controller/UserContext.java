@@ -5,7 +5,9 @@ import com.google.common.collect.Maps;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
+import sirius.web.http.WebContext;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +42,17 @@ public class UserContext {
             return fieldErrors.get(field);
         }
         return NLS.toUserString(value);
+    }
+
+    public String getFieldValue(String field) {
+        if (fieldErrors.containsKey(field)) {
+            return fieldErrors.get(field);
+        }
+        return CallContext.getCurrent().get(WebContext.class).get(field).getString();
+    }
+
+    public Collection<String> getFieldValues(String field) {
+        return CallContext.getCurrent().get(WebContext.class).getParameters(field);
     }
 
     public static void handle(Throwable e) {

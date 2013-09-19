@@ -35,6 +35,10 @@ public class TimerService implements Lifecycle {
     protected static final Log LOG = Log.get("timer");
     private static final String TIMER = "timer";
 
+    @Parts(EveryTenSeconds.class)
+    private PartCollection<EveryTenSeconds> everyTenSeconds;
+    private long lastTenSecondsExecution = 0;
+
     @Parts(EveryMinute.class)
     private PartCollection<EveryMinute> everyMinute;
     private long lastOneMinuteExecution = 0;
@@ -55,7 +59,12 @@ public class TimerService implements Lifecycle {
         @Override
         public void run() {
             try {
+                runTenSecondTimers();
+                if (TimeUnit.MINUTES
+                            .convert(System.currentTimeMillis() - lastTenMinutesExecution,
+                                     TimeUnit.MILLISECONDS) >= 1) {
                 runOneMinuteTimers();
+                }
                 if (TimeUnit.MINUTES
                             .convert(System.currentTimeMillis() - lastTenMinutesExecution,
                                      TimeUnit.MILLISECONDS) >= 10) {
@@ -72,6 +81,18 @@ public class TimerService implements Lifecycle {
 
     }
 
+    /**
+     * Returns the timestamp of the last execution of the 10 second timer.
+     *
+     * @return a textual representation of the last execution of the ten seconds timer. Returns "-" if the timer didn't
+     *         run yet.
+     */
+    public String getLastTenSecondsExecution() {
+        if (lastTenSecondsExecution == 0) {
+            return "-";
+        }
+        return NLS.toUserString(new Date(lastTenSecondsExecution), true);
+    }
     /**
      * Returns the timestamp of the last execution of the one minute timer.
      *
@@ -123,7 +144,7 @@ public class TimerService implements Lifecycle {
                     timer.cancel();
                     timer = new Timer(true);
                 }
-                timer.schedule(new InnerTimerTask(), 1000 * 60, 1000 * 60);
+                timer.schedule(new InnerTimerTask(), 1000 * 10, 1000 * 10);
             } finally {
                 timerLock.unlock();
             }
@@ -153,6 +174,15 @@ public class TimerService implements Lifecycle {
         return "timer (System Timer Services)";
     }
 
+    /**
+     * Executes all one minute timers (implementing <tt>EveryTenSeconds</tt>) now (out of schedule).
+     */
+    public void runTenSecondTimers() {
+        for (final TimedTask task : everyTenSeconds.getParts()) {
+            executeTask(task);
+        }
+        lastTenSecondsExecution = System.currentTimeMillis();
+    }
     /**
      * Executes all one minute timers (implementing <tt>EveryMinute</tt>) now (out of schedule).
      */

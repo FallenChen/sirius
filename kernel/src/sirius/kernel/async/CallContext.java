@@ -14,6 +14,7 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.commons.Value;
 import sirius.kernel.commons.Watch;
+import sirius.kernel.health.Counter;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
 
@@ -51,6 +52,7 @@ public class CallContext {
     public static final String MDC_FLOW = "flow";
     private static ThreadLocal<CallContext> currentContext = new ThreadLocal<CallContext>();
     private static String nodeName;
+    private static Counter interactionCounter = new Counter();
 
     /**
      * Returns the name of this computation node.
@@ -99,7 +101,21 @@ public class CallContext {
         ctx.addToMDC(MDC_FLOW, externalFlowId);
         ctx.setLang(NLS.getDefaultLanguage());
         currentContext.set(ctx);
+        interactionCounter.inc();
         return ctx;
+    }
+
+    /**
+     * Provides access to the interaction counter.
+     * <p>
+     * This counts all CallContexts which have been created and is used
+     * to provide rough system utilization metrics.
+     * </p>
+     *
+     * @return the Counter, which contains the total number of CallContexts created
+     */
+    public static Counter getInteractionCounter() {
+        return interactionCounter;
     }
 
     /**
