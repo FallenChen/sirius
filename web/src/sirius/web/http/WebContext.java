@@ -910,6 +910,9 @@ public class WebContext {
      * @return an input stream reading from the body of the request.
      */
     public InputStream getContent() throws IOException {
+        if (content == null) {
+            return null;
+        }
         if (!content.isInMemory()) {
             return new FileInputStream(content.getFile());
         }
@@ -931,7 +934,9 @@ public class WebContext {
     public long getContentSize() {
         if (contentSize == null) {
             try {
-                if (!content.isInMemory()) {
+                if (content == null) {
+                    contentSize = 0L;
+                } else if (!content.isInMemory()) {
                     contentSize = content.getFile().length();
                 } else {
                     contentSize = (long) content.getChannelBuffer().readableBytes();
@@ -954,6 +959,9 @@ public class WebContext {
      * @throws IOException in case of an IO error
      */
     public File getFileContent() throws IOException {
+        if (content == null) {
+            return null;
+        }
         if (!content.isInMemory()) {
             return content.getFile();
         }

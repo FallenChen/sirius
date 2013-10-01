@@ -448,7 +448,7 @@ public class Response {
             return;
         }
 
-        RandomAccessFile raf;
+        final RandomAccessFile raf;
         try {
             raf = new RandomAccessFile(file, "r");
         } catch (IOException io) {
@@ -479,6 +479,13 @@ public class Response {
                 final FileRegion region = new DefaultFileRegion(raf.getChannel(), 0, fileLength);
                 writeFuture = ctx.getChannel().write(region);
             }
+            // Close file once completed
+            writeFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                    raf.close();
+                }
+            });
             complete(writeFuture);
         } catch (Throwable e) {
             internalServerError(e);
