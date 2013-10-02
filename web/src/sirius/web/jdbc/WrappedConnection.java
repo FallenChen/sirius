@@ -3,6 +3,7 @@ package sirius.web.jdbc;
 import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 
 /**
  * Used to make connection pooling more robust. (Doesn't call close() twice,
@@ -98,6 +99,31 @@ public class WrappedConnection implements Connection {
     @Override
     public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
         return delegate.createStruct(typeName, attributes);
+    }
+
+    @Override
+    public void setSchema(String schema) throws SQLException {
+        delegate.setSchema(schema);
+    }
+
+    @Override
+    public String getSchema() throws SQLException {
+        return delegate.getSchema();
+    }
+
+    @Override
+    public void abort(Executor executor) throws SQLException {
+       delegate.abort(executor);
+    }
+
+    @Override
+    public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+        delegate.setNetworkTimeout(executor, milliseconds);
+    }
+
+    @Override
+    public int getNetworkTimeout() throws SQLException {
+        return delegate.getNetworkTimeout();
     }
 
     @Override

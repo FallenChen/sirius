@@ -226,4 +226,14 @@ public class WrappedStatement implements Statement {
     public boolean isPoolable() throws SQLException {
         return stmt.isPoolable();
     }
+
+    @Override
+    public void closeOnCompletion() throws SQLException {
+        stmt.closeOnCompletion();
+    }
+
+    @Override
+    public boolean isCloseOnCompletion() throws SQLException {
+        return stmt.isCloseOnCompletion();
+    }
 }

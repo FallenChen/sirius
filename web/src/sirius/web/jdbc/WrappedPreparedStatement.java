@@ -507,6 +507,16 @@ public class WrappedPreparedStatement implements PreparedStatement {
     }
 
     @Override
+    public void closeOnCompletion() throws SQLException {
+        delegate.closeOnCompletion();
+    }
+
+    @Override
+    public boolean isCloseOnCompletion() throws SQLException {
+        return delegate.isCloseOnCompletion();
+    }
+
+    @Override
     public void setSQLXML(int parameterIndex, SQLXML xmlObject) throws SQLException {
         delegate.setSQLXML(parameterIndex, xmlObject);
     }
