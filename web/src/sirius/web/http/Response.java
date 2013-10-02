@@ -110,7 +110,7 @@ public class Response {
     /*
      * Caches the date formatter used to output http date headers
      */
-    private static SimpleDateFormat dateFormatter;
+    private SimpleDateFormat dateFormatter;
 
     /**
      * Creates a new response for the given request.
@@ -543,7 +543,7 @@ public class Response {
     /*
      * Creates a DateFormat to parse HTTP dates.
      */
-    private static SimpleDateFormat getHTTPDateFormat() {
+    private SimpleDateFormat getHTTPDateFormat() {
         if (dateFormatter == null) {
             dateFormatter = new SimpleDateFormat(WebContext.HTTP_DATE_FORMAT, Locale.US);
             dateFormatter.setTimeZone(TimeZone.getTimeZone(WebContext.HTTP_DATE_GMT_TIMEZONE));
