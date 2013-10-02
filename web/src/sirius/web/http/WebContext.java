@@ -1089,8 +1089,16 @@ public class WebContext {
             postDecoder = null;
         }
         if (content != null) {
+            // Delete manually if anything like a file or so was allocated
             try {
                 content.delete();
+            } catch (Exception e) {
+                Exceptions.handle(WebServer.LOG, e);
+            }
+            // Also tell the factory to release all allocated data, as it keeps an internal reference to the request
+            // (...along with all its data!).
+            try {
+                WebServer.getHttpDataFactory().cleanRequestHttpDatas(request);
             } catch (Exception e) {
                 Exceptions.handle(WebServer.LOG, e);
             }
