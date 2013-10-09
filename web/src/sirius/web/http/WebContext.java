@@ -676,6 +676,7 @@ public class WebContext {
         DefaultCookie cookie = new DefaultCookie(name, value);
         cookie.setMaxAge((int) Integer.MIN_VALUE);
         cookie.setHttpOnly(true);
+        cookie.setPath("/");
         setCookie(cookie);
     }
 
@@ -688,6 +689,7 @@ public class WebContext {
     public void setCookie(String name, String value, int maxAgeSeconds) {
         DefaultCookie cookie = new DefaultCookie(name, value);
         cookie.setMaxAge((int) maxAgeSeconds);
+        cookie.setPath("/");
         setCookie(cookie);
     }
 

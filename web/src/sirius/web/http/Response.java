@@ -146,7 +146,7 @@ public class Response {
         // Add cookies
         Collection<Cookie> cookies = wc.getOutCookies();
         if (cookies != null && !cookies.isEmpty()) {
-            CookieEncoder ce = new CookieEncoder(false);
+            CookieEncoder ce = new CookieEncoder(true);
             for (Cookie c : cookies) {
                 ce.addCookie(c);
             }
