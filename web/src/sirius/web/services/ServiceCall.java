@@ -35,7 +35,7 @@ public abstract class ServiceCall {
         out.property("success", false);
         out.property("message", he.getMessage());
         Throwable cause = error.getCause();
-        while (cause != null && !cause.getCause().equals(cause)) {
+        while (cause != null && cause.getCause() != null && !cause.getCause().equals(cause)) {
             cause = cause.getCause();
         }
         if (cause == null) {
