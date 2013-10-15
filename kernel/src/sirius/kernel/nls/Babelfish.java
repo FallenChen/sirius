@@ -283,7 +283,7 @@ public class Babelfish {
                         for (Map.Entry<String, Long> entry : loadedFiles.entrySet()) {
                             long lastModified = getLastModified(classpath, entry.getKey());
                             if (lastModified > entry.getValue()) {
-                                LOG.FINE("Reloading: %s", entry.getKey());
+                                LOG.INFO("Reloading: %s", entry.getKey());
                                 Matcher m = PROPERTIES_FILE.matcher(entry.getKey());
                                 if (m.matches()) {
                                     importProperties(entry.getKey(), m.group(1), m.group(2), lastModified);
@@ -298,7 +298,7 @@ public class Babelfish {
 
     private long getLastModified(Classpath classpath, String relativePath) {
         try {
-            return classpath.getLoader().getResource(relativePath).openConnection().getLastModified();
+            return new File(classpath.getLoader().getResource(relativePath).toURI()).lastModified();
         } catch (Throwable e) {
             return 0;
         }
@@ -320,7 +320,7 @@ public class Babelfish {
 
 
     private void importProperties(String relativePath, String baseName, String lang, long lastModified) {
-        ResourceBundle bundle = ResourceBundle.getBundle(baseName + "_" + lang);
+        ResourceBundle bundle = ResourceBundle.getBundle(baseName + "_" + lang, CONTROL);
         translationsWriteLock.lock();
         try {
             Map<String, Translation> copy = new TreeMap<String, Translation>(translationMap);

@@ -46,7 +46,7 @@ public class Translation {
     public void addTranslation(String lang, String value) {
         if (translationTable.containsKey(lang) && !Strings.areEqual(translationTable.get(lang), value)) {
             Babelfish.LOG
-                     .WARN("Overriding translation for '%s' in language %s: Old value: '%s', New value: '%s'",
+                     .WARN("Overriding translation for '%s' in language %s: '%s' --> '%s'",
                            key,
                            lang,
                            translationTable.get(lang),
