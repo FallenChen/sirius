@@ -33,6 +33,7 @@ import sirius.kernel.xml.XMLStructuredInput;
 
 import javax.annotation.Nonnull;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -523,6 +524,15 @@ public class WebContext {
             decodeQueryString();
         }
         return requestedURI;
+    }
+
+    /**
+     * Returns a string representation of the remote ip.
+     *
+     * @return the remote ip as string
+     */
+    public String getRemoteIp() {
+        return ((InetSocketAddress)ctx.getChannel().getRemoteAddress()).getAddress().toString();
     }
 
     /**
