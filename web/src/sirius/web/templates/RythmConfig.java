@@ -79,7 +79,7 @@ public class RythmConfig implements Lifecycle {
             public TemplateClass tryLoadTemplate(String tmplName,
                                                  RythmEngine engine,
                                                  TemplateClass callerTemplateClass) {
-                if (!tmplName.startsWith("view")) {
+                if (!tmplName.startsWith("view") && !tmplName.startsWith("help")) {
                     return null;
                 }
                 String ext = Files.getFileExtension(tmplName);

@@ -1,4 +1,11 @@
-@import sirius.kernel.commons.*
-@extends(help/help.html, NLS.get("X"))
+@*
+*  Made with all the love in the world
+*  by scireum in Remshalden, Germany
+*
+*  Copyright by scireum GmbH
+*  http://www.scireum.de - info@scireum.de
+*@
 
-Test2 @System.currentTimeMillis()
+@extends(help.help.html, NLS.get("help.contents"))
+
+@invoke("help.start.html").ignoreNonExistsTag()
