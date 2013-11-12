@@ -8,6 +8,9 @@
 
 package sirius.kernel.cache;
 
+import sirius.kernel.commons.Callback;
+import sirius.kernel.commons.Tuple;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Date;
@@ -168,5 +171,17 @@ public interface Cache<K, V> {
      * @return a list of entries which provide detailed information about each entry in the cache
      */
     List<CacheEntry<K, V>> getContents();
+
+    /**
+     * Sets the remove callback which is invoked once a value is removed from the cache.
+     * <p>
+     * Only one handler can be set at a time.
+     * </p>
+     *
+     * @param onRemoveCallback the callback to call when an element is removed from the cache. Can be null
+     *                         <tt>null</tt> to remove the last handler.
+     * @return the original instance of the cache.
+     */
+    Cache<K, V> onRemove(Callback<Tuple<K, V>> onRemoveCallback);
 
 }

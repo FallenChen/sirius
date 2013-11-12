@@ -9,6 +9,10 @@
 package sirius.kernel.cache;
 
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import sirius.kernel.commons.Callback;
+import sirius.kernel.commons.Tuple;
 import sirius.kernel.extensions.Extension;
 import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Counter;
@@ -30,7 +34,7 @@ import java.util.concurrent.Callable;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08
  */
-class ManagedCache<K, V> implements Cache<K, V> {
+class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object> {
 
     protected static final int MAX_HISTORY = 25;
     protected List<Long> usesHistory = new ArrayList<Long>(MAX_HISTORY);
@@ -46,6 +50,7 @@ class ManagedCache<K, V> implements Cache<K, V> {
     protected long timeToLive;
     protected final ValueVerifier<V> verifier;
     protected long verificationInterval;
+    protected Callback<Tuple<K, V>> removeListener;
 
     private static final String EXTENSION_TYPE_CACHE = "cache";
     private static final String CONFIG_KEY_MAX_SIZE = "maxSize";
@@ -59,7 +64,9 @@ class ManagedCache<K, V> implements Cache<K, V> {
      * @param valueComputer used to compute absent cache values for given keys. May be null.
      * @param verifier      used to verify cached values before they are delivered to the caller.
      */
-    protected ManagedCache(String name, @Nullable ValueComputer<K, V> valueComputer, @Nullable ValueVerifier<V> verifier) {
+    protected ManagedCache(String name,
+                           @Nullable ValueComputer<K, V> valueComputer,
+                           @Nullable ValueVerifier<V> verifier) {
         this.name = name;
         this.computer = valueComputer;
         this.verifier = verifier;
@@ -83,9 +90,9 @@ class ManagedCache<K, V> implements Cache<K, V> {
         this.timeToLive = cacheInfo.get(CONFIG_KEY_TTL).asLong(60 * 60 * 1000);
         this.maxSize = cacheInfo.get(CONFIG_KEY_MAX_SIZE).asInt(100);
         if (maxSize > 0) {
-            this.data = CacheBuilder.newBuilder().maximumSize(maxSize).build();
+            this.data = CacheBuilder.newBuilder().maximumSize(maxSize).removalListener(this).build();
         } else {
-            this.data = CacheBuilder.newBuilder().build();
+            this.data = CacheBuilder.newBuilder().removalListener(this).build();
         }
     }
 
@@ -192,15 +199,15 @@ class ManagedCache<K, V> implements Cache<K, V> {
             long now = System.currentTimeMillis();
             CacheEntry<K, V> entry = null;
             if (computer != null) {
-               entry = data.get(key, new Callable<CacheEntry<K, V>>() {
+                entry = data.get(key, new Callable<CacheEntry<K, V>>() {
                     @Override
                     public CacheEntry<K, V> call() throws Exception {
                         misses.inc();
-                            V value = computer.compute(key);
-                            return new CacheEntry<K, V>(key,
-                                                        value,
-                                                        timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
-                                                        verificationInterval + System.currentTimeMillis());
+                        V value = computer.compute(key);
+                        return new CacheEntry<K, V>(key,
+                                                    value,
+                                                    timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
+                                                    verificationInterval + System.currentTimeMillis());
                     }
                 });
             } else {
@@ -276,4 +283,20 @@ class ManagedCache<K, V> implements Cache<K, V> {
         return hitRateHistory;
     }
 
+    @Override
+    public Cache<K, V> onRemove(Callback<Tuple<K, V>> onRemoveCallback) {
+        removeListener = onRemoveCallback;
+        return this;
+    }
+
+    @Override
+    public void onRemoval(RemovalNotification<Object, Object> notification) {
+        if (removeListener != null) {
+            try {
+                removeListener.invoke(Tuple.create((K) notification.getKey(), (V) notification.getValue()));
+            } catch (Throwable e) {
+                Exceptions.handle(e);
+            }
+        }
+    }
 }
