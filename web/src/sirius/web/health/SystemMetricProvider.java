@@ -6,7 +6,6 @@ import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Amount;
 import sirius.kernel.commons.Collector;
 import sirius.kernel.di.std.Register;
-import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 
 import java.util.Map;
@@ -28,12 +27,12 @@ public class SystemMetricProvider implements MetricProvider {
     @Override
     public void gather(Collector<Metric> collector) {
         gatherInteractions(collector);
-        try {
-            gartherCPUandMem(collector);
-            gatherNetworkStats(collector);
-        } catch (SigarException e) {
-            Exceptions.handle(LOG, e);
-        }
+//        try {
+////            gartherCPUandMem(collector);
+////            gatherNetworkStats(collector);
+//        } catch (SigarException e) {
+//            Exceptions.handle(LOG, e);
+//        }
     }
 
     private void gatherNetworkStats(Collector<Metric> collector) throws SigarException {

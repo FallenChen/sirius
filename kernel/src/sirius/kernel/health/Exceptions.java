@@ -48,7 +48,7 @@ public class Exceptions {
     private static PartCollection<ExceptionHandler> handlers;
 
     /*
-     * Used to cut endless loops which handling errors
+     * Used to cut endless loops while handling errors
      */
     private static ThreadLocal<Boolean> frozen = new ThreadLocal<Boolean>();
 
@@ -109,7 +109,7 @@ public class Exceptions {
         private String systemErrorMessage;
         private Object[] systemErrorMessageParams;
         private boolean processError = true;
-        private String key="HandledException.exception";
+        private String key = "HandledException.exception";
         private Map<String, Object> params = Maps.newTreeMap();
 
         /**
@@ -234,7 +234,10 @@ public class Exceptions {
                             }
                             for (ExceptionHandler handler : handlers) {
                                 try {
-                                    handler.handle(log.getName(), location, CallContext.getCurrent().getMDC(), result);
+                                    handler.handle(new Incident(log.getName(),
+                                                                location,
+                                                                CallContext.getCurrent().getMDC(),
+                                                                result));
                                 } catch (Throwable e) {
                                     // Just log the exception - anything else might call a rather long infinite loop
                                     LOG.SEVERE(new Exception(Strings.apply(

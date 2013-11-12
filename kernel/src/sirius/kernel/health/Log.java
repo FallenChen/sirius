@@ -9,9 +9,12 @@
 package sirius.kernel.health;
 
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
+import sirius.kernel.di.PartCollection;
+import sirius.kernel.di.std.Parts;
 import sirius.kernel.nls.NLS;
 
 /**
@@ -43,6 +46,9 @@ import sirius.kernel.nls.NLS;
 public class Log {
 
     private final Logger logger;
+
+    @Parts(LogTap.class)
+    private static PartCollection<LogTap> taps;
 
     /**
      * Generates a new logger with the given name
@@ -84,6 +90,32 @@ public class Log {
                 logger.info(msg);
             }
         }
+        tap(msg, logger.isInfoEnabled(), Level.INFO);
+    }
+
+    /*
+     * Used to cut endless loops while feeding taps
+     */
+    private static ThreadLocal<Boolean> frozen = new ThreadLocal<Boolean>();
+
+    /*
+     * Notify all log taps
+     */
+    private void tap(Object msg, boolean wouldLog, Level level) {
+        if (Boolean.TRUE.equals(frozen.get())) {
+            return;
+        }
+        try {
+            frozen.set(Boolean.TRUE);
+            if (taps != null) {
+                for (LogTap tap : taps) {
+                    tap.handleLogMessage(new LogMessage(msg instanceof Throwable ? ((Throwable) msg).getMessage() : NLS.toUserString(
+                            msg), level, this, wouldLog));
+                }
+            }
+        } finally {
+            frozen.set(Boolean.FALSE);
+        }
     }
 
     /*
@@ -107,6 +139,7 @@ public class Log {
             fixMDC();
             logger.info(Strings.apply(msg, params));
         }
+        tap(Strings.apply(msg, params), logger.isInfoEnabled(), Level.INFO);
     }
 
     /**
@@ -128,6 +161,7 @@ public class Log {
                 logger.debug(NLS.toUserString(msg));
             }
         }
+        tap(msg, logger.isDebugEnabled(), Level.DEBUG);
     }
 
     /**
@@ -145,6 +179,7 @@ public class Log {
             fixMDC();
             logger.debug(Strings.apply(msg, params));
         }
+        tap(Strings.apply(msg, params), logger.isDebugEnabled(), Level.DEBUG);
     }
 
     /**
@@ -159,10 +194,11 @@ public class Log {
     public void WARN(Object msg) {
         fixMDC();
         if (msg instanceof Throwable) {
-            logger.error(((Throwable) msg).getMessage(), (Throwable) msg);
+            logger.warn(((Throwable) msg).getMessage(), (Throwable) msg);
         } else {
             logger.warn(NLS.toUserString(msg));
         }
+        tap(msg, true, Level.WARN);
     }
 
     /**
@@ -177,7 +213,7 @@ public class Log {
     public void WARN(String msg, Object... params) {
         fixMDC();
         logger.warn(Strings.apply(msg, params));
-
+        tap(Strings.apply(msg, params), true, Level.WARN);
     }
 
     /**
@@ -197,6 +233,7 @@ public class Log {
         } else {
             logger.error(NLS.toUserString(msg));
         }
+        tap(msg, true, Level.ERROR);
     }
 
     /**
