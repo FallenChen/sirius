@@ -39,7 +39,7 @@ public class Exceptions {
      * Used to log exceptions which are normally just discarded. This are either exception handled with
      * {@link #ignore(Throwable)} or exceptions created by {@link #createHandled()}
      */
-    protected static final Log IGNORED_EXCEPTIONS_LOG = Log.get("ignoredExceptions");
+    protected static final Log IGNORED_EXCEPTIONS_LOG = Log.get("ignored");
 
     /*
      * Filled by the Injector - contains all handles which participate in the exception handling process

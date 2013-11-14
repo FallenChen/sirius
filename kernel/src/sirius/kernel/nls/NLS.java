@@ -235,6 +235,19 @@ public class NLS {
     }
 
     /**
+     * Marks a string as deliberately not translated.
+     * <p>
+     * Can be used to signal that a string needs no internationalization as it is only used on rare cases etc.
+     * </p>
+     *
+     * @param s the text which will be used as output
+     * @return the given value for s
+     */
+    public static String nonNLS(String s) {
+        return s;
+    }
+
+    /**
      * Provides access to commonly used keys.
      */
     public static enum CommonKeys {

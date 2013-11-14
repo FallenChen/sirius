@@ -1,8 +1,15 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.jdbc;
 
 import com.google.common.io.ByteStreams;
 import sirius.kernel.commons.Context;
-import sirius.kernel.commons.Value;
 import sirius.kernel.commons.Watch;
 
 import java.io.IOException;
@@ -12,49 +19,23 @@ import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a flexible way of executing parameterized SQL queries without
  * thinking too much about resource management.
  *
+ * @author Andreas Haufler (aha@scireum.de)
  * @see {@link StatementCompiler#buildParameterizedStatement(StatementStrategy, String, Context)}
  *      for the supported language.
+ * @since 2013/11
  */
 public class JDBCQuery {
 
     public interface RowHandler {
         boolean handle(Row row);
-    }
-
-    /**
-     * A small wrapper class to represent a result row.
-     */
-    public static class Row {
-        protected Map<String, Object> fields = new TreeMap<String, Object>();
-
-        public Map<String, Object> getFields() {
-            return fields;
-        }
-
-        public Value getValue(Object key) {
-            return Value.of(fields.get(key));
-        }
-
-        @SuppressWarnings("unchecked")
-        public List<Row> getSublist(Object key) {
-            return (List<Row>) getValue(key).get(Collections.emptyList());
-        }
-
-        public void setValue(String string, Object value) {
-            fields.put(string, value);
-        }
-
-        @Override
-        public String toString() {
-            return "Row [" + fields + "]";
-        }
-
     }
 
     private final Databases ds;

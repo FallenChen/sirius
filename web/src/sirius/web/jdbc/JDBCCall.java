@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.jdbc;
 
 import sirius.kernel.commons.Value;
@@ -14,6 +22,9 @@ import java.util.TreeMap;
 /**
  * Represents a flexible way of executing parameterized SQL calls without
  * thinking too much about resource management.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 public class JDBCCall {
 

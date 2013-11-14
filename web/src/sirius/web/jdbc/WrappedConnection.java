@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.jdbc;
 
 import java.sql.*;
@@ -8,6 +16,9 @@ import java.util.concurrent.Executor;
 /**
  * Used to make connection pooling more robust. (Doesn't call close() twice,
  * etc.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 public class WrappedConnection implements Connection {
 
@@ -113,7 +124,7 @@ public class WrappedConnection implements Connection {
 
     @Override
     public void abort(Executor executor) throws SQLException {
-       delegate.abort(executor);
+        delegate.abort(executor);
     }
 
     @Override

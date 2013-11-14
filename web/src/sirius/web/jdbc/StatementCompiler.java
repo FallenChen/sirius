@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.jdbc;
 
 import sirius.kernel.commons.Context;
@@ -11,8 +19,10 @@ import java.util.*;
 /**
  * Provides methods to compile SQL statements with embedded parameters.
  *
+ * @author Andreas Haufler (aha@scireum.de)
  * @see {@link StatementCompiler#buildParameterizedStatement(StatementStrategy, String, Context)}
  *      for the supported langauge.
+ * @since 2013/11
  */
 public class StatementCompiler {
 

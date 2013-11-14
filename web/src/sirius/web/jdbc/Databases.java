@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.jdbc;
 
 import com.google.common.collect.Maps;
@@ -18,6 +26,9 @@ import java.util.Map;
 /**
  * Provides a {@link javax.sql.DataSource} which can be configured via the system
  * configuration.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 public class Databases {
 

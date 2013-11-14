@@ -1031,6 +1031,9 @@ public class Response {
                     setDateAndCacheHeaders(System.currentTimeMillis(),
                                            cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                            isPrivate);
+                    if (name != null) {
+                        setContentDisposition(name, download);
+                    }
                     HttpResponse response = createResponse(status, true);
                     if (last) {
                         if (buffer == null) {

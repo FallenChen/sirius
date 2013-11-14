@@ -8,6 +8,8 @@
 
 package sirius.kernel.di;
 
+import sirius.kernel.commons.Tuple;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -60,7 +62,8 @@ public interface GlobalContext {
      * @param uniqueName the name for which the part was registered
      * @param clazz      one of the lookup classes for which the part was registered
      * @return the part which the given unique name, registered for the given class.
-     * @throws sirius.kernel.health.HandledException if no matching part was found
+     * @throws sirius.kernel.health.HandledException
+     *          if no matching part was found
      */
     @Nonnull
     <P> P findPart(@Nonnull String uniqueName, @Nonnull Class<P> clazz);
@@ -74,6 +77,16 @@ public interface GlobalContext {
      */
     @Nonnull
     <P> Collection<P> getParts(@Nonnull Class<P> partInterface);
+
+    /**
+     * Returns all parts which are currently registered for the given lookup class and have a name attached.
+     *
+     * @param partInterface one of the lookup classes for which the parts of interest were registered
+     * @return a collection of all parts registered for the given class with a name. If no parts were found,
+     *         an empty collection is returned.
+     */
+    @Nonnull
+    <P> Collection<Tuple<String, P>> getNamedParts(@Nonnull Class<P> partInterface);
 
     /**
      * Returns a {@link PartCollection} which contains all parts registered for the given lookup class.

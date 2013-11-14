@@ -11,7 +11,9 @@ package sirius.kernel.di;
 import com.google.common.collect.Sets;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Tuple;
 
+import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -72,6 +74,12 @@ class PartRegistry implements MutableGlobalContext {
     @Override
     public <P> Collection<P> getParts(Class<P> partInterface) {
         return (Collection<P>) parts.get(partInterface);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <P> Collection<Tuple<String, P>> getNamedParts(@Nonnull Class<P> partInterface) {
+        return (Collection<Tuple<String, P>>) (Object)Tuple.fromMap(namedParts.get(partInterface));
     }
 
     @Override
