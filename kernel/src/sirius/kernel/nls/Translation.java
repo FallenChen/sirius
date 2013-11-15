@@ -14,11 +14,11 @@ import sirius.kernel.commons.Strings;
 import java.util.Map;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 21.07.13
- * Time: 22:48
- * To change this template use File | Settings | File Templates.
+ * Describes a translated property.
+ * <p>Used by {@link Babelfish}</p> to manage all translations available.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 public class Translation {
     private boolean autocreated;
@@ -27,22 +27,56 @@ public class Translation {
     private boolean accessed;
     private Map<String, String> translationTable = Maps.newTreeMap();
 
+    /**
+     * Creates a new translation, containing all native language values for the given key.
+     *
+     * @param key the key for which the translations are held
+     */
     protected Translation(String key) {
         this.key = key;
     }
 
+    /**
+     * Returns <tt>true</tt> if the translation was auto created as it was missing in the .properties files.
+     *
+     * @return <tt>true</tt> if the translation is auto created, <tt>false</tt> otherwise
+     */
     public boolean isAutocreated() {
         return autocreated;
     }
 
+    /**
+     * Sets the the autocreated flag.
+     * @param autocreated determines if the translation was automatically created by the system (true).
+     */
+    protected void setAutocreated(boolean autocreated) {
+        this.autocreated = autocreated;
+    }
+
+    /**
+     * Sets the name of the file in which the property is defined.
+     *
+     * @param file the name of the file in which the property is defined
+     */
     protected void setFile(String file) {
         this.file = file;
     }
 
+    /**
+     * Returns the name of the file in which the property is defined.
+     *
+     * @return the name of the file in which the property is defined
+     */
     public String getFile() {
         return file;
     }
 
+    /**
+     * Adds a translation for the given language.
+     *
+     * @param lang  a two-letter language code for which the given translation should be used
+     * @param value the translation for the given language
+     */
     public void addTranslation(String lang, String value) {
         if (translationTable.containsKey(lang) && !Strings.areEqual(translationTable.get(lang), value)) {
             Babelfish.LOG
@@ -55,18 +89,29 @@ public class Translation {
         translationTable.put(lang, value);
     }
 
+    /**
+     * Returns the key for which the translation can be found
+     *
+     * @return the name of the key used to register the translation
+     */
     public String getKey() {
         return key;
     }
 
+    /**
+     * Determines whether the translation was already accessed
+     *
+     * @return <tt>true</tt> if the translation was already accessed, <tt>false</tt> otherwise
+     */
     public boolean isAccessed() {
         return accessed;
     }
 
-    protected void setAutocreated(boolean autocreated) {
-        this.autocreated = autocreated;
-    }
-
+    /**
+     *
+     * @param lang
+     * @return
+     */
     public String translate(String lang) {
         this.accessed = true;
         String result = translationTable.get(lang);
