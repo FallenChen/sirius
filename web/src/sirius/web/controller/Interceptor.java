@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.controller;
 
 import sirius.web.http.WebContext;
@@ -6,6 +14,9 @@ import java.lang.reflect.Method;
 
 /**
  * Can be used to intercept calls to controllers ({@link Controller})
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 public interface Interceptor {
     /**

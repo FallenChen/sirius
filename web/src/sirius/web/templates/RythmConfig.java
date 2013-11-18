@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.templates;
 
 import com.google.common.collect.Lists;
@@ -27,20 +35,41 @@ import sirius.web.controller.UserContext;
 import sirius.web.http.WebContext;
 
 import java.io.File;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 14.07.13
- * Time: 23:10
- * To change this template use File | Settings | File Templates.
+ * Initializes and configures Rythm (http://www.rythmengine.org).
+ * <p>
+ * Configures Rythm, so that {@literal @}i18n uses {@link NLS#get(String)}. Also the template lookup is changed
+ * to scan resources/view/... or resources/help/...
+ * </p>
+ * <p>
+ * Each template will have two auto-import: {@link NLS} and {@link sirius.kernel.commons.Strings}. Additionally,
+ * the following variables are declared:
+ * <ul>
+ * <li><b>ctx</b>: the current {@link CallContext}</li>
+ * <li><b>user</b>: the current {@link UserContext}</li>
+ * <li><b>prefix</b>: the http url prefix</li>
+ * <li><b>product</b>: the name of the product</li>
+ * <li><b>version</b>: the version of the product</li>
+ * <li><b>isDev</b>: <tt>true</tt> if the system is started in development mode, <tt>false</tt> otherwise</li>
+ * <li><b>call</b>:the current {@link WebContext}</li>
+ * </ul>
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 @Register
 public class RythmConfig implements Lifecycle {
 
     public static final Log LOG = Log.get("rythm");
 
+    /*
+     * Adapter to make @i18n commands used NLS.get
+     */
     public static class I18nResourceResolver implements II18nMessageResolver {
 
         @Override

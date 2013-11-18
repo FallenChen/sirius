@@ -47,6 +47,7 @@ public class Translation {
 
     /**
      * Sets the the autocreated flag.
+     *
      * @param autocreated determines if the translation was automatically created by the system (true).
      */
     protected void setAutocreated(boolean autocreated) {
@@ -108,9 +109,10 @@ public class Translation {
     }
 
     /**
+     * Returns the translation for the given language
      *
-     * @param lang
-     * @return
+     * @param lang the language as two-letter code
+     * @return a translation in the requested language or the key if no translation was found
      */
     public String translate(String lang) {
         this.accessed = true;
@@ -124,10 +126,22 @@ public class Translation {
         return result;
     }
 
+    /**
+     * Returns the translation for the given language
+     *
+     * @param lang the language as two-letter code
+     * @return a translation in the requested language or <tt>null</tt> if no translation was found
+     */
     public String translateWithoutFallback(String lang) {
         return translationTable.get(lang);
     }
 
+    /**
+     * Determines if a translation for the given language is available
+     *
+     * @param lang the language as two-letter code
+     * @return <tt>true</tt> if a translation for the given language exists, <tt>false</tt> otherwise
+     */
     public boolean hasTranslation(String lang) {
         return translationTable.containsKey(lang);
     }

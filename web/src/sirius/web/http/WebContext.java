@@ -33,6 +33,7 @@ import sirius.kernel.xml.XMLStructuredInput;
 
 import javax.annotation.Nonnull;
 import java.io.*;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -162,6 +163,21 @@ public class WebContext {
     private ServerSession serverSession;
 
     /*
+     * Determines if the requested has a trusted ip address
+     */
+    private Boolean trusted;
+
+    /*
+     * Contains the remote IP. If a proxyIP is specified (WebServer#proxyIPs), a X-Forwarded-For header is checked
+     */
+    private InetAddress remoteIp;
+
+    /*
+     * If longCall is set to true (by the user), the idle-state handler is disabled for this request.
+     */
+    private boolean longCall;
+
+    /*
      * Name of the cookie used to store and load the client session
      */
     @ConfigValue("http.sessionCookieName")
@@ -275,6 +291,28 @@ public class WebContext {
      */
     protected void setRequest(HttpRequest request) {
         this.request = request;
+    }
+
+    /**
+     * Determines if this request was marked as long call.
+     * <p>
+     * This will effectively disable the idle timeout for this request.
+     * </p>
+     *
+     * @return <tt>true</tt> if the request was marked as long call, <tt>false</tt> otherwise
+     */
+    public boolean isLongCall() {
+        return longCall;
+    }
+
+    /**
+     * Marks the request as long call.
+     * <p>
+     * This will disable all idle timeout checks for this request.
+     * </p>
+     */
+    public void markAsLongCall() {
+        this.longCall = true;
     }
 
     /**
@@ -527,12 +565,44 @@ public class WebContext {
     }
 
     /**
-     * Returns a string representation of the remote ip.
+     * Returns the remote address which sent the request
      *
-     * @return the remote ip as string
+     * @return the remote address of the underlying TCP connection
      */
-    public String getRemoteIp() {
-        return ((InetSocketAddress)ctx.getChannel().getRemoteAddress()).getAddress().toString();
+    public InetAddress getRemoteIP() {
+        if (remoteIp == null) {
+            remoteIp = ((InetSocketAddress) ctx.getChannel().getRemoteAddress()).getAddress();
+            if (!WebServer.getProxyIPs().isEmpty()) {
+                if (WebServer.getProxyIPs().accepts(remoteIp)) {
+                    String forwardedFor = request.getHeader("X-Forwarded-For");
+                    if (Strings.isFilled(forwardedFor)) {
+                        try {
+                            remoteIp = InetAddress.getByName(forwardedFor);
+                        } catch (Throwable e) {
+                            WebServer.LOG
+                                     .WARN(Strings.apply("Cannot parse X-Forwarded-For address: %s - %s (%s)",
+                                                         forwardedFor));
+                        }
+                    }
+                }
+            }
+        }
+        return remoteIp;
+    }
+
+    /**
+     * Determines if the request is from a trusted IP.
+     *
+     * @return <tt>true</tt> if the request is from a trusted ip (see {@link WebServer#trustedIPs}), <tt>false</tt>
+     *         otherwise
+     */
+    public boolean isTrusted() {
+        if (trusted == null) {
+            trusted = WebServer.getTrustedRanges()
+                               .accepts(((InetSocketAddress) ctx.getChannel().getRemoteAddress()).getAddress());
+        }
+
+        return trusted;
     }
 
     /**

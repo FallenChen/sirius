@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.services;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -13,14 +21,19 @@ import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.07.13
- * Time: 11:49
- * To change this template use File | Settings | File Templates.
+ * Dispatches calls to the JSON / XML Service-Framework (/service).
+ * <p>
+ * Processes calls to <tt>/service/[format]/service-name</tt>, by dispatching them to the appropriate
+ * {@link StructuredService} and selecting the matching {@link sirius.kernel.xml.StructuredOutput} based on the given
+ * <tt>format</tt> (either json or xml).
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 @Register
 public class ServiceDispatcher implements WebDispatcher {
+
     @Override
     public int getPriority() {
         return PriorityCollector.DEFAULT_PRIORITY;
@@ -46,7 +59,7 @@ public class ServiceDispatcher implements WebDispatcher {
             @Override
             public void run() {
                 ServiceCall call = null;
-                Tuple<String,String> callPath = Strings.split(subpath,"/");
+                Tuple<String, String> callPath = Strings.split(subpath, "/");
                 String type = callPath.getFirst();
                 String service = callPath.getSecond();
                 if ("xml".equals(type)) {

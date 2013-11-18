@@ -26,6 +26,7 @@ import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Context;
 import sirius.kernel.di.std.Register;
+import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.web.health.Metric;
 import sirius.web.health.MetricProvider;
@@ -86,6 +87,106 @@ public class WebServer implements Lifecycle, MetricProvider {
     @ConfigValue("http.maxUploadSize")
     private static long maxUploadSize;
 
+    /**
+     * Contains a list of IP ranges which are permitted to access this server. Access from unauthorized IPs will be
+     * blocked at the lowest level possible (probably no connection will be accepted). The format accepted by this
+     * field is defined by {@link IPRange#paraseRangeSet(String)}.
+     *
+     * @see IPRange#paraseRangeSet(String)
+     */
+    @ConfigValue("http.firewall.filterIPs")
+    private static String ipFilter;
+    private static IPRange.RangeSet filterRanges;
+
+    /**
+     * Returns an ip filter which determines which IPs may connect to the web server.
+     *
+     * @return a range set describing all accepted ranges
+     */
+    protected static IPRange.RangeSet getIPFilter() {
+        if (filterRanges == null) {
+            try {
+                filterRanges = IPRange.paraseRangeSet(ipFilter);
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage(
+                                  "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
+                          .handle();
+                filterRanges = IPRange.LOCALHOST;
+            }
+        }
+
+        return filterRanges;
+    }
+
+    /**
+     * Contains a list of IP ranges which are trusted. This rule will not change the processing of requests, it will
+     * only set the return value of {@link WebContext#isTrusted()}. The format accepted by this field is defined by
+     * {@link IPRange#paraseRangeSet(String)}.
+     *
+     * @see IPRange#paraseRangeSet(String)
+     */
+    @ConfigValue("http.firewall.trustedIPs")
+    private static String trustedIPs;
+    private static IPRange.RangeSet trustedRanges;
+
+    /**
+     * Returns all trusted IPs as {@link IPRange.RangeSet}
+     *
+     * @return a range set describing all trusted ranges
+     */
+    protected static IPRange.RangeSet getTrustedRanges() {
+        if (trustedRanges == null) {
+            try {
+                trustedRanges = IPRange.paraseRangeSet(trustedIPs);
+                // If no trust range is given, we trust nobody but good old LOCALHOST....This seems to be a better
+                // alternative than trusting everybody
+                if (trustedRanges.isEmpty()) {
+                    trustedRanges = IPRange.LOCALHOST;
+                }
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
+                          .handle();
+                trustedRanges = IPRange.LOCALHOST;
+            }
+        }
+
+        return trustedRanges;
+    }
+
+    @ConfigValue("http.firewall.proxyIPs")
+    private static String proxyIPs;
+    private static IPRange.RangeSet proxyRanges;
+
+    /**
+     * Returns all proxy IPs as {@link IPRange.RangeSet}
+     *
+     * @return a range set describing all proxy ranges. This is probably just a single IP addressed, however, using
+     *         {@link IPRange.RangeSet} permit to name several, even sub nets. If a request comes from a proxy IP
+     *         its X-Forwarded-For header is checked for the original IP.
+     */
+    protected static IPRange.RangeSet getProxyIPs() {
+        if (proxyRanges == null) {
+            try {
+                proxyRanges = IPRange.paraseRangeSet(proxyIPs);
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
+                          .handle();
+                proxyRanges = IPRange.NO_FILTER;
+            }
+        }
+
+        return proxyRanges;
+    }
+
     @Context
     private GlobalContext ctx;
 
@@ -104,9 +205,11 @@ public class WebServer implements Lifecycle, MetricProvider {
     protected static volatile long messagesIn = 0;
     protected static volatile long messagesOut = 0;
     protected static volatile long connections = 0;
+    protected static volatile long blocks = 0;
     protected static volatile long requests = 0;
     protected static volatile long chunks = 0;
     protected static volatile long keepalives = 0;
+    protected static volatile long idleTimeouts = 0;
     protected static AtomicLong openConnections = new AtomicLong();
 
     /*
@@ -246,6 +349,15 @@ public class WebServer implements Lifecycle, MetricProvider {
     }
 
     /**
+     * Returns the total number of connections blocked so far
+     *
+     * @return the total number of connections blocked via a firewall rule on the http port
+     */
+    public static long getBlockedConnections() {
+        return blocks;
+    }
+
+    /**
      * Returns the number of currently open connection
      *
      * @return the number of open connections on the http port
@@ -279,6 +391,15 @@ public class WebServer implements Lifecycle, MetricProvider {
      */
     public static long getKeepalives() {
         return keepalives;
+    }
+
+    /**
+     * Returns the number of idle connections killed
+     *
+     * @return the number of connections closed because they were found to be idle.
+     */
+    public static long getIdleTimeouts() {
+        return idleTimeouts;
     }
 
     @Override

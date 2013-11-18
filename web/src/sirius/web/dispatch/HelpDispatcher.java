@@ -11,6 +11,12 @@ import sirius.web.http.WebDispatcher;
 import java.io.File;
 import java.net.URL;
 
+/**
+ * Takes care of all /help URIs and sub-uris.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
+ */
 @Register
 public class HelpDispatcher implements WebDispatcher {
 

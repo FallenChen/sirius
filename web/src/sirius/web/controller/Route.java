@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.controller;
 
 import com.google.common.base.Charsets;
@@ -20,13 +28,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.07.13
- * Time: 14:55
- * To change this template use File | Settings | File Templates.
+ * Represents a compiled routed as a result of parsing a {@link Controller} and its methods.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
-public class Route {
+class Route {
     private static final Pattern EXPR = Pattern.compile("(:|#|\\$)\\{?(.+?)}?");
 
     private String format;
@@ -37,7 +44,14 @@ public class Route {
     private Class<?>[] parameterTypes;
     private Controller controller;
 
-    public static Route compile(String uri, Class<?>[] parameterTypes) {
+    /**
+     * Compiles a method defined by a {@link Controller}
+     *
+     * @param uri            the URI template defined by the {@link Routed} annotation
+     * @param parameterTypes the parameters defined by the method
+     * @return a compiled matcher handling matching URIs
+     */
+    protected static Route compile(String uri, Class<?>[] parameterTypes) {
         Route result = new Route();
         result.uri = uri;
         result.parameterTypes = parameterTypes;
@@ -86,7 +100,14 @@ public class Route {
     }
 
 
-    public List<Object> matches(WebContext ctx, String requestedURI) {
+    /**
+     * Determines if this route matches the current request.
+     *
+     * @param ctx          defines the current request
+     * @param requestedURI contains the request uri as string
+     * @return <tt>null</tt> if the route does not match or a list of extracted object from the URI as defined by the template
+     */
+    protected List<Object> matches(WebContext ctx, String requestedURI) {
         try {
             Matcher m = pattern.matcher(requestedURI);
             List<Object> result = new ArrayList<Object>(parameterTypes.length);
@@ -123,19 +144,19 @@ public class Route {
         }
     }
 
-    public Method getSuccessCallback() {
+    protected Method getSuccessCallback() {
         return successCallback;
     }
 
-    public void setSuccessCallback(Method successCallback) {
+    protected void setSuccessCallback(Method successCallback) {
         this.successCallback = successCallback;
     }
 
-    public void setController(Controller controller) {
+    protected void setController(Controller controller) {
         this.controller = controller;
     }
 
-    public Controller getController() {
+    protected Controller getController() {
         return controller;
     }
 

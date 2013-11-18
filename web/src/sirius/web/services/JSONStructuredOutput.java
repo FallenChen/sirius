@@ -15,11 +15,24 @@ import sirius.kernel.xml.Attribute;
 
 import java.io.*;
 
+/**
+ * Encoder to generate JSON via the {@link sirius.kernel.xml.StructuredOutput} interface.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/08
+ */
 public class JSONStructuredOutput extends AbstractStructuredOutput {
 
     private Writer writer;
     private final String callback;
 
+    /**
+     * Generates a new output, writing to the given output stream.
+     *
+     * @param out      the destination for the generated output
+     * @param callback name of the callback function for JSONP requests
+     * @param encoding the character encoding to use
+     */
     public JSONStructuredOutput(OutputStream out, String callback, String encoding) {
         try {
             this.callback = callback;

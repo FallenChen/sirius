@@ -40,7 +40,6 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     private List<WebDispatcher> sortedDispatchers;
     private int numKeepAlive = 5;
     private boolean readingChunks;
-    //    private String proxyAddress;
     private WebContext currentContext;
 
 
@@ -56,14 +55,6 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         WebServer.openConnections.incrementAndGet();
-//        if (firewall.isActive()) {
-//            InetSocketAddress address = (InetSocketAddress) ctx.getChannel().getRemoteAddress();
-//            if (!firewall.accepts(address)) {
-//                ctx.getChannel().close();
-//            } else {
-//                super.channelOpen(ctx, e);
-//            }
-//        }
     }
 
     @Override
@@ -100,7 +91,18 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
 
     @Override
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) throws Exception {
-        // TODO handle
+        if (ctx.getAttachment() != null) {
+            CallContext.setCurrent((CallContext) ctx.getAttachment());
+            WebContext wc = ((CallContext) ctx.getAttachment()).get(WebContext.class);
+            if (!wc.isLongCall()) {
+                WebServer.idleTimeouts++;
+                if (WebServer.idleTimeouts < 0) {
+                    WebServer.idleTimeouts = 0;
+                }
+                e.getChannel().close();
+                return;
+            }
+        }
     }
 
     /**
@@ -144,12 +146,16 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
             HttpRequest req = (HttpRequest) e.getMessage();
             currentContext = setupContext(ctx, req);
             try {
-//                if (firewall.isActive() && proxyAddress != null) {
-//                    if (firewall.accepts(currentContext.getRemoteAddress())) {
-//                        ctx.getChannel().close();
-//                        return;
-//                    }
-//                }
+                if (!WebServer.getIPFilter().isEmpty()) {
+                    if (!WebServer.getIPFilter().accepts(currentContext.getRemoteIP())) {
+                        WebServer.blocks++;
+                        if (WebServer.blocks < 0) {
+                            WebServer.blocks = 0;
+                        }
+                        ctx.getChannel().close();
+                        return;
+                    }
+                }
                 if (req.getMethod() == HttpMethod.GET || req.getMethod() == HttpMethod.HEAD || req.getMethod() == HttpMethod.DELETE) {
                     if (HttpHeaders.is100ContinueExpected(req)) {
                         send100Continue(e);

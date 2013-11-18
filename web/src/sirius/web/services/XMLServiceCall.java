@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.services;
 
 import com.google.common.base.Charsets;
@@ -7,13 +15,12 @@ import sirius.kernel.xml.XMLStructuredOutput;
 import sirius.web.http.WebContext;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.07.13
- * Time: 12:24
- * To change this template use File | Settings | File Templates.
+ * XML encoder for calls to a {@link StructuredService}.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
-public class XMLServiceCall extends ServiceCall {
+class XMLServiceCall extends ServiceCall {
     public XMLServiceCall(WebContext ctx) {
         super(ctx);
     }

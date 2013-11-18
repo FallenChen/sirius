@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.templates;
 
 import org.rythmengine.Rythm;
@@ -10,19 +18,23 @@ import sirius.kernel.Sirius;
 import java.net.URL;
 
 /**
- * Created by IntelliJ IDEA.
- * User: luog
- * Date: 20/01/12
- * Time: 11:25 PM
- * To change this template use File | Settings | File Templates.
+ * Implementation of {@link ITemplateResource} to get caching and reloading right.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
-public class RythmTemplate extends TemplateResourceBase implements ITemplateResource {
+class RythmTemplate extends TemplateResourceBase implements ITemplateResource {
 
     private URL url;
     private String key;
 
-
-    public RythmTemplate(String path, RythmEngine engine) {
+    /**
+     * Creates a new template for the given path within the given engine.
+     *
+     * @param path   the path to the template source
+     * @param engine the surrounding engine
+     */
+    RythmTemplate(String path, RythmEngine engine) {
         super(engine);
         ClassLoader cl = Sirius.getClasspath().getLoader();
         if (null == cl) {

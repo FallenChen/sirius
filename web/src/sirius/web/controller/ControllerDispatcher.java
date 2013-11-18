@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.controller;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -18,11 +26,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.07.13
- * Time: 14:25
- * To change this template use File | Settings | File Templates.
+ * Dispatches incoming requests to the appropriate {@link Controller}.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 @Register
 public class ControllerDispatcher implements WebDispatcher {
@@ -48,7 +55,7 @@ public class ControllerDispatcher implements WebDispatcher {
         return route(ctx);
     }
 
-    public boolean route(final WebContext ctx) {
+    private boolean route(final WebContext ctx) {
         for (final Route route : routes) {
             try {
                 final List<Object> params = route.matches(ctx, ctx.getRequestedURI());

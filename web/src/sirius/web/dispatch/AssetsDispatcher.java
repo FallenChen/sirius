@@ -10,8 +10,22 @@ import sirius.web.http.WebDispatcher;
 import java.io.File;
 import java.net.URL;
 
+/**
+ * Dispatches all URLs below <code>/assets</code>.
+ * <p>
+ * All assets are fetched from the classpath and should be located in the <tt>resources</tt> source root (below the
+ * <tt>assets</tt> directory).
+ * </p>
+ * <p>
+ * This dispatcher tries to support caching as well as zero-copy delivery of static files if possible.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
+ */
 @Register
 public class AssetsDispatcher implements WebDispatcher {
+
     @Override
     public int getPriority() {
         return PriorityCollector.DEFAULT_PRIORITY;
