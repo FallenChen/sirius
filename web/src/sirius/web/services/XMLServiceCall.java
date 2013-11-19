@@ -21,7 +21,8 @@ import sirius.web.http.WebContext;
  * @since 2013/11
  */
 class XMLServiceCall extends ServiceCall {
-    public XMLServiceCall(WebContext ctx) {
+
+    XMLServiceCall(WebContext ctx) {
         super(ctx);
     }
 

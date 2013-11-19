@@ -17,12 +17,19 @@ import java.net.URL;
 import java.sql.*;
 import java.util.Calendar;
 
-public class WrappedPreparedStatement implements PreparedStatement {
+/**
+ * Wrapper for {@link PreparedStatement} to add microtiming.
+ * <p/>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
+ */
+class WrappedPreparedStatement implements PreparedStatement {
     private PreparedStatement delegate;
     private Databases ds;
     private final String preparedSQL;
 
-    public WrappedPreparedStatement(Databases ds, PreparedStatement prepareStatement, String preparedSQL) {
+    WrappedPreparedStatement(Databases ds, PreparedStatement prepareStatement, String preparedSQL) {
         this.ds = ds;
         delegate = prepareStatement;
         this.preparedSQL = preparedSQL;

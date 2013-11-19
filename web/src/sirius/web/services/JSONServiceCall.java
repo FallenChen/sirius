@@ -18,7 +18,8 @@ import sirius.web.http.WebContext;
  * @since 2013/11
  */
 class JSONServiceCall extends ServiceCall {
-    public JSONServiceCall(WebContext ctx) {
+
+    JSONServiceCall(WebContext ctx) {
         super(ctx);
     }
 

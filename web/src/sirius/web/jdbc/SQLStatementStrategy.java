@@ -15,9 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Adapter for filling a SQL query in the {@link QueryValve}.
+ * Adapter to generate SQL statements via the {@link StatementCompiler}
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
-public class SQLStatementStrategy implements StatementStrategy {
+class SQLStatementStrategy implements StatementStrategy {
 
     private PreparedStatement stmt;
     private List<Tuple<Integer, Object>> parameters = new ArrayList<Tuple<Integer, Object>>();
@@ -26,7 +29,7 @@ public class SQLStatementStrategy implements StatementStrategy {
     private boolean mysql;
     private boolean retriveGeneratedKeys;
 
-    public SQLStatementStrategy(Connection c, boolean mysql) {
+    protected SQLStatementStrategy(Connection c, boolean mysql) {
         this.c = c;
         this.mysql = mysql;
         this.sb = new StringBuilder();

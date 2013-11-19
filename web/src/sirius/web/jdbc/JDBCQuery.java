@@ -26,10 +26,16 @@ import java.util.Map;
 /**
  * Represents a flexible way of executing parameterized SQL queries without
  * thinking too much about resource management.
+ * <p>
+ * Supports named parameters in form of ${name}. Also #{name} can be used in LIKE expressions and will be
+ * surrounded by % signs (if not empty).
+ * </p>
+ * <p>
+ * Optional blocks can be surrounded with angular braces: SELECT * FROM x WHERE test = 1[ AND test2=${val}]
+ * The surrounded block will only be added to the query, if the parameter within has a non-null value.
+ * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @see {@link StatementCompiler#buildParameterizedStatement(StatementStrategy, String, Context)}
- *      for the supported language.
  * @since 2013/11
  */
 public class JDBCQuery {
@@ -42,13 +48,20 @@ public class JDBCQuery {
     private final String sql;
     private Context params = Context.create();
 
-    public JDBCQuery(Databases ds, String sql) {
+    /*
+     * Create a new instance using Databases.createQuery(sql)
+     */
+    protected JDBCQuery(Databases ds, String sql) {
         this.ds = ds;
         this.sql = sql;
     }
 
     /**
      * Adds a parameter.
+     *
+     * @param parameter the name of the parameter as referenced in the SQL statement (${name} or #{name}).
+     * @param value     the value of the parameter
+     * @return the query itself to support fluent calls
      */
     public JDBCQuery set(String parameter, Object value) {
         params.put(parameter, value);
@@ -57,6 +70,9 @@ public class JDBCQuery {
 
     /**
      * Sets all parameters of the given context.
+     *
+     * @param ctx the containing pairs of names and values to add to the query
+     * @return the query itself to support fluent calls
      */
     public JDBCQuery set(Map<String, Object> ctx) {
         params.putAll(ctx);
@@ -64,14 +80,21 @@ public class JDBCQuery {
     }
 
     /**
-     * Executes the given query.
+     * Executes the given query returning the result as list
+     *
+     * @return a list of {@link Row}s
+     * @throws SQLException in case of a database error
      */
     public List<Row> queryList() throws SQLException {
         return queryList(0);
     }
 
     /**
-     * Executes the given query.
+     * Executes the given query returning the result as list with at most <tt>maxRows</tt> entries
+     *
+     * @param maxRows maximal number of rows to be returned
+     * @return a list of {@link Row}s
+     * @throws SQLException in case of a database error
      */
     public List<Row> queryList(int maxRows) throws SQLException {
         Watch w = Watch.start();
@@ -110,8 +133,11 @@ public class JDBCQuery {
     }
 
     /**
-     * Executes the given query by invoking the {@link RowHandler} for earch
+     * Executes the given query by invoking the {@link RowHandler} for each
      * result row.
+     *
+     * @param handler the row handler invoked for each row
+     * @throws SQLException in case of a database error
      */
     public void perform(RowHandler handler) throws SQLException {
         Watch w = Watch.start();
@@ -147,7 +173,10 @@ public class JDBCQuery {
     }
 
     /**
-     * Executes the given query.
+     * Executes the given query returning the first matching row.
+     *
+     * @return the first matching row for the given query or <tt>null</tt> if no matching row was found
+     * @throws SQLException in case of a database error
      */
     public Row queryFirst() throws SQLException {
         Connection c = ds.getConnection();
@@ -200,6 +229,12 @@ public class JDBCQuery {
 
     /**
      * Executes the query as update.
+     * <p>
+     * Requires the SQL statement to be an UPDATE or DELETE statement.
+     * </p>
+     *
+     * @return the number of rows changed
+     * @throws SQLException in case of a database error
      */
     public int executeUpdate() throws SQLException {
         Connection c = ds.getConnection();
@@ -225,6 +260,12 @@ public class JDBCQuery {
 
     /**
      * Executes the update and returns the generated keys.
+     * <p>
+     * Requires the SQL statement to be an UPDATE or DELETE statement.
+     * </p>
+     *
+     * @return the a row representing all generated keys
+     * @throws SQLException in case of a database error
      */
     public Row executeUpdateReturnKeys() throws SQLException {
         Connection c = ds.getConnection();

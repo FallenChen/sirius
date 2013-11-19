@@ -15,17 +15,17 @@ import java.util.concurrent.Executor;
 
 /**
  * Used to make connection pooling more robust. (Doesn't call close() twice,
- * etc.
+ * etc.).
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/11
  */
-public class WrappedConnection implements Connection {
+class WrappedConnection implements Connection {
 
     private final Connection delegate;
     private final Databases ds;
 
-    public WrappedConnection(Connection c, Databases ds) {
+    WrappedConnection(Connection c, Databases ds) {
         this.delegate = c;
         this.ds = ds;
     }

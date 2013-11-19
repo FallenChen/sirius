@@ -37,7 +37,10 @@ public class JDBCCall {
     private final Map<String, Object> output = new TreeMap<String, Object>();
     private Integer returnType;
 
-    public JDBCCall(Databases ds, String fun, Integer returnType) {
+    /*
+     * Use Databases.createFunctionCall or Databases.createFunctionCall to create an instance
+     */
+    protected JDBCCall(Databases ds, String fun, Integer returnType) {
         this.ds = ds;
         this.fun = fun;
         this.returnType = returnType;
@@ -48,6 +51,9 @@ public class JDBCCall {
 
     /**
      * Adds an in parameter.
+     *
+     * @param value the value to pass in
+     * @return the call itself to perform fluent calls
      */
     public JDBCCall addInParam(Object value) {
         names.add("");
@@ -58,6 +64,10 @@ public class JDBCCall {
 
     /**
      * Adds an out parameter.
+     *
+     * @param parameter the name of the parameter
+     * @param type      the SQL type ({@link java.sql.Types}) of the parameter
+     * @return the call itself to perform fluent calls
      */
     public JDBCCall addOutParam(String parameter, int type) {
         names.add(parameter);
@@ -68,6 +78,9 @@ public class JDBCCall {
 
     /**
      * Invokes the call
+     *
+     * @return the call itself to perform fluent calls in order to read the result
+     * @throws SQLException in case of a database error
      */
     public JDBCCall call() throws SQLException {
         Connection c = ds.getConnection();
@@ -113,10 +126,21 @@ public class JDBCCall {
         return this;
     }
 
+    /**
+     * Returns the return value of the function call
+     *
+     * @return the return value wrapped as {@link Value}
+     */
     public Value getReturnValue() {
         return getValue(RETURN_VALUE);
     }
 
+    /**
+     * Returns the named out parameter
+     *
+     * @param key the parameter to return
+     * @return the value of the given out parameter wrapped as {@link Value}
+     */
     public Value getValue(String key) {
         return Value.of(output.get(key));
     }

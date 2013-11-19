@@ -17,24 +17,26 @@ import java.sql.SQLException;
 import java.util.*;
 
 /**
- * Provides methods to compile SQL statements with embedded parameters.
+ * Provides methods to compile statements with embedded parameters and optional blocks.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @see {@link StatementCompiler#buildParameterizedStatement(StatementStrategy, String, Context)}
- *      for the supported langauge.
  * @since 2013/11
  */
-public class StatementCompiler {
+class StatementCompiler {
 
     /**
      * Builds a PreparedStatement where references to parameters (${Param} for
      * normal substitution and #{Param} for LIKE substitution) are replaced by
      * the given parameters. Blocks created with [ and ] are taken out if the
      * parameter referenced in between is null.
+     *
+     * @param adapter used to determine the dialect to generate (SQL, HQL...)
+     * @param query   the query to compile
+     * @param context the context defining the parameters available
      */
-    public static void buildParameterizedStatement(StatementStrategy adapter,
-                                                   String query,
-                                                   Context context) throws SQLException {
+    static void buildParameterizedStatement(StatementStrategy adapter,
+                                            String query,
+                                            Context context) throws SQLException {
         List<Object> params = new ArrayList<Object>();
         if (query != null) {
             parseSection(query, query, adapter, params, context);
@@ -61,14 +63,11 @@ public class StatementCompiler {
                 }
             }
         } catch (SQLException e) {
-            throw new SQLException(NLS.fmtr("scireum.ds.query.SubstitutionError")
-                                      .set("error", e.getMessage())
-                                      .set("query", adapter.getQueryString())
-                                      .format());
+            throw new SQLException(Strings.apply("Error compiling: %s - %s", adapter.getQueryString(), e.getMessage()));
         }
     }
 
-    /**
+    /*
      * Searches for an occurrence of a block [ .. ]. Everything before the [ is
      * compiled and added to the result SQL. Everything between the brackets is
      * compiled and if a parameter was found it is added to the result SQL. The
@@ -76,8 +75,6 @@ public class StatementCompiler {
      * <p/>
      * If no [ was found, the complete string is compiled and added to the
      * result SQL.
-     *
-     * @throws java.sql.SQLException with a i18ned message
      */
     private static void parseSection(String originalSQL,
                                      String sql,
@@ -88,17 +85,13 @@ public class StatementCompiler {
         if (index > -1) {
             int nextClose = sql.indexOf("]", index + 1);
             if (nextClose < 0) {
-                throw new SQLException(NLS.fmtr("scireum.db.query.QueryErrorUnbalancedBracket")
-                                          .set("index", index)
-                                          .set("query", originalSQL)
-                                          .format());
+                throw new SQLException(Strings.apply("Unbalanced [ at %d in: %s ", index, originalSQL));
             }
             int nextOpen = sql.indexOf("[", index + 1);
             if ((nextOpen > -1) && (nextOpen < nextClose)) {
-                throw new SQLException(NLS.fmtr("scireum.db.query.QueryErrorNoNesting")
-                                          .set("index", index)
-                                          .set("query", originalSQL)
-                                          .format());
+                throw new SQLException(Strings.apply("Cannot nest blocks of angular brackets at %d in: %s ",
+                                                     index,
+                                                     originalSQL));
             }
             compileSection(false, sql, sql.substring(0, index), adapter, params, context);
             compileSection(true, sql, sql.substring(index + 1, nextClose), adapter, params, context);
@@ -109,8 +102,11 @@ public class StatementCompiler {
     }
 
     /**
-     * Make searchString conform with SQL 92 syntax. Therefore all * are
+     * Make <tt>searchString</tt> conform with SQL 92 syntax. Therefore all * are
      * converted to % and a final % is appended at the end of the string.
+     *
+     * @param searchString the query to expand
+     * @param wildcardLeft determines if a % should be added to the start of the string
      */
     public static String addSQLWildcard(String searchString, boolean wildcardLeft) {
         if (searchString == null) {
@@ -131,11 +127,9 @@ public class StatementCompiler {
         return searchString;
     }
 
-    /**
+    /*
      * Replaces all occurrences of parameters ${..} or #{..} by parameters given
      * in context.
-     *
-     * @throws java.sql.SQLException with a i18ned message
      */
     @SuppressWarnings("unchecked")
     private static void compileSection(boolean ignoreIfParametersNull,
@@ -214,7 +208,7 @@ public class StatementCompiler {
         }
     }
 
-    /**
+    /*
      * Returns the next index of ${ or #{ in the given string.
      */
     private static int getNextRelevantIndex(String sql) {

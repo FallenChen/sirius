@@ -12,11 +12,18 @@ import sirius.kernel.commons.Watch;
 
 import java.sql.*;
 
-public class WrappedStatement implements Statement {
+/**
+ * Wrapper for {@link Statement} to add microtiming.
+ * <p/>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
+ */
+class WrappedStatement implements Statement {
     private Statement stmt;
     private Databases ds;
 
-    public WrappedStatement(Statement stmt, Databases ds) {
+    WrappedStatement(Statement stmt, Databases ds) {
         super();
         this.stmt = stmt;
         this.ds = ds;
