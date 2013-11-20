@@ -293,7 +293,8 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
     public void onRemoval(RemovalNotification<Object, Object> notification) {
         if (removeListener != null) {
             try {
-                removeListener.invoke(Tuple.create((K) notification.getKey(), (V) notification.getValue()));
+                CacheEntry<K, V> entry = (CacheEntry<K, V>) notification.getValue();
+                removeListener.invoke(Tuple.create(entry.getKey(), entry.getValue()));
             } catch (Throwable e) {
                 Exceptions.handle(e);
             }
