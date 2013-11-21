@@ -10,15 +10,16 @@ package sirius.web.services;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.async.Async;
-import sirius.kernel.commons.PriorityCollector;
-import sirius.kernel.commons.Strings;
-import sirius.kernel.commons.Tuple;
+import sirius.kernel.commons.*;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Context;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Dispatches calls to the JSON / XML Service-Framework (/service).
@@ -50,7 +51,19 @@ public class ServiceDispatcher implements WebDispatcher {
         }
         String uri = ctx.getRequestedURI();
         if ("/service".equals(uri)) {
-            ctx.respondWith().cached().template("/view/help/service/info.xhtml");
+            if (ctx.get("service").isFilled()) {
+                StructuredService service = gc.getPart(ctx.get("service").asString(), StructuredService.class);
+                if (service != null && service.getClass().isAnnotationPresent(AutoDoc.class)) {
+                    ctx.respondWith()
+                       .cached()
+                       .template("/help/service/service.html",
+                                 ctx.get("service").asString(),
+                                 service.getClass().getAnnotation(AutoDoc.class));
+                    return true;
+                }
+            }
+            List<ComparableTuple<String, Collection<StructuredService>>> allDocumentedServices = collectServiceInfo();
+            ctx.respondWith().cached().template("/help/service/info.html", allDocumentedServices);
             return true;
         }
         // Cut /service/
@@ -97,6 +110,17 @@ public class ServiceDispatcher implements WebDispatcher {
             }
         }).execute();
         return true;
+    }
+
+    private List<ComparableTuple<String, Collection<StructuredService>>> collectServiceInfo() {
+        MultiMap<String, StructuredService> result = MultiMap.create();
+        for (StructuredService ss : gc.getParts(StructuredService.class)) {
+            AutoDoc ad = ss.getClass().getAnnotation(AutoDoc.class);
+            if (ad != null) {
+                result.put(ad.category(), ss);
+            }
+        }
+        return ComparableTuple.fromComparableMap(result.getUnderlyingMap());
     }
 
 }

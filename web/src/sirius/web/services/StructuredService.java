@@ -19,6 +19,9 @@ import sirius.kernel.xml.StructuredOutput;
  * <p>
  * The generated output can be either JSON or XML, which is completely handled by the framework.
  * </p>
+ * <p>
+ * Consider providing an {@link AutoDoc} annotation in order to provide a public API documentation for all services
+ * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/11
