@@ -20,11 +20,10 @@ import sirius.web.http.WebContext;
 import java.util.Arrays;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.07.13
- * Time: 12:24
- * To change this template use File | Settings | File Templates.
+ * Provides access to the underlying request of a call to a {@link StructuredService}
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2013/11
  */
 public abstract class ServiceCall {
 
@@ -32,7 +31,7 @@ public abstract class ServiceCall {
 
     protected WebContext ctx;
 
-    public ServiceCall(WebContext ctx) {
+    protected ServiceCall(WebContext ctx) {
         this.ctx = ctx;
     }
 
