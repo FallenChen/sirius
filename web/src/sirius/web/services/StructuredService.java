@@ -27,6 +27,7 @@ import sirius.kernel.xml.StructuredOutput;
  * @since 2013/11
  */
 public interface StructuredService {
+
     /**
      * Handles the incoming call while using <tt>out</tt> to generate the result.
      *
@@ -35,4 +36,5 @@ public interface StructuredService {
      * @throws Exception in case of an error. An appropriate result will be generated in the selected format.
      */
     void call(ServiceCall call, StructuredOutput out) throws Exception;
+
 }
