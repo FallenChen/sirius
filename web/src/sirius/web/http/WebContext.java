@@ -1201,4 +1201,16 @@ public class WebContext {
             filesToCleanup = null;
         }
     }
+
+    private static final String DYNAMIC_ASSET_TOKEN = String.valueOf(System.currentTimeMillis());
+
+    /**
+     * Returns a token which can be added to dynamic asset-URLS (/asset/dynamic/TOKEN/...) to force a reload of the
+     * specified resource.
+     *
+     * @return a random token which is guaranteed to be free of special chars (like / and the like)
+     */
+    public String getDynamicAssetToken() {
+        return DYNAMIC_ASSET_TOKEN;
+    }
 }

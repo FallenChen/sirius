@@ -812,6 +812,9 @@ public class Response {
         }
     }
 
+    private static final AsyncHttpClient ASYNC_CLIENT = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setAllowPoolingConnection(
+            true).build());
+
     /**
      * Tunnels the contents retrieved from the given URL as result of this response.
      * <p>
@@ -824,9 +827,7 @@ public class Response {
      */
     public void tunnel(final String url) {
         try {
-            AsyncHttpClient c = new AsyncHttpClient();
-            AsyncHttpClient.BoundRequestBuilder brb = c.prepareGet(url);
-
+            AsyncHttpClient.BoundRequestBuilder brb = ASYNC_CLIENT.prepareGet(url);
             // Support caching...
             long ifModifiedSince = wc.getDateHeader(HttpHeaders.Names.IF_MODIFIED_SINCE);
             if (ifModifiedSince > 0) {

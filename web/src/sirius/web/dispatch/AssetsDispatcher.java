@@ -3,6 +3,8 @@ package sirius.web.dispatch;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.commons.PriorityCollector;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.std.Register;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
@@ -36,20 +38,22 @@ public class AssetsDispatcher implements WebDispatcher {
         if (!ctx.getRequest().getUri().startsWith("/assets") || HttpMethod.GET != ctx.getRequest().getMethod()) {
             return false;
         }
-        if (ctx.getRequestedURI().startsWith("/assets/dynamic")) {
-            ctx.respondWith().cached().template(ctx.getRequestedURI());
+        String uri = ctx.getRequestedURI();
+        if (uri.startsWith("/assets/dynamic")) {
+            uri = uri.substring(16);
+            Tuple<String, String> pair = Strings.split(uri, "/");
+            uri = "/assets/" + pair.getSecond();
+        }
+        URL url = getClass().getResource(uri);
+        if (url == null) {
+            url = getClass().getResource("/assets/defaults" + uri.substring(7));
+        }
+        if (url == null) {
+            ctx.respondWith().error(HttpResponseStatus.NOT_FOUND);
+        } else if ("file".equals(url.getProtocol())) {
+            ctx.respondWith().file(new File(url.toURI()));
         } else {
-            URL url = getClass().getResource(ctx.getRequestedURI());
-            if (url == null) {
-                url = getClass().getResource("/assets/defaults" + ctx.getRequestedURI().substring(7));
-            }
-            if (url == null) {
-                ctx.respondWith().error(HttpResponseStatus.NOT_FOUND);
-            } else if ("file".equals(url.getProtocol())) {
-                ctx.respondWith().file(new File(url.toURI()));
-            } else {
-                ctx.respondWith().resource(url.openConnection());
-            }
+            ctx.respondWith().resource(url.openConnection());
         }
         return true;
     }
