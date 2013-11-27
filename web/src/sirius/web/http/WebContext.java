@@ -954,7 +954,7 @@ public class WebContext {
      *
      * @return the content prefix or "" if no prefix is set
      */
-    public String getContextPrefix() {
+    public static String getContextPrefix() {
         return contextPrefix;
     }
 
