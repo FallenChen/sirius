@@ -225,6 +225,11 @@ public class Extensions {
         }
 
         @Override
+        public boolean isDefault() {
+            return DEFAULT.equals(id);
+        }
+
+        @Override
         public String getQualifiedName() {
             return type + "." + id;
         }

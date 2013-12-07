@@ -42,6 +42,14 @@ public interface Extension {
     String getQualifiedName();
 
     /**
+     * Determined if this extension is an artifically created default extension.
+     *
+     * @return <tt>true</tt> if this is an artifically created default extension used by
+     *         {@link Extensions#getExtension(String, String)} if nothing was found
+     */
+    boolean isDefault();
+
+    /**
      * Returns the {@link Value} defined for the given key.
      * <p>
      * If this extension doesn't provide a value for this key, but there is an extension with the name
