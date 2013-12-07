@@ -201,9 +201,6 @@
             <fileset dir="${sirius.dir}/web/src" excludes="**/*.java"/>
             <fileset dir="${sirius.dir}/web/resources" excludes="**/*.java"/>
         </copy>
-        <copy todir="${dist.dir}">
-            <fileset dir="${sirius.dir}/web/dist" />
-        </copy>
     </target>
 
     <!-- =========================================================================================================== -->
