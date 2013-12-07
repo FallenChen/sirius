@@ -29,7 +29,7 @@ CMD_SUFFIX=""
 
 # Java options to use. This should probably be customized according to the
 # applications heap requirements
-JAVA_OPTS="-Xmx1024m -XX:MaxPermSize=128M -Djava.net.preferIPv4Stack=true"
+JAVA_OPTS="-server -Xmx1024m -XX:MaxPermSize=128M -Djava.net.preferIPv4Stack=true"
 
 # Shutdown port used to signal the application to shut down. Used different
 # ports for different apps or disaster will strike !
@@ -37,9 +37,6 @@ SHUTDOWN_PORT="9191"
 
 # File used to pipe all stdout and stderr output to
 STDOUT="logs/stdout.txt"
-
-# Set this to a user which runs the app. If not set, the call will run the app
-USER_ID="$USER"
 
 # Enable authbind so that apps can use ports < 1024
 # To enabled port 80:
@@ -49,13 +46,7 @@ USER_ID="$USER"
 # chmod 700 80
 LD_PRELOAD="/usr/lib/authbind/libauthbind.so.1"
 
-if [ -n "$USER_ID" ]
-then
-    JAVA_CMD="su $USER_ID -c \"$JAVA_CMD"
-    CMD_SUFFIX="\""
-fi
-
-if [ -f config.sh ] 
+if [ -f config.sh ]
 then
 	echo "Loading config.sh..."
 	source config.sh
@@ -78,7 +69,7 @@ start)
 		rm $STDOUT 
 	fi
 	echo "Starting Application..."
-	$JAVA_CMD $JAVA_OPTS IPL >> $STDOUT $CMD_SUFFIX &
+   	$JAVA_CMD $JAVA_OPTS IPL >> $STDOUT $CMD_SUFFIX &
     ;;
 
 stop) 
