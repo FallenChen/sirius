@@ -10,6 +10,7 @@ package sirius.kernel.extensions;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
 import sirius.kernel.Sirius;
@@ -243,6 +244,17 @@ public class Extensions {
                 return Value.of(def.get(path).unwrapped()).translate();
             }
             return Value.of(null);
+        }
+
+        @Override
+        public long getMilliseconds(String path) {
+            try {
+                return config.toConfig().getMilliseconds(path);
+            } catch (ConfigException.Missing e) {
+                return def.toConfig().getMilliseconds(path);
+            } catch (Exception e) {
+                throw Exceptions.handle(e);
+            }
         }
 
         @Override

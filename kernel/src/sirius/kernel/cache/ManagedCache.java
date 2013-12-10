@@ -86,8 +86,8 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
             CacheManager.LOG.WARN("Cache %s does not exist! Using defaults...", name);
             cacheInfo = Extensions.getExtension(EXTENSION_TYPE_CACHE, Extensions.DEFAULT);
         }
-        this.verificationInterval = cacheInfo.get(CONFIG_KEY_VERIFICATION).asLong(60 * 60 * 1000);
-        this.timeToLive = cacheInfo.get(CONFIG_KEY_TTL).asLong(60 * 60 * 1000);
+        this.verificationInterval = cacheInfo.getMilliseconds(CONFIG_KEY_VERIFICATION);
+        this.timeToLive = cacheInfo.getMilliseconds(CONFIG_KEY_TTL);
         this.maxSize = cacheInfo.get(CONFIG_KEY_MAX_SIZE).asInt(100);
         if (maxSize > 0) {
             this.data = CacheBuilder.newBuilder().maximumSize(maxSize).removalListener(this).build();

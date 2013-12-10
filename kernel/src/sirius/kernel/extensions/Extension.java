@@ -68,6 +68,20 @@ public interface Extension {
     Value get(String path);
 
     /**
+     * Returns the duration in milliseconds defined for the given key.
+     * <p>
+     * If this extension doesn't provide a value for this key, but there is an extension with the name
+     * <tt>default</tt> which provides a value, this is used.
+     * </p>
+     *
+     * @param path the access path to retrieve the value
+     * @return the encoded duration as milliseconds.
+     * @throws sirius.kernel.health.HandledException
+     *          if an invalid value was given in the config
+     */
+    long getMilliseconds(String path);
+
+    /**
      * Returns the {@link Value} defined for the given key or throws a <tt>HandledException</tt> if no value was found
      * <p>
      * If this extension doesn't provide a value for this key, but there is an extension with the name
