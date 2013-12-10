@@ -216,6 +216,13 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
             if (entry != null && entry.getMaxAge() > 0 && entry.getMaxAge() < now) {
                 data.invalidate(key);
                 entry = null;
+                if (computer != null) {
+                    V value = computer.compute(key);
+                    entry = new CacheEntry<K, V>(key,
+                                                value,
+                                                timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
+                                                verificationInterval + System.currentTimeMillis());
+                }
             }
             if (verifier != null && entry != null && verificationInterval > 0 && entry.getNextVerification() < now) {
                 if (!verifier.valid(entry.getValue())) {
