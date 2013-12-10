@@ -592,7 +592,11 @@ public class NLS {
             }
         }
         if (data instanceof LocalDate) {
-            return getDateTimeFormat(lang).format(((LocalDate) data).toDate());
+            if (fullDateConversion) {
+                return getDateTimeFormat(lang).format(((LocalDate) data).toDate());
+            } else {
+                return getDateFormat(lang).format(((LocalDate) data).toDate());
+            }
         }
         if (data instanceof LocalTime) {
             return getTimeFormat(lang).format(((LocalTime) data).toDateTimeToday().toDate());
