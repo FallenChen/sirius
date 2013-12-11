@@ -68,12 +68,14 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         if (ctx.getAttachment() != null) {
             CallContext.setCurrent((CallContext) ctx.getAttachment());
         }
-        if (e instanceof ClosedChannelException) {
+        if (e.getCause() instanceof ClosedChannelException) {
             WebServer.LOG.FINE(e);
         } else {
             Exceptions.handle(WebServer.LOG, e.getCause());
             e.getChannel().close();
         }
+
+        throw Exceptions.createHandled().error(e.getCause()).to(WebServer.LOG).handle();
     }
 
     /*

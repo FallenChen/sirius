@@ -898,19 +898,27 @@ public class Response {
 
                 @Override
                 public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
-                    if (isChucked) {
-                        if (bodyPart.isLast()) {
-                            ctx.getChannel()
-                               .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
-                            lastFuture = ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER));
+                    try {
+                        if (isChucked) {
+                            if (bodyPart.isLast()) {
+                                ctx.getChannel()
+                                   .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                                lastFuture = ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER));
+                            } else {
+                                lastFuture = ctx.getChannel()
+                                                .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                            }
                         } else {
-                            lastFuture = ctx.getChannel()
-                                            .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                            lastFuture = ctx.getChannel().write(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer()));
                         }
-                    } else {
-                        lastFuture = ctx.getChannel().write(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer()));
+                        return STATE.CONTINUE;
+                    } catch (HandledException e) {
+                        Exceptions.ignore(e);
+                        return STATE.ABORT;
+                    } catch (Throwable e) {
+                        Exceptions.handle(e);
+                        return STATE.ABORT;
                     }
-                    return STATE.CONTINUE;
                 }
 
                 @Override
