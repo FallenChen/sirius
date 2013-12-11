@@ -72,10 +72,14 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
             WebServer.LOG.FINE(e);
         } else {
             Exceptions.handle(WebServer.LOG, e.getCause());
-            e.getChannel().close();
+            try {
+                if (e.getChannel().isOpen()) {
+                    e.getChannel().close();
+                }
+            } catch (Throwable t) {
+                Exceptions.ignore(t);
+            }
         }
-
-        throw Exceptions.createHandled().error(e.getCause()).to(WebServer.LOG).handle();
     }
 
     /*
@@ -146,6 +150,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         try {
             cleanup();
             HttpRequest req = (HttpRequest) e.getMessage();
+            System.out.println(req.getUri());
             currentContext = setupContext(ctx, req);
             try {
                 if (!WebServer.getIPFilter().isEmpty()) {

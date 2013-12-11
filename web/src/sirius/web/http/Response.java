@@ -899,6 +899,9 @@ public class Response {
                 @Override
                 public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
                     try {
+                        if (ctx.getChannel().isOpen()) {
+                            return STATE.ABORT;
+                        }
                         if (isChucked) {
                             if (bodyPart.isLast()) {
                                 ctx.getChannel()
