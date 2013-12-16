@@ -150,7 +150,6 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         try {
             cleanup();
             HttpRequest req = (HttpRequest) e.getMessage();
-            System.out.println(req.getUri());
             currentContext = setupContext(ctx, req);
             try {
                 if (!WebServer.getIPFilter().isEmpty()) {
