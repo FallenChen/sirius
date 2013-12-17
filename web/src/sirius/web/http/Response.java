@@ -985,6 +985,12 @@ public class Response {
      * If the contents are small enough, everything will be sent in one response. Otherwise a chunked response
      * will be sent. The size of the underlying buffer will be determined by {@link #BUFFER_SIZE}.
      * </p>
+     * <p><b>WARNING:</b> Do not used this kind of response directly from a {@link WebDispatcher}! You need to fork a
+     * new thread using {@link sirius.kernel.async.Async} as the internal workings might block in
+     * <code>OutputStream.write</code> until the message is fully written to the channel. This might lead to a deadlock
+     * if the kernel buffer needs to be flushed as well (as this needs the worker thread to handle the write which is
+     * blocked internally due to waiting for the chunk to be written).
+     * </p>
      * <p>
      * By default, caching will be supported.
      * </p>
@@ -1013,14 +1019,11 @@ public class Response {
             }
 
             private void waitAndClearBuffer(ChannelFuture cf) throws IOException {
-                cf.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        buffer.discardReadBytes();
-                    }
-                });
                 try {
-                    cf.await(10, TimeUnit.SECONDS);
+                    if (!cf.await(10, TimeUnit.SECONDS)) {
+                        throw new InterruptedException();
+                    }
+                    buffer.clear();
                 } catch (InterruptedException e) {
                     open = false;
                     ctx.getChannel().close();
@@ -1103,6 +1106,7 @@ public class Response {
                     return;
                 }
                 ensureCapacity(len);
+                bytesWritten += len;
                 buffer.writeBytes(b, off, len);
             }
 

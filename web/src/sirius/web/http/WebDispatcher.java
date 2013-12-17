@@ -58,7 +58,10 @@ public interface WebDispatcher {
      * </p>
      * <p>
      * Note that no blocking operation must be performed in this method. For any complex interaction, a new thread
-     * should be forked using {@link sirius.kernel.async.Async#executor(String)}.
+     * should be forked using {@link sirius.kernel.async.Async#executor(String)}. Note that even
+     * {@link Response#outputStream(org.jboss.netty.handler.codec.http.HttpResponseStatus, String, Integer)} might
+     * block sooner or later to limit heap memory usage - to fork a thread for any serious work besides checking
+     * responsibilities for handling requests.
      * </p>
      *
      * @param ctx the request to handle
