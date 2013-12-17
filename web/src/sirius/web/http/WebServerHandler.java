@@ -22,6 +22,7 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
 
@@ -69,6 +70,8 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
             CallContext.setCurrent((CallContext) ctx.getAttachment());
         }
         if (e.getCause() instanceof ClosedChannelException) {
+            WebServer.LOG.FINE(e);
+        } else if (e.getCause() instanceof IOException && "Connection reset by peer".equals(e.getCause().getMessage())) {
             WebServer.LOG.FINE(e);
         } else {
             Exceptions.handle(WebServer.LOG, e.getCause());
