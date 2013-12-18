@@ -91,10 +91,20 @@
     </target>
 
 
+    <target name="version" description="Sets app.version as production code style 4-digit-code: 2-digit year and 2-digit week in year" unless="hasVersion">
+        <tstamp>
+            <format property="aap.version" pattern="yyww" />
+        </tstamp>
+    </target>
+
     <!-- =========================================================================================================== -->
     <!-- Runs ivy to resolve and retrieve all dependencies -->
     <!-- =========================================================================================================== -->
     <target name="make" depends="ivy">
+        <condition property="hasVersion">
+            <length string="${app.version}" when="greater" length="0" />
+        </condition>
+        <antcall target="version" />
 
         <!-- Create distribution directory -->
         <mkdir dir="${dist.dir}" />
