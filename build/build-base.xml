@@ -93,7 +93,7 @@
 
     <target name="version" description="Sets app.version as production code style 4-digit-code: 2-digit year and 2-digit week in year" unless="hasVersion">
         <tstamp>
-            <format property="aap.version" pattern="yyww" />
+            <format property="app.version" pattern="yyww" />
         </tstamp>
     </target>
 
