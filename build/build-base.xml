@@ -117,22 +117,25 @@
         <antcall target="make-app" />
         <antcall target="make-main-app" />
 
-        <!-- Replace version number and product name in config files -->
+        <!-- Replace version number and product name in config and html files -->
         <replace dir="${dist.dir}/app"
                  token="@PRODUCT@"
                  value="${app.name}">
             <include name="*.conf" />
+            <include name="*.html" />
          </replace>
         <replace dir="${dist.dir}/app"
                  token="@VERSION@"
                  value="${app.version}">
             <include name="*.conf" />
+            <include name="*.html" />
         </replace>
         <replace dir="${dist.dir}/app"
                  token="@PRODUCT_FILE_NAME@"
                  value="${app.filename}"
                  includes="conf">
             <include name="*.conf" />
+            <include name="*.html" />
         </replace>
 
         <!-- Make love (and a .zip) -->
