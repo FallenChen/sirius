@@ -30,7 +30,6 @@ class XMLServiceCall extends ServiceCall {
     protected StructuredOutput createOutput() {
         return new XMLStructuredOutput(ctx.respondWith()
                                           .outputStream(HttpResponseStatus.OK,
-                                                        "text/xml;charset=" + Charsets.UTF_8.name(),
-                                                        null));
+                                                        "text/xml;charset=" + Charsets.UTF_8.name()));
     }
 }

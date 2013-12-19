@@ -10,6 +10,7 @@ package sirius.web.http;
 
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Sets;
 import com.ning.http.client.*;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -64,7 +65,7 @@ public class Response {
     /**
      * Expires value used to indicate that a resource can be infinitely long cached
      */
-    public static final int HTTP_CACHE_INIFINITE = 60 * 60 * 24 * 356 * 20;
+    public static final int HTTP_CACHE_INFINITE = 60 * 60 * 24 * 356 * 20;
 
     /**
      * Size of the internally used transfer buffers
@@ -314,7 +315,7 @@ public class Response {
      */
     public Response infinitelyCached() {
         this.isPrivate = false;
-        this.cacheSeconds = HTTP_CACHE_INIFINITE;
+        this.cacheSeconds = HTTP_CACHE_INFINITE;
         return this;
     }
 
@@ -815,6 +816,11 @@ public class Response {
     private static final AsyncHttpClient ASYNC_CLIENT = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setAllowPoolingConnection(
             true).build());
 
+    private static final Set<String> NON_TUNNELLED_HEADERS = Sets.newHashSet(HttpHeaders.Names.TRANSFER_ENCODING,
+                                                                             HttpHeaders.Names.SERVER,
+                                                                             HttpHeaders.Names.CONTENT_ENCODING,
+                                                                             HttpHeaders.Names.CONTENT_LENGTH);
+
     /**
      * Tunnels the contents retrieved from the given URL as result of this response.
      * <p>
@@ -843,10 +849,6 @@ public class Response {
             // Tunnel it through...
             brb.execute(new AsyncHandler<String>() {
 
-                ChannelFuture lastFuture;
-                boolean isChucked;
-                boolean contentLengthFound = false;
-
                 @Override
                 public AsyncHandler.STATE onHeadersReceived(HttpResponseHeaders h) throws Exception {
                     FluentCaseInsensitiveStringsMap headers = h.getHeaders();
@@ -855,25 +857,19 @@ public class Response {
                     long lastModified = 0;
 
                     for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                        if (!entry.getKey().startsWith("x-") && !entry.getKey().equals("Server")) {
+                        if (!entry.getKey().startsWith("x-") && !NON_TUNNELLED_HEADERS.contains(entry.getKey())) {
                             for (String value : entry.getValue()) {
-                                setHeader(entry.getKey(), value);
+                                addHeader(entry.getKey(), value);
                                 if (HttpHeaders.Names.LAST_MODIFIED.equals(entry.getKey())) {
                                     try {
                                         lastModified = getHTTPDateFormat().parse(value).getTime();
                                     } catch (Throwable e) {
                                         Exceptions.ignore(e);
                                     }
-                                } else if (HttpHeaders.Names
-                                        .TRANSFER_ENCODING
-                                        .equals(entry.getKey()) && "chunked".equals(value)) {
-                                    isChucked = true;
                                 }
                             }
                             if (HttpHeaders.Names.CONTENT_TYPE.equals(entry.getKey())) {
                                 contentTypeFound = true;
-                            } else if (HttpHeaders.Names.CONTENT_LENGTH.equals(entry.getKey())) {
-                                contentLengthFound = true;
                             }
                         }
                     }
@@ -890,9 +886,6 @@ public class Response {
                         setContentDisposition(name, download);
                     }
 
-                    HttpResponse response = createResponse(HttpResponseStatus.OK, true);
-                    lastFuture = commit(response);
-
                     return STATE.CONTINUE;
                 }
 
@@ -902,17 +895,29 @@ public class Response {
                         if (!ctx.getChannel().isOpen()) {
                             return STATE.ABORT;
                         }
-                        if (isChucked) {
+
+                        if (wc.responseCommitted) {
                             if (bodyPart.isLast()) {
                                 ctx.getChannel()
                                    .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
-                                lastFuture = ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER));
+                                complete(ctx.getChannel().write(new DefaultHttpChunk(ChannelBuffers.EMPTY_BUFFER)));
                             } else {
-                                lastFuture = ctx.getChannel()
-                                                .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                                ctx.getChannel()
+                                   .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
                             }
                         } else {
-                            lastFuture = ctx.getChannel().write(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer()));
+                            HttpResponse response = createResponse(HttpResponseStatus.OK, true);
+                            if (bodyPart.isLast()) {
+                                HttpHeaders.setContentLength(response, bodyPart.getBodyByteBuffer().remaining());
+                                commit(response);
+                                complete(ctx.getChannel()
+                                            .write(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                            } else {
+                                response.setChunked(true);
+                                commit(response);
+                                ctx.getChannel()
+                                   .write(new DefaultHttpChunk(ChannelBuffers.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                            }
                         }
                         return STATE.CONTINUE;
                     } catch (HandledException e) {
@@ -940,11 +945,9 @@ public class Response {
                 @Override
                 public String onCompleted() throws Exception {
                     if (!wc.responseCommitted) {
-                        if (lastFuture != null) {
-                            complete(lastFuture, isChucked || contentLengthFound);
-                        } else {
-                            error(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                        }
+                        HttpResponse response = createResponse(HttpResponseStatus.OK, true);
+                        HttpHeaders.setContentLength(response, 0);
+                        complete(commit(response));
                     }
                     return "";
                 }
@@ -974,9 +977,9 @@ public class Response {
         String callback = wc.get("callback").getString();
         String encoding = wc.get("encoding")
                             .asString(Strings.isEmpty(callback) ? Charsets.UTF_8.name() : Charsets.ISO_8859_1.name());
-        return new JSONStructuredOutput(outputStream(HttpResponseStatus.OK,
-                                                     "application/json;charset=" + encoding,
-                                                     null), callback, encoding);
+        return new JSONStructuredOutput(outputStream(HttpResponseStatus.OK, "application/json;charset=" + encoding),
+                                        callback,
+                                        encoding);
     }
 
     /**
@@ -995,14 +998,12 @@ public class Response {
      * By default, caching will be supported.
      * </p>
      *
-     * @param status        the HTTP status to send
-     * @param contentType   the content type to use. If <tt>null</tt>, we rely on a previously set header.
-     * @param contentLength the expected content length (if known in advance). Can be left <tt>null</tt> as
-     *                      we support chunked responses.
+     * @param status      the HTTP status to send
+     * @param contentType the content type to use. If <tt>null</tt>, we rely on a previously set header.
      */
-    public OutputStream outputStream(final HttpResponseStatus status,
-                                     @Nullable final String contentType,
-                                     @Nullable final Integer contentLength) {
+    public OutputStream outputStream(final HttpResponseStatus status, @Nullable final String contentType) {
+        System.out.println(wc.getRequest().getUri());
+        System.out.println(wc.getRequest().getHeaders());
         wc.enableTiming(null);
         return new OutputStream() {
             volatile boolean open = true;
@@ -1060,9 +1061,6 @@ public class Response {
                             complete(ctx.getChannel().write(buffer));
                         }
                     } else {
-                        if (contentLength != null) {
-                            HttpHeaders.setContentLength(response, contentLength);
-                        }
                         response.setChunked(true);
                         commit(response);
                         waitAndClearBuffer(ctx.getChannel().write(new DefaultHttpChunk(buffer)));
@@ -1076,10 +1074,8 @@ public class Response {
                     return;
                 }
                 bytesWritten++;
-                if (contentLength == null || bytesWritten < contentLength) {
-                    ensureCapacity(1);
-                    buffer.writeByte(b);
-                }
+                ensureCapacity(1);
+                buffer.writeByte(b);
             }
 
             @Override
@@ -1091,9 +1087,6 @@ public class Response {
             public void write(byte[] b, int off, int len) throws IOException {
                 if (!open) {
                     return;
-                }
-                if (contentLength != null && bytesWritten + len > contentLength) {
-                    len = (int) (contentLength - bytesWritten);
                 }
                 if (len <= 0) {
                     return;
