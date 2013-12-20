@@ -27,6 +27,8 @@ public class Message {
     private String details;
     private String type;
     private String action;
+    private String actionLabel;
+    private boolean actionJavascript;
 
     /**
      * Creates a new message with the given content, details info and message type.
@@ -77,14 +79,36 @@ public class Message {
         return action;
     }
 
+    public String getActionLabel() {
+        return actionLabel;
+    }
+
+    public boolean isActionJavascript() {
+        return actionJavascript;
+    }
+
     /**
      * Adds an action as URL to the message
      *
      * @param link the URL to invoke if the user clicks on the message
      * @return the message itself for further use
      */
-    public Message withAction(String link) {
+    public Message withAction(String link, String label) {
         this.action = link;
+        this.actionLabel = label;
+        return this;
+    }
+
+    /**
+     * Adds an action as URL to the message
+     *
+     * @param codeFragment the URL to invoke if the user clicks on the message
+     * @return the message itself for further use
+     */
+    public Message withJavascriptAction(String codeFragment, String label) {
+        this.action = codeFragment;
+        this.actionLabel = label;
+        this.actionJavascript = true;
         return this;
     }
 
