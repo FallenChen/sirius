@@ -1002,8 +1002,6 @@ public class Response {
      * @param contentType the content type to use. If <tt>null</tt>, we rely on a previously set header.
      */
     public OutputStream outputStream(final HttpResponseStatus status, @Nullable final String contentType) {
-        System.out.println(wc.getRequest().getUri());
-        System.out.println(wc.getRequest().getHeaders());
         wc.enableTiming(null);
         return new OutputStream() {
             volatile boolean open = true;
@@ -1091,7 +1089,7 @@ public class Response {
                 if (len <= 0) {
                     return;
                 }
-                // If the given array is larger than out buffer, we repeatedly call write and limit the length to
+                // If the given array is larger than our buffer, we repeatedly call write and limit the length to
                 // our buffer size.
                 if (len > BUFFER_SIZE) {
                     write(b, off, BUFFER_SIZE);
