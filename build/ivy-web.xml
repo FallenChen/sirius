@@ -5,3 +5,4 @@
 <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="default"/>
 <dependency org="mysql" name="mysql-connector-java" rev="5.1.12" conf="default"/>
 <dependency org="com.ning" name="async-http-client" rev="1.7.19" conf="default"/>
+<dependency org="org.slf4j" name="slf4j-log4j12" rev="1.7.5"/>
