@@ -71,7 +71,8 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         }
         if (e.getCause() instanceof ClosedChannelException) {
             WebServer.LOG.FINE(e);
-        } else if (e.getCause() instanceof IOException && "Connection reset by peer".equals(e.getCause().getMessage())) {
+        } else if (e.getCause() instanceof IOException && "Connection reset by peer".equals(e.getCause()
+                                                                                             .getMessage())) {
             WebServer.LOG.FINE(e);
         } else {
             Exceptions.handle(WebServer.LOG, e.getCause());
@@ -153,6 +154,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         try {
             cleanup();
             HttpRequest req = (HttpRequest) e.getMessage();
+            if (WebServer.LOG.isFINE()) {
+                WebServer.LOG.FINE("OPEN: " + req.getUri());
+            }
             currentContext = setupContext(ctx, req);
             try {
                 if (!WebServer.getIPFilter().isEmpty()) {
@@ -161,17 +165,26 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                         if (WebServer.blocks < 0) {
                             WebServer.blocks = 0;
                         }
+                        if (WebServer.LOG.isFINE()) {
+                            WebServer.LOG.FINE("BLOCK: " + req.getUri());
+                        }
                         ctx.getChannel().close();
                         return;
                     }
                 }
                 if (req.getMethod() == HttpMethod.GET || req.getMethod() == HttpMethod.HEAD || req.getMethod() == HttpMethod.DELETE) {
                     if (HttpHeaders.is100ContinueExpected(req)) {
+                        if (WebServer.LOG.isFINE()) {
+                            WebServer.LOG.FINE("CONTINUE: " + req.getUri());
+                        }
                         send100Continue(e);
                     }
                     handleGETorHEADorDELETE(req);
                 } else if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.PUT) {
                     if (HttpHeaders.is100ContinueExpected(req)) {
+                        if (WebServer.LOG.isFINE()) {
+                            WebServer.LOG.FINE("CONTINUE: " + req.getUri());
+                        }
                         send100Continue(e);
                     }
                     handlePOSTandPUT(req);
@@ -257,6 +270,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
      * Reads another chunk of data for a previously started request
      */
     private void continueChunkedRequest(ChannelHandlerContext ctx, MessageEvent e) {
+        if (WebServer.LOG.isFINE()) {
+            WebServer.LOG.FINE("CHUNK: " + currentContext.getRequestedURI() + " - " + e.getMessage().toString());
+        }
         HttpChunk chunk = (HttpChunk) e.getMessage();
         try {
             if (currentContext.getPostDecoder() != null) {
@@ -273,6 +289,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                 dispatch();
             }
         } catch (Throwable ex) {
+            readingChunks = false;
             currentContext.respondWith()
                           .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
         }
@@ -283,6 +300,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
      */
     private void checkUploadFileLimits(File file) {
         if (file.getFreeSpace() < WebServer.getMinUploadFreespace() && WebServer.getMinUploadFreespace() > 0) {
+            if (WebServer.LOG.isFINE()) {
+                WebServer.LOG.FINE("Not enough space to handle: "+currentContext.getRequestedURI());
+            }
             currentContext.respondWith()
                           .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                  Exceptions.handle()
@@ -292,6 +312,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                                            .handle());
         }
         if (file.length() > WebServer.getMaxUploadSize() && WebServer.getMaxUploadSize() > 0) {
+            if (WebServer.LOG.isFINE()) {
+                WebServer.LOG.FINE("Body is too large: "+currentContext.getRequestedURI());
+            }
             currentContext.respondWith()
                           .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
                                  Exceptions.handle()
@@ -310,6 +333,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         for (WebDispatcher wd : sortedDispatchers) {
             try {
                 if (wd.dispatch(currentContext)) {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("DISPATCHED: " + currentContext.getRequestedURI() + " to " + wd);
+                    }
                     return;
                 }
             } catch (Exception e) {
