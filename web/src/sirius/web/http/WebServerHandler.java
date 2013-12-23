@@ -60,6 +60,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        if (WebServer.LOG.isFINE() && currentContext != null) {
+            WebServer.LOG.FINE("CLOSE: " + currentContext.getRequestedURI());
+        }
         cleanup();
         WebServer.openConnections.decrementAndGet();
     }
@@ -221,9 +224,15 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
             String contentType = req.getHeader(HttpHeaders.Names.CONTENT_TYPE);
             if (Strings.isFilled(contentType) && (contentType.startsWith("multipart/form-data") || contentType.startsWith(
                     "application/x-www-form-urlencoded"))) {
+                if (WebServer.LOG.isFINE()) {
+                    WebServer.LOG.FINE("POST/PUT-FORM: " + req.getUri());
+                }
                 HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(), req);
                 currentContext.setPostDecoder(postDecoder);
             } else {
+                if (WebServer.LOG.isFINE()) {
+                    WebServer.LOG.FINE("POST/PUT-DATA: " + req.getUri());
+                }
                 Attribute body = WebServer.getHttpDataFactory().createAttribute(req, "body");
                 body.setContent(req.getContent());
                 currentContext.content = body;
@@ -270,21 +279,26 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
      * Reads another chunk of data for a previously started request
      */
     private void continueChunkedRequest(ChannelHandlerContext ctx, MessageEvent e) {
-        if (WebServer.LOG.isFINE()) {
-            WebServer.LOG.FINE("CHUNK: " + currentContext.getRequestedURI() + " - " + e.getMessage().toString());
-        }
         HttpChunk chunk = (HttpChunk) e.getMessage();
         try {
             if (currentContext.getPostDecoder() != null) {
+                if (WebServer.LOG.isFINE()) {
+                    WebServer.LOG
+                             .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.getContent()
+                                                                                                    .readableBytes() + " bytes");
+                }
                 currentContext.getPostDecoder().offer(chunk);
             } else {
-                currentContext.content.addContent(chunk.getContent(), chunk.isLast());
+                if (WebServer.LOG.isFINE()) {
+                    WebServer.LOG
+                             .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.getContent()
+                                                                                                    .readableBytes() + " bytes");
+                } currentContext.content.addContent(chunk.getContent(), chunk.isLast());
                 if (!currentContext.content.isInMemory()) {
                     File file = currentContext.content.getFile();
                     checkUploadFileLimits(file);
                 }
-            }
-            if (chunk.isLast()) {
+            } if (chunk.isLast()) {
                 readingChunks = false;
                 dispatch();
             }
@@ -301,7 +315,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     private void checkUploadFileLimits(File file) {
         if (file.getFreeSpace() < WebServer.getMinUploadFreespace() && WebServer.getMinUploadFreespace() > 0) {
             if (WebServer.LOG.isFINE()) {
-                WebServer.LOG.FINE("Not enough space to handle: "+currentContext.getRequestedURI());
+                WebServer.LOG.FINE("Not enough space to handle: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
                           .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
@@ -313,7 +327,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         }
         if (file.length() > WebServer.getMaxUploadSize() && WebServer.getMaxUploadSize() > 0) {
             if (WebServer.LOG.isFINE()) {
-                WebServer.LOG.FINE("Body is too large: "+currentContext.getRequestedURI());
+                WebServer.LOG.FINE("Body is too large: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
                           .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
@@ -330,6 +344,10 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
      * Dispatches the completely read request.
      */
     private void dispatch() throws Exception {
+        if (WebServer.LOG.isFINE() && currentContext != null) {
+            WebServer.LOG.FINE("DISPATCHING: " + currentContext.getRequestedURI());
+        }
+
         for (WebDispatcher wd : sortedDispatchers) {
             try {
                 if (wd.dispatch(currentContext)) {

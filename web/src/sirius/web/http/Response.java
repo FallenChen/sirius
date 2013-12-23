@@ -176,6 +176,9 @@ public class Response {
                             .withSystemErrorMessage("Response for %s was already committed!", wc.getRequestedURI())
                             .handle();
         }
+        if (WebServer.LOG.isFINE()) {
+            WebServer.LOG.FINE("COMMITTING: " + wc.getRequestedURI());
+        }
         wc.responseCommitted = true;
         return ctx.getChannel().write(response);
     }
@@ -191,6 +194,10 @@ public class Response {
      * Completes the response and closes the underlying channel if necessary
      */
     private void complete(ChannelFuture future, final boolean keepalive) {
+        if (WebServer.LOG.isFINE()) {
+            WebServer.LOG.FINE("CLOSING: " + wc.getRequestedURI());
+        }
+
         final CallContext cc = CallContext.getCurrent();
         future.addListener(new ChannelFutureListener() {
             @Override
