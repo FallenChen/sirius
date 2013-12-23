@@ -62,6 +62,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         if (WebServer.LOG.isFINE() && currentContext != null) {
             WebServer.LOG.FINE("CLOSE: " + currentContext.getRequestedURI());
+            Exceptions.handle(new Exception());
         }
         cleanup();
         WebServer.openConnections.decrementAndGet();
