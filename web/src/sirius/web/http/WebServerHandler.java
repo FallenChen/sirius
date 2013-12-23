@@ -62,7 +62,6 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
         if (WebServer.LOG.isFINE() && currentContext != null) {
             WebServer.LOG.FINE("CLOSE: " + currentContext.getRequestedURI());
-            Exceptions.handle(new Exception());
         }
         cleanup();
         WebServer.openConnections.decrementAndGet();
@@ -109,6 +108,9 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
             CallContext.setCurrent((CallContext) ctx.getAttachment());
             WebContext wc = ((CallContext) ctx.getAttachment()).get(WebContext.class);
             if (!wc.isLongCall()) {
+                if (WebServer.LOG.isFINE()) {
+                    WebServer.LOG.FINE("IDLE: " + wc.getRequestedURI());
+                }
                 WebServer.idleTimeouts++;
                 if (WebServer.idleTimeouts < 0) {
                     WebServer.idleTimeouts = 0;
@@ -294,12 +296,14 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                     WebServer.LOG
                              .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.getContent()
                                                                                                     .readableBytes() + " bytes");
-                } currentContext.content.addContent(chunk.getContent(), chunk.isLast());
+                }
+                currentContext.content.addContent(chunk.getContent(), chunk.isLast());
                 if (!currentContext.content.isInMemory()) {
                     File file = currentContext.content.getFile();
                     checkUploadFileLimits(file);
                 }
-            } if (chunk.isLast()) {
+            }
+            if (chunk.isLast()) {
                 readingChunks = false;
                 dispatch();
             }

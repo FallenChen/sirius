@@ -55,8 +55,8 @@ class WebServerPipelineFactory implements ChannelPipelineFactory {
         if (idleTimeout != null && idleTimeout.getMillis() > 0) {
             pipeline.addLast("idler",
                              new IdleStateHandler(timer,
-                                                  idleTimeout.getMillis(),
-                                                  idleTimeout.getMillis(),
+                                                  0,
+                                                  0,
                                                   idleTimeout.getMillis(),
                                                   TimeUnit.MILLISECONDS));
         }
