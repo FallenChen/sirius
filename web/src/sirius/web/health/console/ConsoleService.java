@@ -34,6 +34,7 @@ public class ConsoleService implements StructuredService {
         out.beginResult();
         try {
             Watch w = Watch.start();
+// TODO auth!
 //            if (!Users.isSystemTenant() && !Model.isDebugEnvironment()) {
 //                throw new BusinessException("The System Console is only available for the System Tenant");
 //            }

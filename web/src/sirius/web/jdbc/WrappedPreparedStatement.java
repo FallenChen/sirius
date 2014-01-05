@@ -26,10 +26,10 @@ import java.util.Calendar;
  */
 class WrappedPreparedStatement implements PreparedStatement {
     private PreparedStatement delegate;
-    private Databases ds;
+    private Database ds;
     private final String preparedSQL;
 
-    WrappedPreparedStatement(Databases ds, PreparedStatement prepareStatement, String preparedSQL) {
+    WrappedPreparedStatement(Database ds, PreparedStatement prepareStatement, String preparedSQL) {
         this.ds = ds;
         delegate = prepareStatement;
         this.preparedSQL = preparedSQL;

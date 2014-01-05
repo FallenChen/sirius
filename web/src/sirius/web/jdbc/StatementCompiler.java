@@ -51,7 +51,7 @@ class StatementCompiler {
                         } else {
                             adapter.set(++index, obj);
                         }
-                        Databases.LOG.FINE("SETTING: " + index + " TO " + NLS.toMachineString(obj));
+                        Database.LOG.FINE("SETTING: " + index + " TO " + NLS.toMachineString(obj));
                     }
                 } else {
                     if ((param != null) && (param instanceof Calendar)) {
@@ -59,7 +59,7 @@ class StatementCompiler {
                     } else {
                         adapter.set(++index, param);
                     }
-                    Databases.LOG.FINE("SETTING: " + index + " TO " + NLS.toMachineString(param));
+                    Database.LOG.FINE("SETTING: " + index + " TO " + NLS.toMachineString(param));
                 }
             }
         } catch (SQLException e) {

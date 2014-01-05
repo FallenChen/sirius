@@ -29,7 +29,7 @@ import java.util.TreeMap;
 public class JDBCCall {
 
     private static final String RETURN_VALUE = "_RETVAL";
-    private final Databases ds;
+    private final Database ds;
     private final List<String> names = new ArrayList<String>();
     private final List<Object> data = new ArrayList<Object>();
     private final List<Integer> types = new ArrayList<Integer>();
@@ -40,7 +40,7 @@ public class JDBCCall {
     /*
      * Use Databases.createFunctionCall or Databases.createFunctionCall to create an instance
      */
-    protected JDBCCall(Databases ds, String fun, Integer returnType) {
+    protected JDBCCall(Database ds, String fun, Integer returnType) {
         this.ds = ds;
         this.fun = fun;
         this.returnType = returnType;

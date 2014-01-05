@@ -20,21 +20,12 @@ public class StatsCommand implements Command {
 
     @Override
     public void execute(Output output, String... params) throws Exception {
-        output.apply("%-8s %-20s %10s", "STATE", "NAME", "VALUE");
+        output.apply("%-8s %-30s %15s", "STATE", "NAME", "VALUE");
         output.separator();
-        for (Metric metric : metrics.getLocalMainMetrics()) {
-            output.apply("%-8s %-20s %10s", metric.getState(), metric.getName(), metric.getValue());
+        for (Metric metric : metrics.getMetrics()) {
+            output.apply("%-8s %-30s %15s", metric.getState(), metric.getName(), metric.getValueAsString());
         }
         output.separator();
-        for (String category : metrics.getLocalMetricCategories()) {
-            output.blankLine();
-            output.line(category);
-            output.separator();
-            for (Metric metric : metrics.getLocalMetrics(category)) {
-                output.apply("%-8s %-20s %10s", metric.getState(), metric.getName(), metric.getValue());
-            }
-            output.separator();
-        }
     }
 
     @Override

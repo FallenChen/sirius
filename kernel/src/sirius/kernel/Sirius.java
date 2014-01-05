@@ -270,9 +270,9 @@ public class Sirius {
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("Booting the SIRIUS Framework...");
         LOG.INFO("---------------------------------------------------------");
-        if (!getProperty("sirius.manual-health").asBoolean()) {
+        if (!getProperty("sirius.manual-logging").asBoolean()) {
             LOG.INFO(
-                    "Updated log4j config! To block this, set the system property 'sirius.manual-health' to true! [-Dsirius.manual-health=true]");
+                    "Updated log4j config! To block this, set the system property 'sirius.manual-logging' to true! [-Dsirius.manual-logging=true]");
         }
         setupDNSCache();
         setupEncoding();
@@ -284,7 +284,6 @@ public class Sirius {
         LOG.INFO("Starting the system...");
         LOG.INFO("---------------------------------------------------------");
         init(loader);
-        //init(Sirius.class.getClassLoader());
         LOG.INFO("---------------------------------------------------------");
         LOG.INFO("System is UP and RUNNING - %s", w.duration());
         LOG.INFO("---------------------------------------------------------");

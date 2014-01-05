@@ -1,7 +1,5 @@
 package sirius.web.health;
 
-import sirius.kernel.commons.Collector;
-
 /**
  * Created with IntelliJ IDEA.
  *
@@ -9,5 +7,5 @@ import sirius.kernel.commons.Collector;
  * @since 2013/09
  */
 public interface MetricProvider {
-    void gather(Collector<Metric> collector);
+    void gather(MetricsCollector collector);
 }

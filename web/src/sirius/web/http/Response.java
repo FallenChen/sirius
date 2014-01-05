@@ -130,6 +130,18 @@ public class Response {
     private HttpResponse createResponse(HttpResponseStatus status, boolean keepalive) {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
 
+        if (status.getCode() >= 500) {
+            WebServer.serverErrors++;
+            if (WebServer.serverErrors < 0) {
+                WebServer.serverErrors = 0;
+            }
+        } else if (status.getCode() >= 400) {
+            WebServer.clientErrors++;
+            if (WebServer.clientErrors < 0) {
+                WebServer.clientErrors = 0;
+            }
+        }
+
         //Apply headers
         if (headers != null) {
             for (Map.Entry<String, Collection<Object>> e : headers.getUnderlyingMap().entrySet()) {
@@ -212,6 +224,7 @@ public class Response {
                 if (wc.microtimingKey != null && Microtiming.isEnabled()) {
                     cc.getWatch().submitMicroTiming(wc.microtimingKey);
                 }
+                WebServer.responseTime.addValue(cc.getWatch().elapsedMillis());
                 if (!keepalive || !isKeepalive()) {
                     future.getChannel().close();
                 } else {

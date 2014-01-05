@@ -18,19 +18,17 @@ import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.ThreadRenamingRunnable;
-import sirius.kernel.commons.Amount;
-import sirius.kernel.commons.Collector;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Context;
 import sirius.kernel.di.std.Register;
+import sirius.kernel.health.Average;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
-import sirius.web.health.Metric;
 import sirius.web.health.MetricProvider;
-import sirius.web.health.Metrics;
+import sirius.web.health.MetricsCollector;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -56,7 +54,7 @@ public class WebServer implements Lifecycle, MetricProvider {
      * here is 9000 because non root users cannot open ports less than 1024
      */
     @ConfigValue("http.port")
-    private static int port;
+    private int port;
 
     /**
      * Config value of the HTTP bind address used (<tt>http.bindAddress</tt>). If the value is empty, we bind all
@@ -109,11 +107,11 @@ public class WebServer implements Lifecycle, MetricProvider {
                 filterRanges = IPRange.paraseRangeSet(ipFilter);
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .to(LOG)
-                        .error(e)
-                        .withSystemErrorMessage(
-                                "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
-                        .handle();
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage(
+                                  "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
+                          .handle();
                 filterRanges = IPRange.LOCALHOST;
             }
         }
@@ -148,10 +146,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 }
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .to(LOG)
-                        .error(e)
-                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
-                        .handle();
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
+                          .handle();
                 trustedRanges = IPRange.LOCALHOST;
             }
         }
@@ -176,10 +174,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 proxyRanges = IPRange.paraseRangeSet(proxyIPs);
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .to(LOG)
-                        .error(e)
-                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
-                        .handle();
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
+                          .handle();
                 proxyRanges = IPRange.NO_FILTER;
             }
         }
@@ -210,15 +208,10 @@ public class WebServer implements Lifecycle, MetricProvider {
     protected static volatile long chunks = 0;
     protected static volatile long keepalives = 0;
     protected static volatile long idleTimeouts = 0;
+    protected static volatile long clientErrors = 0;
+    protected static volatile long serverErrors = 0;
     protected static AtomicLong openConnections = new AtomicLong();
-
-    /*
-     * Cached values of the last metrics run
-     */
-    protected static volatile long lastBytesIn = 0;
-    protected static volatile long lastBytesOut = 0;
-    protected static volatile long lastConnections = 0;
-    protected static volatile long lastRequests = 0;
+    protected static Average responseTime = new Average();
 
     /**
      * Returns the minimal value of free disk space accepted until an upload is aborted.
@@ -301,15 +294,6 @@ public class WebServer implements Lifecycle, MetricProvider {
     @Override
     public String getName() {
         return "web (netty HTTP Server)";
-    }
-
-    /**
-     * Returns the port the web server is running on.
-     *
-     * @return the port used by the web server
-     */
-    public static int getPort() {
-        return port;
     }
 
     /**
@@ -411,29 +395,53 @@ public class WebServer implements Lifecycle, MetricProvider {
         return idleTimeouts;
     }
 
-    @Override
-    public void gather(Collector<Metric> collector) {
-        collector.add(differenceMetric("Bytes In", bytesIn, lastBytesIn, "b"));
-        lastBytesIn = bytesIn;
-        collector.add(differenceMetric("Bytes Out", bytesOut, lastBytesOut, "b"));
-        lastBytesOut = bytesOut;
-        collector.add(differenceMetric("Connects", connections, lastConnections, null));
-        lastConnections = connections;
-        collector.add(differenceMetric("Requests", requests, lastRequests, null));
-        lastRequests = requests;
-        collector.add(new Metric("HTTP",
-                "Open Connections",
-                String.valueOf(openConnections.get()),
-                Metrics.MetricState.GREEN));
+    /**
+     * Returns the number of HTTP responses with an 4xx status code.
+     *
+     * @return the number of HTTP responses with an 4xx status code.
+     */
+    public static long getClientErrors() {
+        return clientErrors;
     }
 
-    private Metric differenceMetric(String name, long currentValue, long lastValue, String unit) {
-        if (lastValue > currentValue) {
-            return null;
-        }
-        return new Metric("HTTP",
-                name,
-                Amount.of((currentValue - lastValue) / 10d).toScientificString(0, unit),
-                Metrics.MetricState.GREEN);
+    /**
+     * Returns the number of HTTP responses with an 5xx status code.
+     *
+     * @return the number of HTTP responses with an 5xx status code.
+     */
+    public static long getServerErrors() {
+        return serverErrors;
+    }
+
+    /**
+     * Returns the average response time of the last requests.
+     *
+     * @return the average response time of the last requests in milliseconds.
+     */
+    public static double getAvgResponseTime() {
+        return responseTime.getAvg();
+    }
+
+    @Override
+    public void gather(MetricsCollector collector) {
+        collector.differentialMetric("http-bytes-in", "http-bytes-in", "HTTP Bytes-In", bytesIn / 1024d, "KB");
+        collector.differentialMetric("http-bytes-out", "http-bytes-out", "HTTP Bytes-Out", bytesOut / 1024d, "KB");
+        collector.differentialMetric("http-connects", "http-connects", "HTTP Connects", connections, null);
+        collector.differentialMetric("http-requests", "http-requests", "HTTP Requests", requests, null);
+        collector.differentialMetric("http-blocks", "http-blocks", "HTTP Blocked Requests", blocks, null);
+        collector.differentialMetric("http-timeouts", "http-timeouts", "HTTP Idle Timeouts", idleTimeouts, null);
+        collector.differentialMetric("http-client-errors",
+                                     "http-errors",
+                                     "HTTP Client Errors (4xx)",
+                                     clientErrors,
+                                     null);
+        collector.differentialMetric("http-server-errors",
+                                     "http-errors",
+                                     "HTTP Server Errors (5xx)",
+                                     serverErrors,
+                                     null);
+        collector.metric("http-open-connections", "HTTP Open Connections", openConnections.get(), null);
+        collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAvg(), "ms");
+        collector.metric("http-sessions", "HTTP Sessions", ServerSession.getSessions().size(), null);
     }
 }
