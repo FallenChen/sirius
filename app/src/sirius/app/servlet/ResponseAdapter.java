@@ -14,12 +14,14 @@ import sirius.web.http.Response;
 import sirius.web.http.WebContext;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -192,8 +194,8 @@ public class ResponseAdapter implements HttpServletResponse {
                 }
 
                 os = wc.respondWith()
-                       .headers(headers)
-                       .outputStream(HttpResponseStatus.valueOf(status), content, contentLength);
+                        .headers(headers)
+                        .outputStream(HttpResponseStatus.valueOf(status), content);
             }
 
             @Override
@@ -235,6 +237,17 @@ public class ResponseAdapter implements HttpServletResponse {
                 }
                 os.close();
             }
+
+
+            @Override
+            public boolean isReady() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void setWriteListener(WriteListener writeListener) {
+                throw new UnsupportedOperationException();
+            }
         };
 
         return stream;
@@ -263,8 +276,8 @@ public class ResponseAdapter implements HttpServletResponse {
                 throw new IllegalStateException();
             }
             writer = new PrintWriter(new OutputStreamWriter(getOutputStream(),
-                                                            characterEncoding == null ? CharsetUtil.UTF_8
-                                                                                                   .name() : characterEncoding));
+                    characterEncoding == null ? CharsetUtil.UTF_8
+                            .name() : characterEncoding));
         }
         return writer;
     }
@@ -297,6 +310,12 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public void flushBuffer() throws IOException {
+        if (writer != null) {
+            writer.flush();
+        }
+        if (stream != null) {
+            stream.flush();
+        }
     }
 
     @Override
@@ -322,5 +341,35 @@ public class ResponseAdapter implements HttpServletResponse {
     @Override
     public Locale getLocale() {
         return new Locale(CallContext.getCurrent().getLang());
+    }
+
+    @Override
+    public String toString() {
+        return "HttpServletRequest: " + wc.toString();
+    }
+
+    @Override
+    public int getStatus() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String getHeader(String name) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<String> getHeaders(String name) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<String> getHeaderNames() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setContentLengthLong(long len) {
+        throw new UnsupportedOperationException();
     }
 }

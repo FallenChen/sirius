@@ -1,9 +1,1 @@
-<dependency org="javax.servlet" name="servlet-api" rev="2.5" conf="default"/>
-<dependency org="org.icefaces" name="icefaces" rev="2.0.0" conf="default" transitive="false"/>
-<dependency org="org.icefaces" name="icefaces-compat" rev="2.0.0" conf="default" transitive="false"/>
-<dependency org="com.sun.faces" name="jsf-impl" rev="2.0.6" conf="default"/>
-<dependency org="com.sun.faces" name="jsf-api" rev="2.0.6" conf="default"/>
-<dependency org="javax.el" name="el-api" rev="2.2" conf="default"/>
-<dependency org="org.glassfish.web" name="el-impl" rev="2.2" conf="default"/>
-<dependency org="javax.servlet" name="jstl" rev="1.2" conf="default"/>
-<dependency org="org.icepush" name="icepush" rev="2.0.0" conf="default"/>
+<dependency org="javax.servlet" name="javax.servlet-api" rev="3.1.0"/>

@@ -56,7 +56,7 @@ public class WebServer implements Lifecycle, MetricProvider {
      * here is 9000 because non root users cannot open ports less than 1024
      */
     @ConfigValue("http.port")
-    private int port;
+    private static int port;
 
     /**
      * Config value of the HTTP bind address used (<tt>http.bindAddress</tt>). If the value is empty, we bind all
@@ -109,11 +109,11 @@ public class WebServer implements Lifecycle, MetricProvider {
                 filterRanges = IPRange.paraseRangeSet(ipFilter);
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .to(LOG)
-                          .error(e)
-                          .withSystemErrorMessage(
-                                  "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
-                          .handle();
+                        .to(LOG)
+                        .error(e)
+                        .withSystemErrorMessage(
+                                "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
+                        .handle();
                 filterRanges = IPRange.LOCALHOST;
             }
         }
@@ -148,10 +148,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 }
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .to(LOG)
-                          .error(e)
-                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
-                          .handle();
+                        .to(LOG)
+                        .error(e)
+                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
+                        .handle();
                 trustedRanges = IPRange.LOCALHOST;
             }
         }
@@ -176,10 +176,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 proxyRanges = IPRange.paraseRangeSet(proxyIPs);
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .to(LOG)
-                          .error(e)
-                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
-                          .handle();
+                        .to(LOG)
+                        .error(e)
+                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
+                        .handle();
                 proxyRanges = IPRange.NO_FILTER;
             }
         }
@@ -304,6 +304,15 @@ public class WebServer implements Lifecycle, MetricProvider {
     }
 
     /**
+     * Returns the port the web server is running on.
+     *
+     * @return the port used by the web server
+     */
+    public static int getPort() {
+        return port;
+    }
+
+    /**
      * Returns the total bytes received so far
      *
      * @return the total bytes received via the http port
@@ -413,9 +422,9 @@ public class WebServer implements Lifecycle, MetricProvider {
         collector.add(differenceMetric("Requests", requests, lastRequests, null));
         lastRequests = requests;
         collector.add(new Metric("HTTP",
-                                 "Open Connections",
-                                 String.valueOf(openConnections.get()),
-                                 Metrics.MetricState.GREEN));
+                "Open Connections",
+                String.valueOf(openConnections.get()),
+                Metrics.MetricState.GREEN));
     }
 
     private Metric differenceMetric(String name, long currentValue, long lastValue, String unit) {
@@ -423,8 +432,8 @@ public class WebServer implements Lifecycle, MetricProvider {
             return null;
         }
         return new Metric("HTTP",
-                          name,
-                          Amount.of((currentValue - lastValue) / 10d).toScientificString(0, unit),
-                          Metrics.MetricState.GREEN);
+                name,
+                Amount.of((currentValue - lastValue) / 10d).toScientificString(0, unit),
+                Metrics.MetricState.GREEN);
     }
 }

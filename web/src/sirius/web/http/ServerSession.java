@@ -142,8 +142,8 @@ public class ServerSession {
         public void runTimer() throws Exception {
             for (ServerSession s : getSessions()) {
                 if (System.currentTimeMillis() - s.getLastAccessedTime() > TimeUnit.MILLISECONDS
-                                                                                   .convert(s.getMaxInactiveInterval(),
-                                                                                            TimeUnit.SECONDS)) {
+                        .convert(s.getMaxInactiveInterval(),
+                                TimeUnit.SECONDS)) {
                     s.invalidate();
                 }
             }
@@ -287,4 +287,8 @@ public class ServerSession {
         lastAccessed = System.currentTimeMillis();
     }
 
+    @Override
+    public String toString() {
+        return id + " (Created by: " + getValue(INITIAL_URI).asString() + ")";
+    }
 }

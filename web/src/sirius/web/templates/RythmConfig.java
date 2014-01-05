@@ -83,7 +83,6 @@ public class RythmConfig implements Lifecycle {
 
     @Override
     public void started() {
-
         Map<String, Object> config = Maps.newTreeMap();
         config.put("rythm.engine.mode", Sirius.isDev() ? "dev" : "prod");
         File tmpDir = new File(System.getProperty("java.io.tmpdir"), CallContext.getCurrent().getNodeName() + "_rythm");

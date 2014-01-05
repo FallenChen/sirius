@@ -62,14 +62,17 @@ public class CallContext {
      *
      * @return the name of this computation node.
      */
-    public String getNodeName() {
+    public static String getNodeName() {
         if (nodeName == null) {
+            if (Sirius.getConfig() == null) {
+                return "booting";
+            }
             nodeName = Sirius.getConfig().getString("sirius.nodeName");
             if (Strings.isEmpty(nodeName)) {
                 try {
                     nodeName = InetAddress.getLocalHost().getHostName();
                 } catch (UnknownHostException e) {
-                    Exceptions.handle(e);
+                    Async.LOG.WARN(Strings.apply("Cannot determine hostname - consider setting 'sirius.nodeName' in the configuration."));
                     nodeName = "unknown";
                 }
             }
@@ -127,7 +130,7 @@ public class CallContext {
      * @return the newly created CallContext, which is already attached to the current thread.
      */
     public static CallContext initialize() {
-        return initialize(UUID.randomUUID().toString());
+        return initialize(getNodeName() + "/" + interactionCounter.getCount());
     }
 
     /**
@@ -214,10 +217,10 @@ public class CallContext {
             return (C) result;
         } catch (Throwable e) {
             throw Exceptions.handle()
-                            .error(e)
-                            .withSystemErrorMessage("Cannot get instance of %s from current CallContext: %s (%s)",
-                                                    contextType.getName())
-                            .handle();
+                    .error(e)
+                    .withSystemErrorMessage("Cannot get instance of %s from current CallContext: %s (%s)",
+                            contextType.getName())
+                    .handle();
         }
     }
 

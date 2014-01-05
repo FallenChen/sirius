@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.Sirius;
+import sirius.kernel.async.Async;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.ConfigValue;
@@ -18,6 +19,7 @@ import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 
 import javax.servlet.*;
+import javax.servlet.descriptor.JspConfigDescriptor;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 import java.io.InputStream;
@@ -203,6 +205,16 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     }
 
     @Override
+    public int getEffectiveMajorVersion() {
+        return 0;
+    }
+
+    @Override
+    public int getEffectiveMinorVersion() {
+        return 0;
+    }
+
+    @Override
     public String getMimeType(String s) {
         return MimeHelper.guessMimeType(s);
     }
@@ -224,12 +236,12 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public RequestDispatcher getRequestDispatcher(String s) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public RequestDispatcher getNamedDispatcher(String s) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -268,7 +280,7 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public String getRealPath(String s) {
-        throw new UnsupportedOperationException();
+        return null;
     }
 
     @Override
@@ -284,6 +296,11 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     @Override
     public Enumeration getInitParameterNames() {
         return Collections.enumeration(contextParams.keySet());
+    }
+
+    @Override
+    public boolean setInitParameter(String name, String value) {
+        return false;
     }
 
     @Override
@@ -348,46 +365,53 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     }
 
     @Override
-    public boolean dispatch(WebContext ctx) throws Exception {
+    public boolean dispatch(final WebContext ctx) throws Exception {
         LOG.INFO(ctx.getRequestedURI());
-        for (Map.Entry<String, Servlet> s : servlets.entrySet()) {
+        for (final Map.Entry<String, Servlet> s : servlets.entrySet()) {
             if (ctx.getRequestedURI().startsWith(s.getKey())) {
-                ResponseAdapter res = new ResponseAdapter(ctx);
-                final RequestAdapter req = new RequestAdapter(ctx, s.getKey(), this);
-                try {
-                    invokeListeners("requestInitialized",
+                final ResponseAdapter res = new ResponseAdapter(ctx);
+                final RequestAdapter req = new RequestAdapter(ctx, s.getKey(), this, res);
+                Async.executor("servlets").start(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            invokeListeners("requestInitialized",
                                     ServletRequestListener.class,
                                     new Callback<ServletRequestListener>() {
                                         @Override
                                         public void invoke(ServletRequestListener value) throws Exception {
                                             value.requestInitialized(new ServletRequestEvent(ServletContainer.this,
-                                                                                             req));
+                                                    req));
                                         }
                                     });
-                    try {
-                        s.getValue().service(req, res);
-                        res.complete();
-                    } finally {
-                        invokeListeners("requestDestroyed",
+                            try {
+                                s.getValue().service(req, res);
+                                if (!req.isAsyncStarted()) {
+                                res.complete();
+                                }
+                            } finally {
+                                invokeListeners("requestDestroyed",
                                         ServletRequestListener.class,
                                         new Callback<ServletRequestListener>() {
                                             @Override
                                             public void invoke(ServletRequestListener value) throws Exception {
                                                 value.requestDestroyed(new ServletRequestEvent(ServletContainer.this,
-                                                                                               req));
+                                                        req));
                                             }
                                         });
+                            }
+                        } catch (Throwable t) {
+                            LOG.SEVERE(t);
+                            if (!res.isCommitted()) {
+                                ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(LOG, t));
+                            }
+                        }
                     }
-                } catch (Throwable t) {
-                    LOG.SEVERE(t);
-                    if (!res.isCommitted()) {
-                        ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(LOG, t));
-                    }
-                }
+                }).execute();
                 return true;
             }
         }
-        return false;  //To change body of implemented methods use File | Settings | File Templates.
+        return false;
     }
 
     @Override
@@ -408,5 +432,125 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
                 value.sessionDestroyed(new HttpSessionEvent(new SessionAdapter(session, ServletContainer.this)));
             }
         });
+    }
+
+    @Override
+    public ServletRegistration.Dynamic addServlet(String servletName, String className) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ServletRegistration.Dynamic addServlet(String servletName, Servlet servlet) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ServletRegistration.Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T extends Servlet> T createServlet(Class<T> clazz) throws ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ServletRegistration getServletRegistration(String servletName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Map<String, ? extends ServletRegistration> getServletRegistrations() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FilterRegistration.Dynamic addFilter(String filterName, String className) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FilterRegistration.Dynamic addFilter(String filterName, Class<? extends Filter> filterClass) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FilterRegistration getFilterRegistration(String filterName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public SessionCookieConfig getSessionCookieConfig() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void addListener(String className) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T extends EventListener> void addListener(T t) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void addListener(Class<? extends EventListener> listenerClass) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T extends EventListener> T createListener(Class<T> clazz) throws ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public JspConfigDescriptor getJspConfigDescriptor() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ClassLoader getClassLoader() {
+        return Sirius.getClasspath().getLoader();
+    }
+
+    @Override
+    public void declareRoles(String... roleNames) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String getVirtualServerName() {
+        return "Sirius";
     }
 }

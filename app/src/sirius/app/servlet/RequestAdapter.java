@@ -4,14 +4,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import sirius.kernel.commons.Strings;
+import sirius.kernel.health.Exceptions;
 import sirius.web.http.MimeHelper;
+import sirius.web.http.ServerSession;
 import sirius.web.http.WebContext;
+import sirius.web.http.WebServer;
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletInputStream;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
+import javax.servlet.*;
+import javax.servlet.http.*;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,14 +31,16 @@ public class RequestAdapter implements HttpServletRequest {
     private WebContext ctx;
     private String servletPath;
     private ServletContainer container;
+    private ResponseAdapter res;
     private Map<String, Object> attributes = Maps.newTreeMap();
     private SessionAdapter session;
     private List<Cookie> cookies;
 
-    public RequestAdapter(WebContext ctx, String servletPath, ServletContainer container) {
+    public RequestAdapter(WebContext ctx, String servletPath, ServletContainer container, ResponseAdapter res) {
         this.ctx = ctx;
         this.servletPath = servletPath;
         this.container = container;
+        this.res = res;
     }
 
     @Override
@@ -161,10 +163,11 @@ public class RequestAdapter implements HttpServletRequest {
     @Override
     public HttpSession getSession(boolean create) {
         if (session == null) {
-            if (!create) {
+            ServerSession servSess = ctx.getServerSession(create);
+            if (servSess == null) {
                 return null;
             }
-            session = new SessionAdapter(ctx.getServerSession(), container);
+            session = new SessionAdapter(servSess, container);
         }
         return session;
     }
@@ -177,7 +180,7 @@ public class RequestAdapter implements HttpServletRequest {
     @Override
     public boolean isRequestedSessionIdValid() {
         return ctx.getServerSession(false) != null && !ctx.getServerSession()
-                                                          .isNew() && ctx.getServerSessionSource() != null;
+                .isNew() && ctx.getServerSessionSource() != null;
     }
 
     @Override
@@ -208,31 +211,29 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getCharacterEncoding() {
-        return ctx.getContent().getCharset().name();
+        return ctx.getContentCharset().name();
     }
 
     @Override
     public void setCharacterEncoding(String s) throws UnsupportedEncodingException {
-        ctx.getContent().setCharset(Charset.forName(s));
+        ctx.setContentCharset(Charset.forName(s));
     }
 
     @Override
     public int getContentLength() {
-        return (int) ctx.getContent().length();
+        return (int) ctx.getContentSize();
     }
 
     @Override
     public String getContentType() {
         return ctx.getHeaderValue(HttpHeaders.Names.CONTENT_TYPE)
-                  .replaceEmptyWith(MimeHelper.guessMimeType(ctx.getRequestedURI()))
-                  .asString();
+                .replaceEmptyWith(MimeHelper.guessMimeType(ctx.getRequestedURI()))
+                .asString();
     }
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        final InputStream is = (ctx.getContent().isInMemory()) ? new ByteArrayInputStream(ctx.getContent()
-                                                                                             .get()) : new FileInputStream(
-                ctx.getContent().getFile());
+        final InputStream is = ctx.getContent();
         return new ServletInputStream() {
             @Override
             public int read() throws IOException {
@@ -277,6 +278,21 @@ public class RequestAdapter implements HttpServletRequest {
             @Override
             public boolean markSupported() {
                 return is.markSupported();
+            }
+
+            @Override
+            public boolean isFinished() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public boolean isReady() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void setReadListener(ReadListener readListener) {
+                throw new UnsupportedOperationException();
             }
         };
     }
@@ -332,7 +348,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public int getServerPort() {
-        throw new UnsupportedOperationException();
+        return WebServer.getPort();
     }
 
     @Override
@@ -372,7 +388,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public boolean isSecure() {
-        return false;  //To change body of implemented methods use File | Settings | File Templates.
+        return false; // TODO support and detect SSL
     }
 
     @Override
@@ -405,4 +421,109 @@ public class RequestAdapter implements HttpServletRequest {
     public int getLocalPort() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public String toString() {
+        return "HttpServletRequest: " + ctx.toString();
+    }
+
+    @Override
+    public String changeSessionId() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void login(String username, String password) throws ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void logout() throws ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<Part> getParts() throws IOException, ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Part getPart(String name) throws IOException, ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getContentLengthLong() {
+        return ctx.getContentSize();
+    }
+
+    @Override
+    public ServletContext getServletContext() {
+        throw new UnsupportedOperationException();
+    }
+
+    private AsyncContextAdapter async;
+
+    @Override
+    public AsyncContext startAsync() throws IllegalStateException {
+        AsyncContextAdapter newCtx = new AsyncContextAdapter(this, res, this, res);
+        if (async != null) {
+            for (AsyncListener listener : async.listeners) {
+                try {
+                    listener.onStartAsync(new AsyncEvent(newCtx));
+                } catch (IOException e) {
+                    Exceptions.handle(e);
+                }
+            }
+        }
+        async = newCtx;
+        return async;
+    }
+
+    @Override
+    public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
+        AsyncContextAdapter newCtx = new AsyncContextAdapter(this, res, servletRequest, servletResponse);
+        if (async != null) {
+            for (AsyncListener listener : async.listeners) {
+                try {
+                    listener.onStartAsync(new AsyncEvent(newCtx));
+                } catch (IOException e) {
+                    Exceptions.handle(e);
+                }
+            }
+        }
+        async = newCtx;
+        return async;
+    }
+
+    @Override
+    public boolean isAsyncStarted() {
+        return async != null;
+    }
+
+    @Override
+    public boolean isAsyncSupported() {
+        return true;
+    }
+
+    @Override
+    public AsyncContext getAsyncContext() {
+        return async;
+    }
+
+    @Override
+    public DispatcherType getDispatcherType() {
+        throw new UnsupportedOperationException();
+    }
+
 }
