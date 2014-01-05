@@ -1,5 +1,8 @@
 package sirius.web.health;
 
+import sirius.kernel.commons.Amount;
+import sirius.kernel.commons.NumberFormat;
+
 /**
  * Created with IntelliJ IDEA.
  *
@@ -7,28 +10,32 @@ package sirius.web.health;
  * @since 2013/09
  */
 public class Metric implements Comparable<Metric> {
-    private String category;
+    private final String unit;
     private String name;
-    private String value;
+    private double value;
     private Metrics.MetricState state;
 
-    public Metric(String category, String name, String value, Metrics.MetricState state) {
-        this.category = category;
+    public Metric(String name, double value, Metrics.MetricState state, String unit) {
+        this.unit = unit;
         this.name = name;
         this.value = value;
         this.state = state;
-    }
-
-    public String getCategory() {
-        return category;
     }
 
     public String getName() {
         return name;
     }
 
-    public String getValue() {
+    public double getValue() {
         return value;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public String getValueAsString() {
+        return Amount.of(value).toSmartRoundedString(NumberFormat.TWO_DECIMAL_PLACES).append(" ", unit).toString();
     }
 
     public Metrics.MetricState getState() {

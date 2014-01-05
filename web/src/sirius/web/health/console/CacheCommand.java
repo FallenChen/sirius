@@ -24,7 +24,13 @@ public class CacheCommand implements Command {
     @Override
     public String getName() {
         return "cache";
-    }
+    //}
+
+        // Fmt commands
+        // Security
+        // GUI - Logs, Stats, Incidents, Help
+        // Alerts
+        // JDBC stats
 
     @Override
     public String getDescription() {

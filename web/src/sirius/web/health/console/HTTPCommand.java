@@ -30,6 +30,9 @@ public class HTTPCommand implements Command {
         output.apply("%-20s %10d", "Keepalives", WebServer.getKeepalives());
         output.apply("%-20s %10d", "Open Connections", WebServer.getOpenConnections().get());
         output.apply("%-20s %10d", "Idle Timeouts", WebServer.getIdleTimeouts());
+        output.apply("%-20s %10d", "Client Errors", WebServer.getClientErrors());
+        output.apply("%-20s %10d", "Server Errors", WebServer.getServerErrors());
+        output.apply("%-20s %10d", "Avg. Response Time", NLS.toUserString(WebServer.getAvgResponseTime()) + " ms");
         output.separator();
     }
 

@@ -11,9 +11,15 @@ package sirius.web.jdbc;
 import com.google.common.collect.Maps;
 import org.apache.commons.dbcp.BasicDataSource;
 import sirius.kernel.commons.Context;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.di.std.Register;
 import sirius.kernel.extensions.Extension;
 import sirius.kernel.extensions.Extensions;
+import sirius.kernel.health.Average;
+import sirius.kernel.health.Counter;
 import sirius.kernel.health.Log;
+import sirius.web.health.MetricProvider;
+import sirius.web.health.MetricsCollector;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -31,11 +37,15 @@ import java.util.Map;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/11
  */
-public class Databases {
+public class Database {
 
     protected static final Log LOG = Log.get("db");
+    private static final Map<String, Database> datasources = Maps.newConcurrentMap();
 
-    private static final Map<String, Databases> datasources = Maps.newConcurrentMap();
+    protected static Counter numUses = new Counter();
+    protected static Counter numQueries = new Counter();
+    protected static Average queryDuration = new Average();
+
     private final String name;
     private String driver;
     private String url;
@@ -48,6 +58,19 @@ public class Databases {
     private String validationQuery;
     private BasicDataSource ds;
 
+    /**
+     * Provides some metrics across all managed data sources.
+     */
+    @Register
+    public static class DatabaseMetricProvider implements MetricProvider {
+
+        @Override
+        public void gather(MetricsCollector collector) {
+            collector.differentialMetric("jdbc-use", "db-uses", "JDBC Uses", numUses.getCount(), null);
+            collector.differentialMetric("jdbc-queries", "db-queries", "JDBC Queries", numQueries.getCount(), null);
+            collector.metric("db-query-duration", "JDBC Query Duration", queryDuration.getAvg(), "ms");
+        }
+    }
 
     /**
      * Provides access to the selected database.
@@ -58,13 +81,13 @@ public class Databases {
      * @param name name of the database to access
      * @return a wrapper providing access to the given database
      */
-    public static Databases get(String name) {
-        Databases ds = datasources.get(name);
+    public static Database get(String name) {
+        Database ds = datasources.get(name);
         if (ds == null) {
             synchronized (datasources) {
                 ds = datasources.get(name);
                 if (ds == null) {
-                    ds = new Databases(name);
+                    ds = new Database(name);
                     datasources.put(name, ds);
                 }
             }
@@ -75,7 +98,7 @@ public class Databases {
     /*
      * Use the get(name) method to create a new object.
      */
-    private Databases(String name) {
+    private Database(String name) {
         Extension ext = Extensions.getExtension("jdbc.database", name);
         this.name = name;
         this.driver = ext.get("driver").asString();
@@ -271,4 +294,8 @@ public class Databases {
         return "com.mysql.jdbc.Driver".equalsIgnoreCase(driver);
     }
 
+    @Override
+    public String toString() {
+        return Strings.apply("%s (%d/%d)", name, getNumActive(), getSize());
+    }
 }

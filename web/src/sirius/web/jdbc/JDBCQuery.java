@@ -44,14 +44,14 @@ public class JDBCQuery {
         boolean handle(Row row);
     }
 
-    private final Databases ds;
+    private final Database ds;
     private final String sql;
     private Context params = Context.create();
 
     /*
      * Create a new instance using Databases.createQuery(sql)
      */
-    protected JDBCQuery(Databases ds, String sql) {
+    protected JDBCQuery(Database ds, String sql) {
         this.ds = ds;
         this.sql = sql;
     }

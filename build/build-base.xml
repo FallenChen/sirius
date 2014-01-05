@@ -87,7 +87,7 @@
             </fileset>
         </delete>
         <ivy:resolve file="${build.dir}/ivy.xml" />
-        <ivy:retrieve/>
+        <ivy:retrieve conf="compile" />
     </target>
 
 
@@ -108,6 +108,17 @@
         <mkdir dir="${dist.dir}/lib" />
         <copy todir="${dist.dir}/lib">
             <fileset dir="${build.dir}/lib">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+        <!-- Copy libraries not managed by ivy/maven -->
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="${sirius.dir}/build/unmanaged-lib">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="${build.dir}/unmanaged-lib">
                 <include name="**/*"/>
             </fileset>
         </copy>

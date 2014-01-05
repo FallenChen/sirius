@@ -21,9 +21,9 @@ import java.sql.*;
  */
 class WrappedStatement implements Statement {
     private Statement stmt;
-    private Databases ds;
+    private Database ds;
 
-    WrappedStatement(Statement stmt, Databases ds) {
+    WrappedStatement(Statement stmt, Database ds) {
         super();
         this.stmt = stmt;
         this.ds = ds;

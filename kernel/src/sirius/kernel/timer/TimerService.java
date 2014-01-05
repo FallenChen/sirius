@@ -61,9 +61,8 @@ public class TimerService implements Lifecycle {
             try {
                 runTenSecondTimers();
                 if (TimeUnit.MINUTES
-                            .convert(System.currentTimeMillis() - lastTenMinutesExecution,
-                                     TimeUnit.MILLISECONDS) >= 1) {
-                runOneMinuteTimers();
+                            .convert(System.currentTimeMillis() - lastOneMinuteExecution, TimeUnit.MILLISECONDS) >= 1) {
+                    runOneMinuteTimers();
                 }
                 if (TimeUnit.MINUTES
                             .convert(System.currentTimeMillis() - lastTenMinutesExecution,
@@ -93,6 +92,7 @@ public class TimerService implements Lifecycle {
         }
         return NLS.toUserString(new Date(lastTenSecondsExecution), true);
     }
+
     /**
      * Returns the timestamp of the last execution of the one minute timer.
      *
@@ -183,6 +183,7 @@ public class TimerService implements Lifecycle {
         }
         lastTenSecondsExecution = System.currentTimeMillis();
     }
+
     /**
      * Executes all one minute timers (implementing <tt>EveryMinute</tt>) now (out of schedule).
      */

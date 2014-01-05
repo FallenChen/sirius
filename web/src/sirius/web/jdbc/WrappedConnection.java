@@ -23,9 +23,9 @@ import java.util.concurrent.Executor;
 class WrappedConnection implements Connection {
 
     private final Connection delegate;
-    private final Databases ds;
+    private final Database ds;
 
-    WrappedConnection(Connection c, Databases ds) {
+    WrappedConnection(Connection c, Database ds) {
         this.delegate = c;
         this.ds = ds;
     }
@@ -54,8 +54,8 @@ class WrappedConnection implements Connection {
             // in case a "real" problem occured. If we wouldn't call
             // delegate.close, the connection would
             // remain active and might block the pool.
-            Databases.LOG.INFO("Error closing connection");
-            Databases.LOG.INFO(e);
+            Database.LOG.INFO("Error closing connection");
+            Database.LOG.INFO(e);
         }
     }
 
