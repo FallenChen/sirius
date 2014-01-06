@@ -59,7 +59,7 @@ public class Metrics implements EveryMinute {
         if (limit == null) {
             limit = Tuple.create();
             if (Sirius.getConfig().hasPath("health.limits." + limitType + ".warning")) {
-                limit.setFirst(Sirius.getConfig().getDouble("limits." + limitType + ".warning"));
+                limit.setFirst(Sirius.getConfig().getDouble("health.limits." + limitType + ".warning"));
                 if (limit.getFirst() == 0d) {
                     limit.setFirst(null);
                 }

@@ -8,16 +8,16 @@
 
 package sirius.web.http;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
-import org.jboss.netty.handler.codec.http.multipart.DiskAttribute;
-import org.jboss.netty.handler.codec.http.multipart.DiskFileUpload;
-import org.jboss.netty.handler.codec.http.multipart.HttpDataFactory;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.ThreadNameDeterminer;
-import org.jboss.netty.util.ThreadRenamingRunnable;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.DiskAttribute;
+import io.netty.handler.codec.http.multipart.DiskFileUpload;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
@@ -31,8 +31,6 @@ import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricsCollector;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -54,7 +52,16 @@ public class WebServer implements Lifecycle, MetricProvider {
      * here is 9000 because non root users cannot open ports less than 1024
      */
     @ConfigValue("http.port")
-    private int port;
+    private static int port;
+
+    /**
+     * Returns the port used by the web server
+     *
+     * @return the port served by the HTTP server
+     */
+    public static int getPort() {
+        return port;
+    }
 
     /**
      * Config value of the HTTP bind address used (<tt>http.bindAddress</tt>). If the value is empty, we bind all
@@ -95,6 +102,7 @@ public class WebServer implements Lifecycle, MetricProvider {
     @ConfigValue("http.firewall.filterIPs")
     private static String ipFilter;
     private static IPRange.RangeSet filterRanges;
+    private Channel channel;
 
     /**
      * Returns an ip filter which determines which IPs may connect to the web server.
@@ -107,11 +115,11 @@ public class WebServer implements Lifecycle, MetricProvider {
                 filterRanges = IPRange.paraseRangeSet(ipFilter);
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .to(LOG)
-                          .error(e)
-                          .withSystemErrorMessage(
-                                  "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
-                          .handle();
+                        .to(LOG)
+                        .error(e)
+                        .withSystemErrorMessage(
+                                "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
+                        .handle();
                 filterRanges = IPRange.LOCALHOST;
             }
         }
@@ -146,10 +154,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 }
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .to(LOG)
-                          .error(e)
-                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
-                          .handle();
+                        .to(LOG)
+                        .error(e)
+                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
+                        .handle();
                 trustedRanges = IPRange.LOCALHOST;
             }
         }
@@ -174,10 +182,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 proxyRanges = IPRange.paraseRangeSet(proxyIPs);
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .to(LOG)
-                          .error(e)
-                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
-                          .handle();
+                        .to(LOG)
+                        .error(e)
+                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
+                        .handle();
                 proxyRanges = IPRange.NO_FILTER;
             }
         }
@@ -189,11 +197,9 @@ public class WebServer implements Lifecycle, MetricProvider {
     private GlobalContext ctx;
 
     private static HttpDataFactory httpDataFactory;
-    private ThreadPoolExecutor bossExecutor;
-    private ThreadPoolExecutor workerExecutor;
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
     private ServerBootstrap bootstrap;
-    private NioServerSocketChannelFactory channelFactory;
-    private HashedWheelTimer timer;
 
     /*
      * Statistics
@@ -258,37 +264,41 @@ public class WebServer implements Lifecycle, MetricProvider {
         DiskAttribute.baseDirectory = null;
         httpDataFactory = new DefaultHttpDataFactory(uploadDiskThreshold);
 
-        // Keep our sexy thread names..
-        ThreadRenamingRunnable.setThreadNameDeterminer(ThreadNameDeterminer.CURRENT);
-
-        // Configure the server.
-        bossExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
-        bossExecutor.setThreadFactory(new ThreadFactoryBuilder().setNameFormat("http-boss-%d").build());
-        workerExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
-        workerExecutor.setThreadFactory(new ThreadFactoryBuilder().setNameFormat("http-%d").build());
-        channelFactory = new NioServerSocketChannelFactory(bossExecutor, workerExecutor);
-        bootstrap = new ServerBootstrap(channelFactory);
-        timer = new HashedWheelTimer();
-
-        // Set up the event pipeline factory.
-        bootstrap.setPipelineFactory(ctx.wire(new WebServerPipelineFactory(timer)));
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
+        bootstrap = new ServerBootstrap();
+        bootstrap.group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(ctx.wire(new WebServerInitializer()))
+                // At mose have 128 connection waiting to be "connected" - drop everything else...
+                .option(ChannelOption.SO_BACKLOG, 128)
+                // Send a KEEPALIVE packet every 2h and expect and ACK on the TCP layer
+                .childOption(ChannelOption.SO_KEEPALIVE, true)
+                // Tell the kernel not to buffer our data - we're quite aware of what we're doing and
+                // will not create "mini writes" anyway
+                .childOption(ChannelOption.TCP_NODELAY, true);
 
         // Bind and start to accept incoming connections.
-        if (Strings.isFilled(bindAddress)) {
-            bootstrap.bind(new InetSocketAddress(bindAddress, port));
-        } else {
-            bootstrap.bind(new InetSocketAddress(port));
+        try {
+            if (Strings.isFilled(bindAddress)) {
+                channel = bootstrap.bind(new InetSocketAddress(bindAddress, port)).sync().channel();
+            } else {
+                channel = bootstrap.bind(new InetSocketAddress(port)).sync().channel();
+            }
+        } catch (InterruptedException e) {
+            Exceptions.handle(e);
         }
     }
 
     @Override
     public void stopped() {
-        timer.stop();
-        bootstrap.shutdown();
-        channelFactory.shutdown();
-        bossExecutor.shutdown();
-        workerExecutor.shutdown();
-        channelFactory.releaseExternalResources();
+        try {
+            channel.close().sync();
+        } catch (InterruptedException e) {
+            Exceptions.handle(e);
+        }
+        bossGroup.shutdownGracefully();
+        workerGroup.shutdownGracefully();
     }
 
     @Override
@@ -431,15 +441,15 @@ public class WebServer implements Lifecycle, MetricProvider {
         collector.differentialMetric("http-blocks", "http-blocks", "HTTP Blocked Requests", blocks, null);
         collector.differentialMetric("http-timeouts", "http-timeouts", "HTTP Idle Timeouts", idleTimeouts, null);
         collector.differentialMetric("http-client-errors",
-                                     "http-errors",
-                                     "HTTP Client Errors (4xx)",
-                                     clientErrors,
-                                     null);
+                "http-errors",
+                "HTTP Client Errors (4xx)",
+                clientErrors,
+                null);
         collector.differentialMetric("http-server-errors",
-                                     "http-errors",
-                                     "HTTP Server Errors (5xx)",
-                                     serverErrors,
-                                     null);
+                "http-errors",
+                "HTTP Server Errors (5xx)",
+                serverErrors,
+                null);
         collector.metric("http-open-connections", "HTTP Open Connections", openConnections.get(), null);
         collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAvg(), "ms");
         collector.metric("http-sessions", "HTTP Sessions", ServerSession.getSessions().size(), null);

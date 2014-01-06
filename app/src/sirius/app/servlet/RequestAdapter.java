@@ -2,7 +2,7 @@ package sirius.app.servlet;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 import sirius.web.http.MimeHelper;
@@ -28,7 +28,7 @@ import java.util.*;
  */
 public class RequestAdapter implements HttpServletRequest {
 
-    private WebContext ctx;
+    protected WebContext ctx;
     private String servletPath;
     private ServletContainer container;
     private ResponseAdapter res;
@@ -52,13 +52,13 @@ public class RequestAdapter implements HttpServletRequest {
     public Cookie[] getCookies() {
         if (cookies == null) {
             cookies = Lists.newArrayList();
-            for (org.jboss.netty.handler.codec.http.Cookie cookie : ctx.getCookies()) {
+            for (io.netty.handler.codec.http.Cookie cookie : ctx.getCookies()) {
                 Cookie javaCookie = new Cookie(cookie.getName(), cookie.getValue());
                 javaCookie.setComment(cookie.getComment());
                 if (Strings.isFilled(cookie.getDomain())) {
                     javaCookie.setDomain(cookie.getDomain());
                 }
-                javaCookie.setMaxAge(cookie.getMaxAge());
+                javaCookie.setMaxAge((int) cookie.getMaxAge());
                 javaCookie.setPath(cookie.getPath());
                 javaCookie.setSecure(cookie.isSecure());
                 javaCookie.setVersion(cookie.getVersion());
@@ -75,17 +75,17 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getHeader(String s) {
-        return ctx.getRequest().getHeader(s);
+        return ctx.getRequest().headers().get(s);
     }
 
     @Override
     public Enumeration getHeaders(String s) {
-        return Collections.enumeration(ctx.getRequest().getHeaders(s));
+        return Collections.enumeration(ctx.getRequest().headers().getAll(s));
     }
 
     @Override
     public Enumeration getHeaderNames() {
-        return Collections.enumeration(ctx.getRequest().getHeaderNames());
+        return Collections.enumeration(ctx.getRequest().headers().names());
     }
 
     @Override
@@ -95,7 +95,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getMethod() {
-        return ctx.getRequest().getMethod().getName();
+        return ctx.getRequest().getMethod().name();
     }
 
     @Override
@@ -323,7 +323,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getProtocol() {
-        return ctx.getRequest().getProtocolVersion().getProtocolName();
+        return ctx.getRequest().getProtocolVersion().protocolName();
     }
 
     @Override
@@ -358,7 +358,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getRemoteAddr() {
-        return ctx.getCtx().getChannel().getRemoteAddress().toString();
+        return ctx.getCtx().channel().remoteAddress().toString();
     }
 
     @Override

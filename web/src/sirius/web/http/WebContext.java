@@ -8,17 +8,17 @@
 
 package sirius.web.http;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.multipart.*;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.http.*;
-import org.jboss.netty.handler.codec.http.multipart.*;
-import org.jboss.netty.util.CharsetUtil;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.Strings;
@@ -424,7 +424,7 @@ public class WebContext {
             if (Strings.areEqual(sessionInfo.getFirst(),
                     Hashing.md5().hashString(sessionInfo.getSecond() + getSessionSecret()).toString())) {
                 QueryStringDecoder qsd = new QueryStringDecoder(encodedSession);
-                for (Map.Entry<String, List<String>> entry : qsd.getParameters().entrySet()) {
+                for (Map.Entry<String, List<String>> entry : qsd.parameters().entrySet()) {
                     session.put(entry.getKey(), Iterables.getFirst(entry.getValue(), null));
                 }
             } else {
@@ -572,10 +572,10 @@ public class WebContext {
      */
     public InetAddress getRemoteIP() {
         if (remoteIp == null) {
-            remoteIp = ((InetSocketAddress) ctx.getChannel().getRemoteAddress()).getAddress();
+            remoteIp = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress();
             if (!WebServer.getProxyIPs().isEmpty()) {
                 if (WebServer.getProxyIPs().accepts(remoteIp)) {
-                    String forwardedFor = request.getHeader("X-Forwarded-For");
+                    String forwardedFor = request.headers().get("X-Forwarded-For");
                     if (Strings.isFilled(forwardedFor)) {
                         try {
                             remoteIp = InetAddress.getByName(forwardedFor);
@@ -600,7 +600,7 @@ public class WebContext {
     public boolean isTrusted() {
         if (trusted == null) {
             trusted = WebServer.getTrustedRanges()
-                    .accepts(((InetSocketAddress) ctx.getChannel().getRemoteAddress()).getAddress());
+                    .accepts(((InetSocketAddress) ctx.channel().remoteAddress()).getAddress());
         }
 
         return trusted;
@@ -664,9 +664,9 @@ public class WebContext {
      * Decodes the query string on demand
      */
     private void decodeQueryString() {
-        QueryStringDecoder qsd = new QueryStringDecoder(request.getUri(), CharsetUtil.UTF_8);
-        requestedURI = qsd.getPath();
-        queryString = qsd.getParameters();
+        QueryStringDecoder qsd = new QueryStringDecoder(request.getUri(), Charsets.UTF_8);
+        requestedURI = qsd.path();
+        queryString = qsd.parameters();
     }
 
     /**
@@ -697,12 +697,11 @@ public class WebContext {
     private void fillCookies() {
         if (cookiesIn == null) {
             cookiesIn = Maps.newHashMap();
-            CookieDecoder cd = new CookieDecoder();
-            String cookies = request.getHeader(HttpHeaders.Names.COOKIE);
-            if (Strings.isFilled(cookies)) {
-                for (Cookie cookie : cd.decode(cookies)) {
-                    this.cookiesIn.put(cookie.getName(), cookie);
-                }
+            String cookieHeader = request.headers().get(HttpHeaders.Names.COOKIE);
+            if (Strings.isFilled(cookieHeader)) {
+            for (Cookie cookie : CookieDecoder.decode(cookieHeader)) {
+                this.cookiesIn.put(cookie.getName(), cookie);
+            }
             }
         }
     }
@@ -742,7 +741,7 @@ public class WebContext {
      * @param value the contents of the cookie
      */
     public void setSessionCookie(String name, String value) {
-        setCookie(name, value, Integer.MIN_VALUE);
+        setCookie(name, value, Long.MIN_VALUE);
     }
 
     /**
@@ -755,7 +754,7 @@ public class WebContext {
      */
     public void setHTTPSessionCookie(String name, String value) {
         DefaultCookie cookie = new DefaultCookie(name, value);
-        cookie.setMaxAge((int) Integer.MIN_VALUE);
+        cookie.setMaxAge(Long.MIN_VALUE);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         setCookie(cookie);
@@ -767,9 +766,9 @@ public class WebContext {
      * @param name  the cookie to create
      * @param value the contents of the cookie
      */
-    public void setCookie(String name, String value, int maxAgeSeconds) {
+    public void setCookie(String name, String value, long maxAgeSeconds) {
         DefaultCookie cookie = new DefaultCookie(name, value);
-        cookie.setMaxAge((int) maxAgeSeconds);
+        cookie.setMaxAge(maxAgeSeconds);
         cookie.setPath("/");
         setCookie(cookie);
     }
@@ -880,7 +879,7 @@ public class WebContext {
      * @return the value of the given header or <tt>null</tt> if no such header is present
      */
     public String getHeader(String header) {
-        return request.getHeader(header);
+        return request.headers().get(header);
     }
 
     /**
@@ -890,7 +889,7 @@ public class WebContext {
      * @return the contents of the named header wrapped as <tt>Value</tt>
      */
     public Value getHeaderValue(String header) {
-        return Value.of(request.getHeader(header));
+        return Value.of(request.headers().get(header));
     }
 
     /**
@@ -900,7 +899,7 @@ public class WebContext {
      * @return the value in milliseconds of the submitted date or 0 if the header was not present.
      */
     public long getDateHeader(String header) {
-        String value = request.getHeader(header);
+        String value = request.headers().get(header);
         if (Strings.isEmpty(value)) {
             return 0;
         }
@@ -1000,8 +999,8 @@ public class WebContext {
             return new FileInputStream(content.getFile());
         }
         //Backup the original size...
-        contentSize = (long) content.getChannelBuffer().readableBytes();
-        return new ChannelBufferInputStream(content.getChannelBuffer());
+        contentSize = (long) content.getByteBuf().readableBytes();
+        return new ByteBufInputStream(content.getByteBuf());
     }
 
     /**
@@ -1048,7 +1047,7 @@ public class WebContext {
                 } else if (!content.isInMemory()) {
                     contentSize = content.getFile().length();
                 } else {
-                    contentSize = (long) content.getChannelBuffer().readableBytes();
+                    contentSize = (long) content.getByteBuf().readableBytes();
                 }
             } catch (IOException e) {
                 Exceptions.handle(WebServer.LOG, e);

@@ -93,9 +93,8 @@ public class AsyncContextAdapter implements AsyncContext {
 
     @Override
     public void setTimeout(long timeout) {
-        System.out.println("Timeout: " + timeout);
-
-        TODO timeout handling
+        origRequest.ctx.markAsLongCall();
+    }
 
     @Override
     public long getTimeout() {

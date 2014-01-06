@@ -8,7 +8,7 @@
 
 package sirius.web.services;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.async.Async;
 import sirius.kernel.commons.*;
 import sirius.kernel.di.GlobalContext;

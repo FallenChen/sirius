@@ -1,6 +1,6 @@
 package sirius.web.dispatch;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.std.Register;
 import sirius.web.http.WebContext;

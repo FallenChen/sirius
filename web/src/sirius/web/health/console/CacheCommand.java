@@ -24,7 +24,7 @@ public class CacheCommand implements Command {
     @Override
     public String getName() {
         return "cache";
-    //}
+    }
 
         // Fmt commands
         // Security

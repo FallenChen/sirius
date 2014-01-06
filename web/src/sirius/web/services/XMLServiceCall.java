@@ -9,7 +9,7 @@
 package sirius.web.services;
 
 import com.google.common.base.Charsets;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.xml.StructuredOutput;
 import sirius.kernel.xml.XMLStructuredOutput;
 import sirius.web.http.WebContext;

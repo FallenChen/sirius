@@ -88,6 +88,7 @@
         </delete>
         <ivy:resolve file="${build.dir}/ivy.xml" />
         <ivy:retrieve conf="compile" />
+        <ivy:report todir="${build.dir}/lib/report" conf="compile" graph="false" />
     </target>
 
 

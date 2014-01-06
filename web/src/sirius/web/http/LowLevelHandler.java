@@ -1,9 +1,13 @@
 package sirius.web.http;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * Handler for low-level events in the HTTP pipeline.
@@ -14,62 +18,66 @@ import java.net.InetSocketAddress;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/09
  */
-class LowLevelHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+@ChannelHandler.Sharable
+class LowLevelHandler extends ChannelDuplexHandler {
     static LowLevelHandler INSTANCE = new LowLevelHandler();
 
     @Override
-    public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof MessageEvent) {
-            MessageEvent msg = (MessageEvent) e;
-            if (msg.getMessage() instanceof ChannelBuffer) {
-                WebServer.bytesOut += ((ChannelBuffer) msg.getMessage()).writableBytes();
-                if (WebServer.bytesOut < 0) {
-                    WebServer.bytesOut = 0;
+    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise future) throws Exception {
+        WebServer.connections++;
+        if (WebServer.connections < 0) {
+            WebServer.connections = 0;
+        }
+        IPRange.RangeSet filter = WebServer.getIPFilter();
+        if (!filter.isEmpty()) {
+            if (!filter.accepts(((InetSocketAddress) remoteAddress).getAddress())) {
+                WebServer.blocks++;
+                if (WebServer.blocks < 0) {
+                    WebServer.blocks = 0;
                 }
-                WebServer.messagesOut++;
-                if (WebServer.messagesOut < 0) {
-                    WebServer.messagesOut = 0;
-                }
+                ctx.channel().close();
+                future.setSuccess();
+                return;
             }
         }
-        ctx.sendDownstream(e);
+        WebServer.openConnections.incrementAndGet();
+        super.connect(ctx, remoteAddress, localAddress, future);
     }
 
     @Override
-    public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
-        if (e instanceof ChannelStateEvent) {
-            if (((ChannelStateEvent) e).getState() == ChannelState.CONNECTED) {
-                WebServer.connections++;
-                if (WebServer.connections < 0) {
-                    WebServer.connections = 0;
-                }
-                IPRange.RangeSet filter = WebServer.getIPFilter();
-                if (!filter.isEmpty()) {
-                    if (!filter.accepts(((InetSocketAddress)ctx.getChannel().getRemoteAddress()).getAddress())) {
-                        WebServer.blocks++;
-                        if (WebServer.blocks < 0) {
-                            WebServer.blocks = 0;
-                        }
-                        ctx.getChannel().close();
-                        return;
-                    }
-                }
-            }
-        }
-        if (e instanceof MessageEvent) {
-            MessageEvent msg = (MessageEvent) e;
-            if (msg.getMessage() instanceof ChannelBuffer) {
-                WebServer.bytesIn += ((ChannelBuffer) msg.getMessage()).readableBytes();
-                if (WebServer.bytesIn < 0) {
-                    WebServer.bytesIn = 0;
-                }
-                WebServer.messagesIn++;
-                if (WebServer.messagesIn < 0) {
-                    WebServer.messagesIn = 0;
-                }
-            }
-        }
-        ctx.sendUpstream(e);
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+        WebServer.openConnections.decrementAndGet();
     }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof ByteBuf) {
+            WebServer.bytesIn += ((ByteBuf) msg).readableBytes();
+            if (WebServer.bytesIn < 0) {
+                WebServer.bytesIn = 0;
+            }
+            WebServer.messagesIn++;
+            if (WebServer.messagesIn < 0) {
+                WebServer.messagesIn = 0;
+            }
+        }
+        super.channelRead(ctx, msg);
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof ByteBuf) {
+            WebServer.bytesOut += ((ByteBuf) msg).writableBytes();
+            if (WebServer.bytesOut < 0) {
+                WebServer.bytesOut = 0;
+            }
+            WebServer.messagesOut++;
+            if (WebServer.messagesOut < 0) {
+                WebServer.messagesOut = 0;
+            }
+        }
+        super.write(ctx, msg, promise);
+    }
+
 
 }

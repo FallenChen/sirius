@@ -1,7 +1,8 @@
-<dependency org="io.netty" name="netty" rev="3.6.6.Final"/>
-<dependency org="org.rythmengine" name="rythm-engine" rev="1.0-b9" />
-<dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.13" />
-<dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="default"/>
-<dependency org="mysql" name="mysql-connector-java" rev="5.1.12" conf="default"/>
-<dependency org="com.ning" name="async-http-client" rev="1.7.19" conf="default"/>
-<dependency org="org.slf4j" name="slf4j-log4j12" rev="1.7.5"/>
+<dependency org="io.netty" name="netty-all" rev="4.0.14.Final" />
+<dependency org="org.rythmengine" name="rythm-engine" rev="1.0-b9" conf="compile" />
+<dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.13" conf="compile" />
+<dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="compile" />
+<dependency org="com.ning" name="async-http-client" rev="1.7.19" conf="compile">
+    <exclude name="netty" conf="compile" />
+</dependency>
+<dependency org="org.slf4j" name="slf4j-log4j12" rev="1.7.5" conf="compile" />

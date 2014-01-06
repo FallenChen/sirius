@@ -1,10 +1,10 @@
-@args org.jboss.netty.handler.codec.http.HttpResponseStatus status, String message
+@args io.netty.handler.codec.http.HttpResponseStatus status, String message
 <html>
     <head>
-        <title>Error - @status.getCode()</title>
+        <title>Error - @status.code()</title>
     </head>
     <body>
-        <h1>@status.getReasonPhrase()</h1>
+        <h1>@status.reasonPhrase()</h1>
         <hr />
         <pre>@message</pre>
         <hr />

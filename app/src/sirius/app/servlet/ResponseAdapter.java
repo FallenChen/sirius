@@ -1,10 +1,10 @@
 package sirius.app.servlet;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.handler.codec.http.DefaultCookie;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.channel.ChannelFuture;
+import io.netty.handler.codec.http.DefaultCookie;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
@@ -263,8 +263,8 @@ public class ResponseAdapter implements HttpServletResponse {
             stream.close();
         } catch (IOException e) {
             ServletContainer.LOG.FINE(e);
-            if (wc.getCtx().getChannel().isOpen()) {
-                wc.getCtx().getChannel().close();
+            if (wc.getCtx().channel().isOpen()) {
+                wc.getCtx().channel().close();
             }
         }
     }
@@ -276,7 +276,7 @@ public class ResponseAdapter implements HttpServletResponse {
                 throw new IllegalStateException();
             }
             writer = new PrintWriter(new OutputStreamWriter(getOutputStream(),
-                    characterEncoding == null ? CharsetUtil.UTF_8
+                    characterEncoding == null ? Charsets.UTF_8
                             .name() : characterEncoding));
         }
         return writer;

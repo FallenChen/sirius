@@ -8,15 +8,15 @@
 
 package sirius.web.http;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.*;
-import org.jboss.netty.handler.codec.http.multipart.Attribute;
-import org.jboss.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
-import org.jboss.netty.handler.timeout.IdleStateAwareChannelUpstreamHandler;
-import org.jboss.netty.handler.timeout.IdleStateEvent;
+import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.multipart.Attribute;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
+import io.netty.handler.timeout.IdleStateEvent;
+import io.netty.util.AttributeKey;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
@@ -36,13 +36,12 @@ import java.util.List;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08
  */
-class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
+class WebServerHandler extends ChannelDuplexHandler {
 
     private List<WebDispatcher> sortedDispatchers;
     private int numKeepAlive = 5;
-    private boolean readingChunks;
+    private HttpRequest currentRequest;
     private WebContext currentContext;
-
 
     /**
      * Creates a new instance based on a pre sorted list of dispatchers.
@@ -53,35 +52,24 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         this.sortedDispatchers = sortedDispatchers;
     }
 
-    @Override
-    public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        WebServer.openConnections.incrementAndGet();
-    }
+    public static final AttributeKey<CallContext> CALL_CONTEXT_ATTRIBUTE_KEY = AttributeKey.valueOf("sirius.CallContext");
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        if (WebServer.LOG.isFINE() && currentContext != null) {
-            WebServer.LOG.FINE("CLOSE: " + currentContext.getRequestedURI());
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) throws Exception {
+        io.netty.util.Attribute<CallContext> attr = ctx.attr(CALL_CONTEXT_ATTRIBUTE_KEY);
+        if (attr != null) {
+            CallContext.setCurrent(attr.get());
         }
-        cleanup();
-        WebServer.openConnections.decrementAndGet();
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        if (ctx.getAttachment() != null) {
-            CallContext.setCurrent((CallContext) ctx.getAttachment());
-        }
-        if (e.getCause() instanceof ClosedChannelException) {
+        if (e instanceof ClosedChannelException) {
             WebServer.LOG.FINE(e);
-        } else if (e.getCause() instanceof IOException && "Connection reset by peer".equals(e.getCause()
-                                                                                             .getMessage())) {
+        } else if (e.getCause() instanceof IOException && "Connection reset by peer".equals(e
+                .getMessage())) {
             WebServer.LOG.FINE(e);
         } else {
-            Exceptions.handle(WebServer.LOG, e.getCause());
+            Exceptions.handle(WebServer.LOG, e);
             try {
-                if (e.getChannel().isOpen()) {
-                    e.getChannel().close();
+                if (ctx.channel().isOpen()) {
+                    ctx.channel().close();
                 }
             } catch (Throwable t) {
                 Exceptions.ignore(t);
@@ -98,25 +86,37 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         WebContext wc = cc.get(WebContext.class);
         wc.setCtx(ctx);
         wc.setRequest(req);
-        ctx.setAttachment(cc);
+        ctx.attr(CALL_CONTEXT_ATTRIBUTE_KEY).set(cc);
         return wc;
     }
 
     @Override
-    public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) throws Exception {
-        if (ctx.getAttachment() != null) {
-            CallContext.setCurrent((CallContext) ctx.getAttachment());
-            WebContext wc = ((CallContext) ctx.getAttachment()).get(WebContext.class);
-            if (!wc.isLongCall()) {
-                if (WebServer.LOG.isFINE()) {
-                    WebServer.LOG.FINE("IDLE: " + wc.getRequestedURI());
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof IdleStateEvent) {
+            io.netty.util.Attribute<CallContext> attr = ctx.attr(CALL_CONTEXT_ATTRIBUTE_KEY);
+            if (attr != null) {
+                CallContext callContext = attr.get();
+                if (callContext == null) {
+                    ctx.channel().close();
+                    return;
                 }
-                WebServer.idleTimeouts++;
-                if (WebServer.idleTimeouts < 0) {
-                    WebServer.idleTimeouts = 0;
+                CallContext.setCurrent(callContext);
+                WebContext wc = callContext.get(WebContext.class);
+                if (wc == null) {
+                    ctx.channel().close();
+                    return;
                 }
-                e.getChannel().close();
-                return;
+                if (!wc.isLongCall()) {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("IDLE: " + wc.getRequestedURI());
+                    }
+                    WebServer.idleTimeouts++;
+                    if (WebServer.idleTimeouts < 0) {
+                        WebServer.idleTimeouts = 0;
+                    }
+                    ctx.channel().close();
+                    return;
+                }
             }
         }
     }
@@ -134,32 +134,65 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
         return numKeepAlive-- > 0;
     }
 
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+        super.channelReadComplete(ctx);
+    }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        if (readingChunks) {
-            continueChunkedRequest(ctx, e);
-            WebServer.chunks++;
-            if (WebServer.chunks < 0) {
-                WebServer.chunks = 0;
-            }
-            return;
-        } else {
-            handleNewRequest(ctx, e);
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+        cleanup();
+        WebServer.openConnections.decrementAndGet();
+        super.disconnect(ctx, future);
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof HttpRequest) {
             WebServer.requests++;
             if (WebServer.requests < 0) {
                 WebServer.requests = 0;
             }
+
+            currentRequest = (HttpRequest) msg;
+            // Handle a bad request.
+            if (!currentRequest.getDecoderResult().isSuccess()) {
+                signalBadRequest(ctx);
+                return;
+            }
+            boolean chunked = HttpHeaders.Values.CHUNKED.equals(currentRequest.headers().get(HttpHeaders.Names.TRANSFER_ENCODING));
+            handleNewRequest(ctx, currentRequest, chunked);
+        } else if (msg instanceof HttpContent) {
+            if (currentRequest == null) {
+                if (!(msg instanceof LastHttpContent)) {
+                    signalBadRequest(ctx);
+                }
+                return;
+            }
+            continueChunkedRequest(ctx, msg);
+            WebServer.chunks++;
+            if (WebServer.chunks < 0) {
+                WebServer.chunks = 0;
+            }
         }
+    }
+
+    private void signalBadRequest(ChannelHandlerContext ctx) {
+        WebServer.clientErrors++;
+        if (WebServer.clientErrors < 0) {
+            WebServer.clientErrors = 0;
+        }
+        ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST)).addListener(ChannelFutureListener.CLOSE);
+        currentRequest = null;
     }
 
     /*
      * Handles a new request - called once the first chunk of data of a request is available.
      */
-    private void handleNewRequest(ChannelHandlerContext ctx, MessageEvent e) {
+    private void handleNewRequest(ChannelHandlerContext ctx, HttpRequest req, boolean chunked) {
         try {
             cleanup();
-            HttpRequest req = (HttpRequest) e.getMessage();
             if (WebServer.LOG.isFINE()) {
                 WebServer.LOG.FINE("OPEN: " + req.getUri());
             }
@@ -174,57 +207,58 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                         if (WebServer.LOG.isFINE()) {
                             WebServer.LOG.FINE("BLOCK: " + req.getUri());
                         }
-                        ctx.getChannel().close();
+                        ctx.channel().close();
                         return;
                     }
                 }
+
                 if (req.getMethod() == HttpMethod.GET || req.getMethod() == HttpMethod.HEAD || req.getMethod() == HttpMethod.DELETE) {
                     if (HttpHeaders.is100ContinueExpected(req)) {
                         if (WebServer.LOG.isFINE()) {
                             WebServer.LOG.FINE("CONTINUE: " + req.getUri());
                         }
-                        send100Continue(e);
+                        send100Continue(ctx);
                     }
-                    handleGETorHEADorDELETE(req);
+                    handleGETorHEADorDELETE(req, chunked);
                 } else if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.PUT) {
                     if (HttpHeaders.is100ContinueExpected(req)) {
                         if (WebServer.LOG.isFINE()) {
                             WebServer.LOG.FINE("CONTINUE: " + req.getUri());
                         }
-                        send100Continue(e);
+                        send100Continue(ctx);
                     }
-                    handlePOSTandPUT(req);
+                    handlePOSTandPUT(req, chunked);
                 } else {
                     currentContext.respondWith()
-                                  .error(HttpResponseStatus.BAD_REQUEST,
-                                         Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
-                                                       req.getMethod().getName()));
+                            .error(HttpResponseStatus.BAD_REQUEST,
+                                    Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
+                                            req.getMethod().name()));
                 }
             } catch (Throwable t) {
                 currentContext.respondWith()
-                              .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+                        .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
             }
         } catch (Throwable t) {
             Exceptions.handle(WebServer.LOG, t);
             try {
-                ctx.getChannel().close();
+                ctx.channel().close();
             } catch (Exception ex) {
                 Exceptions.ignore(ex);
             }
         }
     }
 
-    private void send100Continue(MessageEvent e) {
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
-        e.getChannel().write(response);
+    private void send100Continue(ChannelHandlerContext e) {
+        HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
+        e.channel().write(response);
     }
 
     /*
      * Handles POST or PUT request - those are the only methods where we expect uploaded content.
      */
-    private boolean handlePOSTandPUT(HttpRequest req) throws Exception {
+    private boolean handlePOSTandPUT(HttpRequest req, boolean chunked) throws Exception {
         try {
-            String contentType = req.getHeader(HttpHeaders.Names.CONTENT_TYPE);
+            String contentType = req.headers().get(HttpHeaders.Names.CONTENT_TYPE);
             if (Strings.isFilled(contentType) && (contentType.startsWith("multipart/form-data") || contentType.startsWith(
                     "application/x-www-form-urlencoded"))) {
                 if (WebServer.LOG.isFINE()) {
@@ -237,18 +271,18 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                     WebServer.LOG.FINE("POST/PUT-DATA: " + req.getUri());
                 }
                 Attribute body = WebServer.getHttpDataFactory().createAttribute(req, "body");
-                body.setContent(req.getContent());
+                if (req instanceof FullHttpRequest) {
+                    body.setContent(((FullHttpRequest) req).content());
+                }
                 currentContext.content = body;
             }
 
         } catch (Throwable ex) {
             currentContext.respondWith()
-                          .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
+                    .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
             return true;
         }
-        if (req.isChunked()) {
-            readingChunks = true;
-        } else {
+        if (!chunked) {
             dispatch();
         }
         return false;
@@ -257,11 +291,11 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     /*
      * Handles GET, HEAD or DELETE requests, where we don't expect any content
      */
-    private boolean handleGETorHEADorDELETE(HttpRequest req) throws Exception {
-        if (req.isChunked()) {
+    private boolean handleGETorHEADorDELETE(HttpRequest req, boolean chunked) throws Exception {
+        if (chunked) {
             currentContext.respondWith()
-                          .error(HttpResponseStatus.BAD_REQUEST,
-                                 "Cannot handle chunked GET, HEAD or DELETE. Use POST or PUT");
+                    .error(HttpResponseStatus.BAD_REQUEST,
+                            "Cannot handle chunked GET, HEAD or DELETE. Use POST or PUT");
             return true;
         }
         dispatch();
@@ -281,36 +315,34 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
     /*
      * Reads another chunk of data for a previously started request
      */
-    private void continueChunkedRequest(ChannelHandlerContext ctx, MessageEvent e) {
-        HttpChunk chunk = (HttpChunk) e.getMessage();
+    private void continueChunkedRequest(ChannelHandlerContext ctx, Object e) {
+        HttpContent chunk = (HttpContent) e;
         try {
             if (currentContext.getPostDecoder() != null) {
                 if (WebServer.LOG.isFINE()) {
                     WebServer.LOG
-                             .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.getContent()
-                                                                                                    .readableBytes() + " bytes");
+                            .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                    .readableBytes() + " bytes");
                 }
                 currentContext.getPostDecoder().offer(chunk);
             } else {
                 if (WebServer.LOG.isFINE()) {
                     WebServer.LOG
-                             .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.getContent()
-                                                                                                    .readableBytes() + " bytes");
+                            .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                    .readableBytes() + " bytes");
                 }
-                currentContext.content.addContent(chunk.getContent(), chunk.isLast());
+                currentContext.content.addContent(chunk.content(), chunk instanceof LastHttpContent);
                 if (!currentContext.content.isInMemory()) {
                     File file = currentContext.content.getFile();
                     checkUploadFileLimits(file);
                 }
             }
-            if (chunk.isLast()) {
-                readingChunks = false;
+            if (chunk instanceof LastHttpContent) {
                 dispatch();
             }
         } catch (Throwable ex) {
-            readingChunks = false;
             currentContext.respondWith()
-                          .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
+                    .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
         }
     }
 
@@ -323,25 +355,25 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                 WebServer.LOG.FINE("Not enough space to handle: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
-                          .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                                 Exceptions.handle()
-                                           .withSystemErrorMessage(
-                                                   "The web server is running out of temporary space to store the upload")
-                                           .to(WebServer.LOG)
-                                           .handle());
+                    .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
+                            Exceptions.handle()
+                                    .withSystemErrorMessage(
+                                            "The web server is running out of temporary space to store the upload")
+                                    .to(WebServer.LOG)
+                                    .handle());
         }
         if (file.length() > WebServer.getMaxUploadSize() && WebServer.getMaxUploadSize() > 0) {
             if (WebServer.LOG.isFINE()) {
                 WebServer.LOG.FINE("Body is too large: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
-                          .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                                 Exceptions.handle()
-                                           .withSystemErrorMessage(
-                                                   "The uploaded file exceeds the maximal upload size of %d bytes",
-                                                   WebServer.getMaxUploadSize())
-                                           .to(WebServer.LOG)
-                                           .handle());
+                    .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
+                            Exceptions.handle()
+                                    .withSystemErrorMessage(
+                                            "The uploaded file exceeds the maximal upload size of %d bytes",
+                                            WebServer.getMaxUploadSize())
+                                    .to(WebServer.LOG)
+                                    .handle());
         }
     }
 
@@ -359,6 +391,7 @@ class WebServerHandler extends IdleStateAwareChannelUpstreamHandler {
                     if (WebServer.LOG.isFINE()) {
                         WebServer.LOG.FINE("DISPATCHED: " + currentContext.getRequestedURI() + " to " + wd);
                     }
+                    currentRequest = null;
                     return;
                 }
             } catch (Exception e) {
