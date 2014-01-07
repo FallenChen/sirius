@@ -668,12 +668,10 @@ public class Response {
             commit(response);
 
             // Write the initial line and the header.
-            ctx.channel().write(response);
-
+            ctx.write(response);
             // Write the content.
-            ChannelFuture writeFuture = ctx.channel()
-                                           .writeAndFlush(new ChunkedInputAdapter(new ChunkedStream(urlConnection.getInputStream(),
-                                                                                                    8192)));
+            ctx.write(new ChunkedInputAdapter(new ChunkedStream(urlConnection.getInputStream(), 8192)));
+            ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
             complete(writeFuture);
         } catch (Throwable e) {
             internalServerError(e);
