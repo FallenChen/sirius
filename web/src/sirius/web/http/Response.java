@@ -13,8 +13,12 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Sets;
 import com.ning.http.client.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.Cookie;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -40,6 +44,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.URLConnection;
+import java.nio.CharBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -200,10 +205,10 @@ public class Response {
     private ChannelFuture commit(HttpResponse response, boolean flush) {
         if (wc.responseCommitted) {
             throw Exceptions.handle()
-                    .to(WebServer.LOG)
-                    .error(new IllegalStateException())
-                    .withSystemErrorMessage("Response for %s was already committed!", wc.getRequestedURI())
-                    .handle();
+                            .to(WebServer.LOG)
+                            .error(new IllegalStateException())
+                            .withSystemErrorMessage("Response for %s was already committed!", wc.getRequestedURI())
+                            .handle();
         }
         if (WebServer.LOG.isFINE()) {
             WebServer.LOG.FINE("COMMITTING: " + wc.getRequestedURI());
@@ -283,6 +288,9 @@ public class Response {
         long ifModifiedSinceDateSeconds = wc.getDateHeader(HttpHeaders.Names.IF_MODIFIED_SINCE) / 1000;
         if (ifModifiedSinceDateSeconds > 0 && lastModifiedInMillis > 0) {
             if (ifModifiedSinceDateSeconds >= lastModifiedInMillis / 1000) {
+                setDateAndCacheHeaders(lastModifiedInMillis,
+                                       cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
+                                       isPrivate);
                 status(HttpResponseStatus.NOT_MODIFIED);
                 return false;
             }
@@ -434,7 +442,6 @@ public class Response {
      */
     public void status(HttpResponseStatus status) {
         HttpResponse response = createFullResponse(status, true, Unpooled.EMPTY_BUFFER);
-        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         complete(commit(response));
     }
 
@@ -447,7 +454,6 @@ public class Response {
     public void redirectTemporarily(String url) {
         HttpResponse response = createFullResponse(HttpResponseStatus.TEMPORARY_REDIRECT, true, Unpooled.EMPTY_BUFFER);
         response.headers().set(HttpHeaders.Names.LOCATION, url);
-        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         complete(commit(response));
     }
 
@@ -459,7 +465,6 @@ public class Response {
     public void redirectPermanently(String url) {
         HttpResponse response = createFullResponse(HttpResponseStatus.MOVED_PERMANENTLY, true, Unpooled.EMPTY_BUFFER);
         response.headers().set(HttpHeaders.Names.LOCATION, url);
-        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, 0);
         complete(commit(response));
     }
 
@@ -500,10 +505,11 @@ public class Response {
             return;
         }
         try {
-            long fileLength = raf.length();
+            final long fileLength = raf.length();
 
             addHeaderIfNotExists(HttpHeaders.Names.CONTENT_LENGTH, fileLength);
-            setContentTypeHeader(name != null ? name : file.getName());
+            String contentType = MimeHelper.guessMimeType(name != null ? name : file.getName());
+            addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, contentType);
             setDateAndCacheHeaders(file.lastModified(), cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
             if (name != null) {
                 setContentDisposition(name, download);
@@ -512,14 +518,14 @@ public class Response {
 
             commit(response, false);
 
-            // Write the content.
-            if (ctx.channel().pipeline().get(SslHandler.class) != null) {
-                // Cannot use zero-copy with HTTPS.
-                ctx.channel().write(new ChunkedFile(raf, 0, fileLength, 8192));
+            if (isSSL() || shouldBeCompressed(contentType)) {
+                // Send chunks of data which can be compressed
+                ctx.write(new ChunkedInputAdapter(new ChunkedFile(raf, 0, fileLength, 8192)));
             } else {
-                // No encryption - use zero-copy.
-                final FileRegion region = new DefaultFileRegion(raf.getChannel(), 0, fileLength);
-                ctx.channel().write(region);
+                // Forcefully disable the content compressor as it cannot compress a DefaultFileRegion
+                response.headers().set(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
+                // Send file using zero copy approach!
+                ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
             }
 
             // Write the end marker
@@ -535,6 +541,25 @@ public class Response {
         } catch (Throwable e) {
             internalServerError(e);
         }
+    }
+
+    /*
+     * Determines if the current request should be compressed or not
+     */
+    private boolean shouldBeCompressed(String contentType) {
+        String acceptEncoding = wc.getRequest().headers().get(HttpHeaders.Names.ACCEPT_ENCODING);
+        if (acceptEncoding == null || (!acceptEncoding.contains(HttpHeaders.Values.GZIP) && !acceptEncoding.contains(
+                HttpHeaders.Values.DEFLATE))) {
+            return false;
+        }
+        return MimeHelper.isCompressable(contentType);
+    }
+
+    /*
+     * Determines if we're running on SSL
+     */
+    private boolean isSSL() {
+        return ctx.channel().pipeline().get(SslHandler.class) != null;
     }
 
     /*
@@ -581,7 +606,7 @@ public class Response {
         }
         if (lastModifiedMillis > 0 && (keySet == null || !keySet.contains(HttpHeaders.Names.LAST_MODIFIED))) {
             addHeaderIfNotExists(HttpHeaders.Names.
-                    LAST_MODIFIED, dateFormatter.format(new Date(lastModifiedMillis)));
+                                         LAST_MODIFIED, dateFormatter.format(new Date(lastModifiedMillis)));
         }
     }
 
@@ -601,9 +626,9 @@ public class Response {
      */
     private void setContentDisposition(String name, boolean download) {
         addHeaderIfNotExists("Content-Disposition",
-                (download ? "attachment;" : "inline;") + "filename=\"" + name.replaceAll(
-                        "[^A-Za-z0-9\\-_\\.]",
-                        "_") + "\"");
+                             (download ? "attachment;" : "inline;") + "filename=\"" + name.replaceAll(
+                                     "[^A-Za-z0-9\\-_\\.]",
+                                     "_") + "\"");
     }
 
     /*
@@ -629,8 +654,8 @@ public class Response {
             HttpHeaders.setContentLength(response, fileLength);
             setContentTypeHeader(name != null ? name : urlConnection.getURL().getFile());
             setDateAndCacheHeaders(urlConnection.getLastModified(),
-                    cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
-                    isPrivate);
+                                   cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
+                                   isPrivate);
             if (name != null) {
                 setContentDisposition(name, download);
             }
@@ -646,7 +671,9 @@ public class Response {
             ctx.channel().write(response);
 
             // Write the content.
-            ChannelFuture writeFuture = ctx.channel().writeAndFlush(new ChunkedStream(urlConnection.getInputStream(), 8192));
+            ChannelFuture writeFuture = ctx.channel()
+                                           .writeAndFlush(new ChunkedInputAdapter(new ChunkedStream(urlConnection.getInputStream(),
+                                                                                                    8192)));
             complete(writeFuture);
         } catch (Throwable e) {
             internalServerError(e);
@@ -710,7 +737,7 @@ public class Response {
                 content = Rythm.renderIfTemplateExists("view/errors/default.html", status, message);
             }
             setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
-            ByteBuf channelBuffer = Unpooled.copiedBuffer(content, Charsets.UTF_8);
+            ByteBuf channelBuffer = wrapUTF8String(content);
             setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(status, false, channelBuffer);
             completeAndClose(commit(response));
@@ -725,13 +752,19 @@ public class Response {
             if (!ctx.channel().isWritable()) {
                 return;
             }
-            ByteBuf channelBuffer = Unpooled.copiedBuffer(Exceptions.handle(WebServer.LOG, e).getMessage(),
-                    Charsets.UTF_8);
+            ByteBuf channelBuffer = wrapUTF8String(Exceptions.handle(WebServer.LOG, e).getMessage());
             HttpResponse response = createFullResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, false, channelBuffer);
             response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
             HttpHeaders.setContentLength(response, channelBuffer.readableBytes());
             completeAndClose(commit(response));
         }
+    }
+
+    /*
+     * Converts a string into a ByteBuf
+     */
+    private ByteBuf wrapUTF8String(String content) {
+        return ByteBufUtil.encodeString(ctx.alloc(), CharBuffer.wrap(content), Charsets.UTF_8);
     }
 
     /**
@@ -747,9 +780,9 @@ public class Response {
     public void direct(HttpResponseStatus status, String content) {
         try {
             setDateAndCacheHeaders(System.currentTimeMillis(),
-                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                    isPrivate);
-            ByteBuf channelBuffer = Unpooled.copiedBuffer(content, Charsets.UTF_8);
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
+            ByteBuf channelBuffer = wrapUTF8String(content);
             setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(status, true, channelBuffer);
             complete(commit(response));
@@ -779,10 +812,10 @@ public class Response {
             content = Rythm.render(name, params);
         } catch (Throwable e) {
             throw Exceptions.handle()
-                    .to(RythmConfig.LOG)
-                    .error(e)
-                    .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
-                    .handle();
+                            .to(RythmConfig.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
+                            .handle();
         }
         try {
             if (name.endsWith("html")) {
@@ -791,9 +824,9 @@ public class Response {
                 setContentTypeHeader(name);
             }
             setDateAndCacheHeaders(System.currentTimeMillis(),
-                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                    isPrivate);
-            ByteBuf channelBuffer = Unpooled.copiedBuffer(content, Charsets.UTF_8);
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
+            ByteBuf channelBuffer = wrapUTF8String(content);
             setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, channelBuffer);
             complete(commit(response));
@@ -833,17 +866,17 @@ public class Response {
             }
         } catch (Throwable e) {
             throw Exceptions.handle()
-                    .to(RythmConfig.LOG)
-                    .error(e)
-                    .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
-                    .handle();
+                            .to(RythmConfig.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
+                            .handle();
         }
         try {
             setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             setDateAndCacheHeaders(System.currentTimeMillis(),
-                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                    isPrivate);
-            ByteBuf channelBuffer = Unpooled.copiedBuffer(content, Charsets.UTF_8);
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
+            ByteBuf channelBuffer = wrapUTF8String(content);
             setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, channelBuffer);
             complete(commit(response));
@@ -856,9 +889,9 @@ public class Response {
             true).build());
 
     private static final Set<String> NON_TUNNELLED_HEADERS = Sets.newHashSet(HttpHeaders.Names.TRANSFER_ENCODING,
-            HttpHeaders.Names.SERVER,
-            HttpHeaders.Names.CONTENT_ENCODING,
-            HttpHeaders.Names.CONTENT_LENGTH);
+                                                                             HttpHeaders.Names.SERVER,
+                                                                             HttpHeaders.Names.CONTENT_ENCODING,
+                                                                             HttpHeaders.Names.CONTENT_LENGTH);
 
     /**
      * Tunnels the contents retrieved from the given URL as result of this response.
@@ -885,6 +918,7 @@ public class Response {
                 brb.addHeader(HttpHeaders.Names.RANGE, range);
             }
 
+
             // Tunnel it through...
             brb.execute(new AsyncHandler<String>() {
 
@@ -895,11 +929,13 @@ public class Response {
                     }
                     FluentCaseInsensitiveStringsMap headers = h.getHeaders();
 
+
                     boolean contentTypeFound = false;
                     long lastModified = 0;
 
                     for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                        if ((Sirius.isDev() || !entry.getKey().startsWith("x-")) && !NON_TUNNELLED_HEADERS.contains(entry.getKey())) {
+                        if ((Sirius.isDev() || !entry.getKey().startsWith("x-")) && !NON_TUNNELLED_HEADERS.contains(
+                                entry.getKey())) {
                             for (String value : entry.getValue()) {
                                 addHeader(entry.getKey(), value);
                                 if (HttpHeaders.Names.LAST_MODIFIED.equals(entry.getKey())) {
@@ -935,7 +971,11 @@ public class Response {
                 public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
                     try {
                         if (WebServer.LOG.isFINE()) {
-                            WebServer.LOG.FINE("Tunnel - CHUNK: %s for %s (Last: %s)", bodyPart, wc.getRequestedURI(), bodyPart.isLast());
+                            WebServer.LOG
+                                     .FINE("Tunnel - CHUNK: %s for %s (Last: %s)",
+                                           bodyPart,
+                                           wc.getRequestedURI(),
+                                           bodyPart.isLast());
                         }
                         if (!ctx.channel().isOpen()) {
                             return STATE.ABORT;
@@ -944,23 +984,25 @@ public class Response {
                         if (wc.responseCommitted) {
                             if (bodyPart.isLast()) {
                                 ctx.channel()
-                                        .write(new DefaultHttpContent(Unpooled.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                                   .write(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
                                 ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
                                 complete(writeFuture);
                             } else {
                                 ctx.channel()
-                                        .writeAndFlush(new DefaultHttpContent(Unpooled.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                                   .writeAndFlush(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
                             }
                         } else {
                             if (bodyPart.isLast()) {
-                                HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, Unpooled.copiedBuffer(bodyPart.getBodyByteBuffer()));
+                                HttpResponse response = createFullResponse(HttpResponseStatus.OK,
+                                                                           true,
+                                                                           Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer()));
                                 HttpHeaders.setContentLength(response, bodyPart.getBodyByteBuffer().remaining());
                                 complete(commit(response));
                             } else {
                                 HttpResponse response = createChunkedResponse(HttpResponseStatus.OK, true);
                                 commit(response, false);
                                 ctx.channel()
-                                        .writeAndFlush(new DefaultHttpContent(Unpooled.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                                   .writeAndFlush(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
                             }
                         }
                         return STATE.CONTINUE;
@@ -976,7 +1018,10 @@ public class Response {
                 @Override
                 public STATE onStatusReceived(com.ning.http.client.HttpResponseStatus httpResponseStatus) throws Exception {
                     if (WebServer.LOG.isFINE()) {
-                        WebServer.LOG.FINE("Tunnel - STATUS %s for %s", httpResponseStatus.getStatusCode(), wc.getRequestedURI());
+                        WebServer.LOG
+                                 .FINE("Tunnel - STATUS %s for %s",
+                                       httpResponseStatus.getStatusCode(),
+                                       wc.getRequestedURI());
                     }
                     if (httpResponseStatus.getStatusCode() == HttpResponseStatus.OK.code()) {
                         return STATE.CONTINUE;
@@ -1008,7 +1053,10 @@ public class Response {
                 @Override
                 public void onThrowable(Throwable t) {
                     if (WebServer.LOG.isFINE()) {
-                        WebServer.LOG.FINE("Tunnel - ERROR %s for %s", t.getMessage() + " (" + t.getMessage() + ")", wc.getRequestedURI());
+                        WebServer.LOG
+                                 .FINE("Tunnel - ERROR %s for %s",
+                                       t.getMessage() + " (" + t.getMessage() + ")",
+                                       wc.getRequestedURI());
                     }
                     if (!(t instanceof ClosedChannelException)) {
                         error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
@@ -1032,10 +1080,10 @@ public class Response {
     public StructuredOutput json() {
         String callback = wc.get("callback").getString();
         String encoding = wc.get("encoding")
-                .asString(Strings.isEmpty(callback) ? Charsets.UTF_8.name() : Charsets.ISO_8859_1.name());
+                            .asString(Strings.isEmpty(callback) ? Charsets.UTF_8.name() : Charsets.ISO_8859_1.name());
         return new JSONStructuredOutput(outputStream(HttpResponseStatus.OK, "application/json;charset=" + encoding),
-                callback,
-                encoding);
+                                        callback,
+                                        encoding);
     }
 
     /**
@@ -1066,7 +1114,7 @@ public class Response {
 
             private void ensureCapacity(int length) throws IOException {
                 if (buffer == null) {
-                    buffer = Unpooled.buffer(BUFFER_SIZE);
+                    buffer = ctx.alloc().buffer(BUFFER_SIZE);
                 }
                 if (buffer.writableBytes() < length) {
                     flushBuffer(false);
@@ -1099,15 +1147,15 @@ public class Response {
                         complete(ctx.writeAndFlush(new DefaultLastHttpContent()));
                     } else {
                         waitAndClearBuffer(ctx.writeAndFlush(new DefaultHttpContent(buffer)));
-                        buffer = Unpooled.buffer(BUFFER_SIZE);
+                        buffer = ctx.alloc().buffer(BUFFER_SIZE);
                     }
                 } else {
                     if (Strings.isFilled(contentType)) {
                         addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, contentType);
                     }
                     setDateAndCacheHeaders(System.currentTimeMillis(),
-                            cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                            isPrivate);
+                                           cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                           isPrivate);
                     if (name != null) {
                         setContentDisposition(name, download);
                     }
@@ -1125,7 +1173,7 @@ public class Response {
                         HttpResponse response = createChunkedResponse(HttpResponseStatus.OK, true);
                         commit(response, false);
                         waitAndClearBuffer(ctx.channel().writeAndFlush(new DefaultHttpContent(buffer)));
-                        buffer = Unpooled.buffer(BUFFER_SIZE);
+                        buffer = ctx.alloc().buffer(BUFFER_SIZE);
                     }
                 }
             }
@@ -1178,6 +1226,9 @@ public class Response {
                 open = false;
                 super.close();
                 flushBuffer(true);
+                if (buffer != null && buffer.refCnt() > 0) {
+                    buffer.release();
+                }
             }
         };
     }

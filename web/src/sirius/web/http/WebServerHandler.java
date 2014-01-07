@@ -62,7 +62,7 @@ class WebServerHandler extends ChannelDuplexHandler {
         }
         if (e instanceof ClosedChannelException) {
             WebServer.LOG.FINE(e);
-        } else if (e.getCause() instanceof IOException && "Connection reset by peer".equals(e
+        } else if (e instanceof IOException && "Connection reset by peer".equals(e
                 .getMessage())) {
             WebServer.LOG.FINE(e);
         } else {
@@ -154,28 +154,36 @@ class WebServerHandler extends ChannelDuplexHandler {
             if (msg instanceof HttpRequest) {
                 handleRequest(ctx, (HttpRequest) msg);
             } else if (msg instanceof LastHttpContent) {
-                if (currentRequest == null) {
-                    WebServer.LOG.FINE("Ignoring CHUNK without request: " + msg);
-                    return;
+                try {
+                    if (currentRequest == null) {
+                        WebServer.LOG.FINE("Ignoring CHUNK without request: " + msg);
+                        return;
+                    }
+                    processContent(ctx, (HttpContent) msg);
+                } finally {
+              //      ((HttpContent) msg).release();
                 }
-                processContent(ctx, (HttpContent) msg);
                 dispatch();
             } else if (msg instanceof HttpContent) {
-                if (currentRequest == null) {
-                    WebServer.LOG.FINE("Ignoring CHUNK without request: " + msg);
-                    return;
+                try {
+                    if (currentRequest == null) {
+                        WebServer.LOG.FINE("Ignoring CHUNK without request: " + msg);
+                        return;
+                    }
+                    if (!(currentRequest.getMethod() == HttpMethod.POST) && !(currentRequest.getMethod() == HttpMethod.POST)) {
+                        currentContext.respondWith()
+                                .error(HttpResponseStatus.BAD_REQUEST, "Only POST or PUT may sent chunked data");
+                        currentRequest = null;
+                        return;
+                    }
+                    WebServer.chunks++;
+                    if (WebServer.chunks < 0) {
+                        WebServer.chunks = 0;
+                    }
+                    processContent(ctx, (HttpContent) msg);
+                } finally {
+            //        ((HttpContent) msg).release();
                 }
-                if (!(currentRequest.getMethod() == HttpMethod.POST) && !(currentRequest.getMethod() == HttpMethod.POST)) {
-                    currentContext.respondWith()
-                            .error(HttpResponseStatus.BAD_REQUEST, "Only POST or PUT may sent chunked data");
-                    currentRequest = null;
-                    return;
-                }
-                WebServer.chunks++;
-                if (WebServer.chunks < 0) {
-                    WebServer.chunks = 0;
-                }
-                processContent(ctx, (HttpContent) msg);
             }
         } catch (Throwable t) {
             if (currentRequest != null) {

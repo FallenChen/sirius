@@ -6,6 +6,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.joda.time.Duration;
 import sirius.kernel.commons.PriorityCollector;
@@ -52,7 +53,8 @@ public class WebServerInitializer extends ChannelInitializer<SocketChannel> {
                             idleTimeout.getMillis(),
                             TimeUnit.MILLISECONDS));
         }
-        pipeline.addLast("deflater", new HttpContentCompressor());
+        pipeline.addLast("compressor", new SmartHttpContentCompressor());
+        pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
         pipeline.addLast("handler", new WebServerHandler(getSortedDispatchers()));
     }
 

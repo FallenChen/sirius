@@ -8,10 +8,12 @@
 
 package sirius.web.http;
 
+import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import sirius.kernel.commons.Strings;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -54,7 +56,51 @@ public class MimeHelper {
      */
     public static final String TEXT_JAVASCRIPT = "text/javascript".intern();
 
+    /**
+     * Mime type of mpeg sound files (MP3)
+     */
+    private static final String AUDIO_MPEG = "audio/mpeg";
+
+    /**
+     * Mime type of mpeg video files
+     */
+    private static final String VIDEO_MPEG = "video/mpeg";
+
+    /**
+     * Mime type of ogg vorbis video files
+     */
+    private static final String VIDEO_OGG = "video/ogg";
+
+    /**
+     * Mime type of mpeg 4 video files
+     */
+    private static final String VIDEO_MP4 = "video/mp4";
+
+    /**
+     * Mime type of zip files
+     */
+    private static final String APPLICATION_ZIP = "application/zip";
+
+    /**
+     * Mime type of quicktime videos
+     */
+    private static final String VIDEO_QUICKTIME = "video/quicktime";
+
     private static final Map<String, String> mimeTable = new TreeMap<String, String>();
+
+    /*
+     * The list is limited to the most common mime types known to be uncompressable. Compressing already compressed
+     * content does not harm other than wasting some CPU cycles.
+     */
+    private static final Set<String> UNCOMPRESSABLE = Sets.newHashSet(IMAGE_PNG,
+                                                                      IMAGE_JPEG,
+                                                                      APPLICATION_PDF,
+                                                                      VIDEO_MP4,
+                                                                      VIDEO_MPEG,
+                                                                      VIDEO_OGG,
+                                                                      VIDEO_QUICKTIME,
+                                                                      APPLICATION_ZIP,
+                                                                      AUDIO_MPEG);
 
     static {
         mimeTable.put("ai", "application/postscript");
@@ -133,22 +179,22 @@ public class MimeHelper {
         mimeTable.put("mid", "audio/midi");
         mimeTable.put("midi", "audio/midi");
         mimeTable.put("mif", "application/vnd.mif");
-        mimeTable.put("mov", "video/quicktime");
+        mimeTable.put("mov", VIDEO_QUICKTIME);
         mimeTable.put("movie", "video/x-sgi-movie");
-        mimeTable.put("mp2", "audio/mpeg");
-        mimeTable.put("mp3", "audio/mpeg");
-        mimeTable.put("mp4", "video/mp4");
-        mimeTable.put("mpe", "video/mpeg");
-        mimeTable.put("mpeg", "video/mpeg");
-        mimeTable.put("mpg", "video/mpeg");
-        mimeTable.put("mpga", "audio/mpeg");
+        mimeTable.put("mp2", AUDIO_MPEG);
+        mimeTable.put("mp3", AUDIO_MPEG);
+        mimeTable.put("mp4", VIDEO_MP4);
+        mimeTable.put("mpe", VIDEO_MPEG);
+        mimeTable.put("mpeg", VIDEO_MPEG);
+        mimeTable.put("mpg", VIDEO_MPEG);
+        mimeTable.put("mpga", AUDIO_MPEG);
         mimeTable.put("ms", "application/x-troff-ms");
         mimeTable.put("msh", "model/mesh");
         mimeTable.put("mxu", "video/vnd.mpegurl");
         mimeTable.put("nc", "application/x-netcdf");
         mimeTable.put("oda", "application/oda");
-        mimeTable.put("ogg", "video/ogg");
-        mimeTable.put("ogv", "video/ogg");
+        mimeTable.put("ogg", VIDEO_OGG);
+        mimeTable.put("ogv", VIDEO_OGG);
         mimeTable.put("pbm", "image/x-portable-bitmap");
         mimeTable.put("pct", "image/pict");
         mimeTable.put("pdb", "chemical/x-pdb");
@@ -164,7 +210,7 @@ public class MimeHelper {
         mimeTable.put("ppm", "image/x-portable-pixmap");
         mimeTable.put("ppt", "application/vnd.ms-powerpoint");
         mimeTable.put("ps", "application/postscript");
-        mimeTable.put("qt", "video/quicktime");
+        mimeTable.put("qt", VIDEO_QUICKTIME);
         mimeTable.put("qti", "image/x-quicktime");
         mimeTable.put("qtif", "image/x-quicktime");
         mimeTable.put("ra", "audio/x-pn-realaudio");
@@ -231,7 +277,7 @@ public class MimeHelper {
         mimeTable.put("xul", "application/vnd.mozilla.xul+xml");
         mimeTable.put("xwd", "image/x-xwindowdump");
         mimeTable.put("xyz", "chemical/x-xyz");
-        mimeTable.put("zip", "application/zip");
+        mimeTable.put("zip", APPLICATION_ZIP);
 
     }
 
@@ -278,5 +324,19 @@ public class MimeHelper {
         } else {
             return result;
         }
+    }
+
+    /**
+     * Determines if it is recommended to compress data of the given mime type.
+     * <p>
+     * It isn't very useful to compress JPEG or PNG files, as they are already compressed. This method is very
+     * optimistic: If the contentType is <tt>null</tt> or unknown it is considered compressable.
+     * </p>
+     *
+     * @param contentType the mime type to check
+     * @return <tt>true</tt> if the mime type is recognized as compressable, <tt>false</tt> otherwise
+     */
+    public static boolean isCompressable(String contentType) {
+        return contentType == null ? true : !UNCOMPRESSABLE.contains(contentType);
     }
 }

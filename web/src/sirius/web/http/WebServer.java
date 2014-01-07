@@ -18,6 +18,8 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.DiskAttribute;
 import io.netty.handler.codec.http.multipart.DiskFileUpload;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.util.ResourceLeakDetector;
+import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
@@ -257,6 +259,11 @@ public class WebServer implements Lifecycle, MetricProvider {
             LOG.INFO("Binding netty to %s", bindAddress);
         }
 
+        if (Sirius.isDev()) {
+            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+            LOG.INFO("Enabling PARANOID resource leak detection...");
+        }
+
         // Setup disk handling.
         DiskFileUpload.deleteOnExitTemporaryFile = true;
         DiskFileUpload.baseDirectory = null;
@@ -270,12 +277,12 @@ public class WebServer implements Lifecycle, MetricProvider {
         bootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(ctx.wire(new WebServerInitializer()))
-                // At mose have 128 connection waiting to be "connected" - drop everything else...
+                        // At mose have 128 connection waiting to be "connected" - drop everything else...
                 .option(ChannelOption.SO_BACKLOG, 128)
-                // Send a KEEPALIVE packet every 2h and expect and ACK on the TCP layer
+                        // Send a KEEPALIVE packet every 2h and expect and ACK on the TCP layer
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
-                // Tell the kernel not to buffer our data - we're quite aware of what we're doing and
-                // will not create "mini writes" anyway
+                        // Tell the kernel not to buffer our data - we're quite aware of what we're doing and
+                        // will not create "mini writes" anyway
                 .childOption(ChannelOption.TCP_NODELAY, true);
 
         // Bind and start to accept incoming connections.
