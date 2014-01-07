@@ -126,7 +126,7 @@ public class WebContext {
     /*
      * Determines if the client session was modified and should be re-set via a cookie
      */
-    private boolean sessionModified;
+    private volatile boolean sessionModified;
 
     /*
      * Contains the decoded language as two-letter code
@@ -141,7 +141,12 @@ public class WebContext {
     /*
      * Used by Response - but stored here, since a new Response might be created....
      */
-    protected boolean responseCommitted;
+    protected volatile boolean responseCommitted;
+
+    /*
+     * Used by Response - but stored here, since a new Response might be created....
+     */
+    protected volatile boolean responseCompleted;
 
     /*
      * Invoked once the call is completely handled

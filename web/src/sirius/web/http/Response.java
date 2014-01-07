@@ -134,6 +134,7 @@ public class Response {
 
     private DefaultHttpResponse createChunkedResponse(HttpResponseStatus status, boolean keepalive) {
         DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+        response.headers().set(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
         setupResponse(status, keepalive, response);
         return response;
     }
@@ -222,6 +223,11 @@ public class Response {
      * Completes the response and closes the underlying channel if necessary
      */
     private void complete(ChannelFuture future, final boolean keepalive) {
+        if (wc.responseCompleted) {
+            WebServer.LOG.FINE("Response for %s was already completed!", wc.getRequestedURI());
+            return;
+        }
+        wc.responseCompleted = true;
         if (WebServer.LOG.isFINE()) {
             WebServer.LOG.FINE("CLOSING: " + wc.getRequestedURI());
         }
@@ -504,18 +510,20 @@ public class Response {
             }
             HttpResponse response = createChunkedResponse(HttpResponseStatus.OK, true);
 
-            commit(response);
+            commit(response, false);
 
             // Write the content.
-            ChannelFuture writeFuture;
             if (ctx.channel().pipeline().get(SslHandler.class) != null) {
                 // Cannot use zero-copy with HTTPS.
-                writeFuture = ctx.channel().write(new ChunkedFile(raf, 0, fileLength, 8192));
+                ctx.channel().write(new ChunkedFile(raf, 0, fileLength, 8192));
             } else {
                 // No encryption - use zero-copy.
                 final FileRegion region = new DefaultFileRegion(raf.getChannel(), 0, fileLength);
-                writeFuture = ctx.channel().writeAndFlush(region);
+                ctx.channel().write(region);
             }
+
+            // Write the end marker
+            ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
             // Close file once completed
             writeFuture.addListener(new ChannelFutureListener() {
                 @Override
@@ -722,7 +730,6 @@ public class Response {
             HttpResponse response = createFullResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, false, channelBuffer);
             response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8");
             HttpHeaders.setContentLength(response, channelBuffer.readableBytes());
-            ;
             completeAndClose(commit(response));
         }
     }
@@ -883,13 +890,16 @@ public class Response {
 
                 @Override
                 public AsyncHandler.STATE onHeadersReceived(HttpResponseHeaders h) throws Exception {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("Tunnel - HEADERS for %s", wc.getRequestedURI());
+                    }
                     FluentCaseInsensitiveStringsMap headers = h.getHeaders();
 
                     boolean contentTypeFound = false;
                     long lastModified = 0;
 
                     for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                        if (!entry.getKey().startsWith("x-") && !NON_TUNNELLED_HEADERS.contains(entry.getKey())) {
+                        if ((Sirius.isDev() || !entry.getKey().startsWith("x-")) && !NON_TUNNELLED_HEADERS.contains(entry.getKey())) {
                             for (String value : entry.getValue()) {
                                 addHeader(entry.getKey(), value);
                                 if (HttpHeaders.Names.LAST_MODIFIED.equals(entry.getKey())) {
@@ -924,6 +934,9 @@ public class Response {
                 @Override
                 public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
                     try {
+                        if (WebServer.LOG.isFINE()) {
+                            WebServer.LOG.FINE("Tunnel - CHUNK: %s for %s (Last: %s)", bodyPart, wc.getRequestedURI(), bodyPart.isLast());
+                        }
                         if (!ctx.channel().isOpen()) {
                             return STATE.ABORT;
                         }
@@ -931,8 +944,9 @@ public class Response {
                         if (wc.responseCommitted) {
                             if (bodyPart.isLast()) {
                                 ctx.channel()
-                                        .writeAndFlush(new DefaultHttpContent(Unpooled.copiedBuffer(bodyPart.getBodyByteBuffer())));
-                                complete(ctx.channel().write(new DefaultLastHttpContent()));
+                                        .write(new DefaultHttpContent(Unpooled.copiedBuffer(bodyPart.getBodyByteBuffer())));
+                                ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+                                complete(writeFuture);
                             } else {
                                 ctx.channel()
                                         .writeAndFlush(new DefaultHttpContent(Unpooled.copiedBuffer(bodyPart.getBodyByteBuffer())));
@@ -961,6 +975,9 @@ public class Response {
 
                 @Override
                 public STATE onStatusReceived(com.ning.http.client.HttpResponseStatus httpResponseStatus) throws Exception {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("Tunnel - STATUS %s for %s", httpResponseStatus.getStatusCode(), wc.getRequestedURI());
+                    }
                     if (httpResponseStatus.getStatusCode() == HttpResponseStatus.OK.code()) {
                         return STATE.CONTINUE;
                     }
@@ -974,16 +991,25 @@ public class Response {
 
                 @Override
                 public String onCompleted() throws Exception {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("Tunnel - COMPLETE for %s", wc.getRequestedURI());
+                    }
                     if (!wc.responseCommitted) {
                         HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, Unpooled.EMPTY_BUFFER);
                         HttpHeaders.setContentLength(response, 0);
                         complete(commit(response));
+                    } else if (!wc.responseCompleted) {
+                        ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+                        complete(writeFuture);
                     }
                     return "";
                 }
 
                 @Override
                 public void onThrowable(Throwable t) {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("Tunnel - ERROR %s for %s", t.getMessage() + " (" + t.getMessage() + ")", wc.getRequestedURI());
+                    }
                     if (!(t instanceof ClosedChannelException)) {
                         error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
                     }

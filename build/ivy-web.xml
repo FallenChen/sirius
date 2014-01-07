@@ -3,6 +3,14 @@
 <dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.13" conf="compile" />
 <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="compile" />
 <dependency org="com.ning" name="async-http-client" rev="1.7.19" conf="compile">
+<!--
+    We better live with 2 netty versions (netty 3.6.6 for this) and netty 4.0 as our server base.
+    Otherwise, async-http-client falls back to the JDK implementation which screws up big.
     <exclude name="netty" conf="compile" />
+
+    As the netty guys had fun renaming each package and a bunch of classes anyway, there are not conflicts
+    in doing so. Therefore DO NOT ENABLE the exclude above!
+    async-http-client is used by Response#tunnel(...)
+-->
 </dependency>
 <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.7.5" conf="compile" />
