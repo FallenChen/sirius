@@ -23,7 +23,10 @@ class LowLevelHandler extends ChannelDuplexHandler {
     static LowLevelHandler INSTANCE = new LowLevelHandler();
 
     @Override
-    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise future) throws Exception {
+    public void connect(ChannelHandlerContext ctx,
+                        SocketAddress remoteAddress,
+                        SocketAddress localAddress,
+                        ChannelPromise future) throws Exception {
         WebServer.connections++;
         if (WebServer.connections < 0) {
             WebServer.connections = 0;

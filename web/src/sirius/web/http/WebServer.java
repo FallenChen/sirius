@@ -117,11 +117,11 @@ public class WebServer implements Lifecycle, MetricProvider {
                 filterRanges = IPRange.paraseRangeSet(ipFilter);
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .to(LOG)
-                        .error(e)
-                        .withSystemErrorMessage(
-                                "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
-                        .handle();
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage(
+                                  "Error parsing config value: 'http.firewall.filterIPs': %s (%s). Defaulting to localhost!")
+                          .handle();
                 filterRanges = IPRange.LOCALHOST;
             }
         }
@@ -156,10 +156,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 }
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .to(LOG)
-                        .error(e)
-                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
-                        .handle();
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.trustedIPs': %s (%s)")
+                          .handle();
                 trustedRanges = IPRange.LOCALHOST;
             }
         }
@@ -184,10 +184,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                 proxyRanges = IPRange.paraseRangeSet(proxyIPs);
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .to(LOG)
-                        .error(e)
-                        .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
-                        .handle();
+                          .to(LOG)
+                          .error(e)
+                          .withSystemErrorMessage("Error parsing config value: 'http.firewall.proxyIPs': %s (%s)")
+                          .handle();
                 proxyRanges = IPRange.NO_FILTER;
             }
         }
@@ -275,7 +275,7 @@ public class WebServer implements Lifecycle, MetricProvider {
         workerGroup = new NioEventLoopGroup();
         bootstrap = new ServerBootstrap();
         bootstrap.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
+                 .channel(NioServerSocketChannel.class)
                 .childHandler(ctx.wire(new WebServerInitializer()))
                         // At mose have 128 connection waiting to be "connected" - drop everything else...
                 .option(ChannelOption.SO_BACKLOG, 128)
@@ -448,15 +448,15 @@ public class WebServer implements Lifecycle, MetricProvider {
         collector.differentialMetric("http-blocks", "http-blocks", "HTTP Blocked Requests", blocks, null);
         collector.differentialMetric("http-timeouts", "http-timeouts", "HTTP Idle Timeouts", idleTimeouts, null);
         collector.differentialMetric("http-client-errors",
-                "http-errors",
-                "HTTP Client Errors (4xx)",
-                clientErrors,
-                null);
+                                     "http-errors",
+                                     "HTTP Client Errors (4xx)",
+                                     clientErrors,
+                                     null);
         collector.differentialMetric("http-server-errors",
-                "http-errors",
-                "HTTP Server Errors (5xx)",
-                serverErrors,
-                null);
+                                     "http-errors",
+                                     "HTTP Server Errors (5xx)",
+                                     serverErrors,
+                                     null);
         collector.metric("http-open-connections", "HTTP Open Connections", openConnections.get(), null);
         collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAvg(), "ms");
         collector.metric("http-sessions", "HTTP Sessions", ServerSession.getSessions().size(), null);

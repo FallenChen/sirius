@@ -3,7 +3,6 @@ package sirius.web.http;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
@@ -46,12 +45,7 @@ public class WebServerInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("encoder", new HttpResponseEncoder());
         if (idleTimeout != null && idleTimeout.getMillis() > 0) {
-            pipeline.addLast("idler",
-                    new IdleStateHandler(
-                            0,
-                            0,
-                            idleTimeout.getMillis(),
-                            TimeUnit.MILLISECONDS));
+            pipeline.addLast("idler", new IdleStateHandler(0, 0, idleTimeout.getMillis(), TimeUnit.MILLISECONDS));
         }
         pipeline.addLast("compressor", new SmartHttpContentCompressor());
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());

@@ -31,16 +31,18 @@ public class ThreadsCommand implements Command {
                     output.line(thread.getKey().getName());
                     output.separator();
                     for (StackTraceElement e : thread.getValue()) {
-                        output.apply("%-60s %19s",e.getClassName() + "." + e.getMethodName(), e.getFileName() + ":" + e.getLineNumber());
+                        output.apply("%-60s %19s",
+                                     e.getClassName() + "." + e.getMethodName(),
+                                     e.getFileName() + ":" + e.getLineNumber());
                     }
                     output.separator();
                     output.blankLine();
                 }
             }
         } else {
-            output.apply("%-15s %10s %53s", "STATE", "ID","NAME");
+            output.apply("%-15s %10s %53s", "STATE", "ID", "NAME");
             output.separator();
-            for(ThreadInfo info : t.dumpAllThreads(false, false)) {
+            for (ThreadInfo info : t.dumpAllThreads(false, false)) {
                 output.apply("%-15s %10s %53s", info.getThreadState().name(), info.getThreadId(), info.getThreadName());
             }
             output.separator();

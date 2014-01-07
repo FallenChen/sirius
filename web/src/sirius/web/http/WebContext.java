@@ -427,7 +427,7 @@ public class WebContext {
         if (Strings.isFilled(encodedSession)) {
             Tuple<String, String> sessionInfo = Strings.split(encodedSession, ":");
             if (Strings.areEqual(sessionInfo.getFirst(),
-                    Hashing.md5().hashString(sessionInfo.getSecond() + getSessionSecret()).toString())) {
+                                 Hashing.md5().hashString(sessionInfo.getSecond() + getSessionSecret()).toString())) {
                 QueryStringDecoder qsd = new QueryStringDecoder(encodedSession);
                 for (Map.Entry<String, List<String>> entry : qsd.parameters().entrySet()) {
                     session.put(entry.getKey(), Iterables.getFirst(entry.getValue(), null));
@@ -586,8 +586,8 @@ public class WebContext {
                             remoteIp = InetAddress.getByName(forwardedFor);
                         } catch (Throwable e) {
                             WebServer.LOG
-                                    .WARN(Strings.apply("Cannot parse X-Forwarded-For address: %s - %s (%s)",
-                                            forwardedFor));
+                                     .WARN(Strings.apply("Cannot parse X-Forwarded-For address: %s - %s (%s)",
+                                                         forwardedFor));
                         }
                     }
                 }
@@ -605,7 +605,7 @@ public class WebContext {
     public boolean isTrusted() {
         if (trusted == null) {
             trusted = WebServer.getTrustedRanges()
-                    .accepts(((InetSocketAddress) ctx.channel().remoteAddress()).getAddress());
+                               .accepts(((InetSocketAddress) ctx.channel().remoteAddress()).getAddress());
         }
 
         return trusted;
@@ -704,9 +704,9 @@ public class WebContext {
             cookiesIn = Maps.newHashMap();
             String cookieHeader = request.headers().get(HttpHeaders.Names.COOKIE);
             if (Strings.isFilled(cookieHeader)) {
-            for (Cookie cookie : CookieDecoder.decode(cookieHeader)) {
-                this.cookiesIn.put(cookie.getName(), cookie);
-            }
+                for (Cookie cookie : CookieDecoder.decode(cookieHeader)) {
+                    this.cookiesIn.put(cookie.getName(), cookie);
+                }
             }
         }
     }
@@ -1120,20 +1120,20 @@ public class WebContext {
         try {
             if (content == null) {
                 throw Exceptions.handle()
-                        .to(WebServer.LOG)
-                        .withSystemErrorMessage("Expected valid XML as body of this request.")
-                        .handle();
+                                .to(WebServer.LOG)
+                                .withSystemErrorMessage("Expected valid XML as body of this request.")
+                                .handle();
             }
             if (content.isInMemory()) {
                 return new XMLStructuredInput(new ByteArrayInputStream(content.get()), true);
             } else {
                 if (content.getFile().length() > maxStructuredInputSize && maxStructuredInputSize > 0) {
                     throw Exceptions.handle()
-                            .to(WebServer.LOG)
-                            .withSystemErrorMessage(
-                                    "Request body is too large to parse as XML. The limit is %d bytes",
-                                    maxStructuredInputSize)
-                            .handle();
+                                    .to(WebServer.LOG)
+                                    .withSystemErrorMessage(
+                                            "Request body is too large to parse as XML. The limit is %d bytes",
+                                            maxStructuredInputSize)
+                                    .handle();
                 }
                 return new XMLStructuredInput(new FileInputStream(content.getFile()), true);
             }
@@ -1141,10 +1141,10 @@ public class WebContext {
             throw e;
         } catch (Throwable e) {
             throw Exceptions.handle()
-                    .to(WebServer.LOG)
-                    .error(e)
-                    .withSystemErrorMessage("Expected valid XML as body of this request: %s (%s).")
-                    .handle();
+                            .to(WebServer.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Expected valid XML as body of this request: %s (%s).")
+                            .handle();
         }
     }
 
@@ -1161,20 +1161,20 @@ public class WebContext {
         try {
             if (content == null) {
                 throw Exceptions.handle()
-                        .to(WebServer.LOG)
-                        .withSystemErrorMessage("Expected a valid JSON map as body of this request.")
-                        .handle();
+                                .to(WebServer.LOG)
+                                .withSystemErrorMessage("Expected a valid JSON map as body of this request.")
+                                .handle();
             }
             if (content.isInMemory()) {
                 return mapper.readValue(new ByteArrayInputStream(content.get()), Map.class);
             } else {
                 if (content.getFile().length() > maxStructuredInputSize && maxStructuredInputSize > 0) {
                     throw Exceptions.handle()
-                            .to(WebServer.LOG)
-                            .withSystemErrorMessage(
-                                    "Request body is too large to parse as JSON. The limit is %d bytes",
-                                    maxStructuredInputSize)
-                            .handle();
+                                    .to(WebServer.LOG)
+                                    .withSystemErrorMessage(
+                                            "Request body is too large to parse as JSON. The limit is %d bytes",
+                                            maxStructuredInputSize)
+                                    .handle();
                 }
                 return mapper.readValue(content.getFile(), Map.class);
             }
@@ -1182,10 +1182,10 @@ public class WebContext {
             throw e;
         } catch (Throwable e) {
             throw Exceptions.handle()
-                    .to(WebServer.LOG)
-                    .error(e)
-                    .withSystemErrorMessage("Expected a valid JSON map as body of this request: %s (%s).")
-                    .handle();
+                            .to(WebServer.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Expected a valid JSON map as body of this request: %s (%s).")
+                            .handle();
         }
     }
 
