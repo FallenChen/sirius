@@ -1,8 +1,25 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.di.std.Register;
 import sirius.kernel.nls.NLS;
 
+/**
+ * Console command to invoke the garbage collector.
+ * <p>
+ * This command will also report the heap consumption before and after the call.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
+ */
 @Register(name = "gc")
 public class GCCommand implements Command {
 

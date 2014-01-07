@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.di.std.Register;
@@ -5,11 +13,10 @@ import sirius.kernel.nls.NLS;
 import sirius.web.http.WebServer;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 28.07.13
- * Time: 20:12
- * To change this template use File | Settings | File Templates.
+ * Console command which reports statistics for the web server
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(name = "http")
 public class HTTPCommand implements Command {

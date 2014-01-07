@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.commons.Strings;
@@ -17,11 +25,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.07.13
- * Time: 13:58
- * To change this template use File | Settings | File Templates.
+ * Provides the glue logic between the system console UI and the {@link Command}s.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(name = "system/console")
 public class ConsoleService implements StructuredService {
@@ -47,41 +54,42 @@ public class ConsoleService implements StructuredService {
                 strParams[i++] = NLS.toMachineString(val);
             }
             Command cmd = ctx.getPart(command, Command.class);
-            if (cmd == null) {
-                throw new Exception("Unknown command: " + command + ". Use 'help' to get a list.");
-            }
             StringWriter buffer = new StringWriter();
             final PrintWriter pw = new PrintWriter(buffer);
             pw.println();
-            cmd.execute(new Command.Output() {
-                @Override
-                public PrintWriter getWriter() {
-                    return pw;
-                }
+            if (cmd == null) {
+                pw.println(Strings.apply("Unknown command: %s", command));
+            } else {
+                cmd.execute(new Command.Output() {
+                    @Override
+                    public PrintWriter getWriter() {
+                        return pw;
+                    }
 
-                @Override
-                public Command.Output blankLine() {
-                    pw.println();
-                    return this;
-                }
+                    @Override
+                    public Command.Output blankLine() {
+                        pw.println();
+                        return this;
+                    }
 
-                @Override
-                public Command.Output line(String contents) {
-                    pw.println(contents);
-                    return this;
-                }
+                    @Override
+                    public Command.Output line(String contents) {
+                        pw.println(contents);
+                        return this;
+                    }
 
-                @Override
-                public Command.Output separator() {
-                    return line("--------------------------------------------------------------------------------");
-                }
+                    @Override
+                    public Command.Output separator() {
+                        return line("--------------------------------------------------------------------------------");
+                    }
 
-                @Override
-                public Command.Output apply(String format, Object... columns) {
-                    return line(Strings.apply(format, columns));
-                }
-            }, strParams);
-            pw.println(w.duration());
+                    @Override
+                    public Command.Output apply(String format, Object... columns) {
+                        return line(Strings.apply(format, columns));
+                    }
+                }, strParams);
+                pw.println(w.duration());
+            }
             pw.println();
             out.property("result", buffer.toString());
         } catch (Throwable t) {

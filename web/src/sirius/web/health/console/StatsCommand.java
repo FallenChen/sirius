@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.di.std.Part;
@@ -6,11 +14,10 @@ import sirius.web.health.Metric;
 import sirius.web.health.Metrics;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 28.07.13
- * Time: 20:12
- * To change this template use File | Settings | File Templates.
+ * Console command which reports all available system metrics.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(name = "stats")
 public class StatsCommand implements Command {

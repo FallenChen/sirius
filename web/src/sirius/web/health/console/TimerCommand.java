@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.di.std.Part;
@@ -5,7 +13,11 @@ import sirius.kernel.di.std.Register;
 import sirius.kernel.timer.TimerService;
 
 /**
- * Internal service which is responsible for executing timers.
+ * Console command which reports the last execution of the timer tasks.
+ * <p>It also permits to call an timer out of schedule</p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(name = "timer")
 public class TimerCommand implements Command {

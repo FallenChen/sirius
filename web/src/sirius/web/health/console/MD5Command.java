@@ -1,8 +1,22 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import com.google.common.hash.Hashing;
 import sirius.kernel.di.std.Register;
 
+/**
+ * Console command which computes an MD5 hash of a given input.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
+ */
 @Register(name = "md5")
 public class MD5Command implements Command {
 

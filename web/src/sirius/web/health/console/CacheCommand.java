@@ -1,9 +1,23 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.cache.Cache;
 import sirius.kernel.cache.CacheManager;
 import sirius.kernel.di.std.Register;
 
+/**
+ * Console command which reports statistics for all caches.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
+ */
 @Register(name = "cache")
 public class CacheCommand implements Command {
 
@@ -25,12 +39,6 @@ public class CacheCommand implements Command {
     public String getName() {
         return "cache";
     }
-
-        // Fmt commands
-        // Security
-        // GUI - Logs, Stats, Incidents, Help
-        // Alerts
-        // JDBC stats
 
     @Override
     public String getDescription() {

@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.di.std.Register;
@@ -8,11 +16,10 @@ import java.lang.management.ThreadMXBean;
 import java.util.Map;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 28.07.13
- * Time: 20:12
- * To change this template use File | Settings | File Templates.
+ * Console command which reports all running threads.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(name = "threads")
 public class ThreadsCommand implements Command {

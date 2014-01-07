@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.commons.Strings;
@@ -6,6 +14,15 @@ import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Average;
 import sirius.kernel.health.Microtiming;
 
+/**
+ * Console command which enables/disables the all mighty Micro-Timing framework.
+ * <p>
+ * It also reports timings recorded for the last period of time.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
+ */
 @Register(name = "timing")
 public class TimingCommand implements Command {
 
@@ -38,6 +55,11 @@ public class TimingCommand implements Command {
         }
     }
 
+    /**
+     * Generates the output for all recorded micro timings.
+     *
+     * @param output the output interface to send the output to
+     */
     protected void generateOutput(Output output) {
         long delta = System.currentTimeMillis() - Microtiming.getLastReset();
         output.apply("%8s %9s %5s %5s %s", "AVG[ms]", "TOTAL[ms]", "RATIO", "COUNT", "NAME");

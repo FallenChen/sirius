@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.health.console;
 
 import sirius.kernel.Sirius;
@@ -6,11 +14,10 @@ import sirius.kernel.di.std.Context;
 import sirius.kernel.di.std.Register;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 28.07.13
- * Time: 19:37
- * To change this template use File | Settings | File Templates.
+ * Console command which generates a help screen listing all commands.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(name = "help")
 public class HelpCommand implements Command {

@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.http;
 
 import io.netty.channel.ChannelInitializer;
@@ -17,13 +25,12 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 05.01.14
- * Time: 19:08
- * To change this template use File | Settings | File Templates.
+ * Creates a new pipeline for processing incoming requests of the HTTP web server.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
-public class WebServerInitializer extends ChannelInitializer<SocketChannel> {
+class WebServerInitializer extends ChannelInitializer<SocketChannel> {
 
 
     @Parts(WebDispatcher.class)
