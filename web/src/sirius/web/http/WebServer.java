@@ -300,7 +300,9 @@ public class WebServer implements Lifecycle, MetricProvider {
     @Override
     public void stopped() {
         try {
-            channel.close().sync();
+            if (channel != null) {
+                channel.close().sync();
+            }
         } catch (InterruptedException e) {
             Exceptions.handle(e);
         }
