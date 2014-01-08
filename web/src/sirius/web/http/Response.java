@@ -486,7 +486,7 @@ public class Response {
     /**
      * Sends the given file as response.
      * <p>
-     * Based on the file, full HTTP caching is supported taking care of If-Modified-Since headers etc.
+     * Based on the file, full HTTP caching is supported, taking care of If-Modified-Since headers etc.
      * </p>
      * <p>
      * If the request does not use HTTPS, the server tries to support a zero-copy approach leading to maximal
@@ -589,7 +589,7 @@ public class Response {
         }
         Tuple<Long, Long> result = Tuple.create();
         result.setFirst(Long.parseLong(m.group(1)));
-        if (m.groupCount() > 1) {
+        if (Strings.isFilled(m.group(2))) {
             result.setSecond(Long.parseLong(m.group(2)));
         } else {
             result.setSecond(availableLength - 1);
