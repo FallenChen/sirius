@@ -271,7 +271,7 @@ class WebServerHandler extends ChannelDuplexHandler {
                         }
                         Attribute body = WebServer.getHttpDataFactory().createAttribute(req, "body");
                         if (req instanceof FullHttpRequest) {
-                            body.setContent(((FullHttpRequest) req).content());
+                            body.setContent(((FullHttpRequest) req).content().retain());
                         }
                         currentContext.content = body;
                     }
@@ -338,7 +338,8 @@ class WebServerHandler extends ChannelDuplexHandler {
                              .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
                                                                                                     .readableBytes() + " bytes");
                 }
-                currentContext.content.addContent(chunk.content(), chunk instanceof LastHttpContent);
+                currentContext.content.addContent(chunk.content().retain(), chunk instanceof LastHttpContent);
+
                 if (!currentContext.content.isInMemory()) {
                     File file = currentContext.content.getFile();
                     checkUploadFileLimits(file);

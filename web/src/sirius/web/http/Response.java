@@ -133,6 +133,7 @@ public class Response {
      */
     private DefaultFullHttpResponse createFullResponse(HttpResponseStatus status, boolean keepalive, ByteBuf buffer) {
         DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, buffer);
+        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, buffer.readableBytes());
         setupResponse(status, keepalive, response);
         return response;
     }
@@ -736,7 +737,6 @@ public class Response {
             }
             setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             ByteBuf channelBuffer = wrapUTF8String(content);
-            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(status, false, channelBuffer);
             completeAndClose(commit(response));
         } catch (Throwable e) {
@@ -781,7 +781,6 @@ public class Response {
                                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                    isPrivate);
             ByteBuf channelBuffer = wrapUTF8String(content);
-            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(status, true, channelBuffer);
             complete(commit(response));
         } catch (Throwable e) {
@@ -825,7 +824,6 @@ public class Response {
                                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                    isPrivate);
             ByteBuf channelBuffer = wrapUTF8String(content);
-            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, channelBuffer);
             complete(commit(response));
         } catch (Throwable e) {
@@ -875,7 +873,6 @@ public class Response {
                                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
                                    isPrivate);
             ByteBuf channelBuffer = wrapUTF8String(content);
-            setHeader(HttpHeaders.Names.CONTENT_LENGTH, channelBuffer.readableBytes());
             HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, channelBuffer);
             complete(commit(response));
         } catch (Throwable e) {
@@ -1133,6 +1130,9 @@ public class Response {
 
             private void flushBuffer(boolean last) throws IOException {
                 if ((buffer == null || buffer.readableBytes() == 0) && !last) {
+                    if (buffer != null) {
+                        buffer.release();
+                    }
                     return;
                 }
                 if (!ctx.channel().isOpen()) {
@@ -1224,9 +1224,6 @@ public class Response {
                 open = false;
                 super.close();
                 flushBuffer(true);
-                if (buffer != null && buffer.refCnt() > 0) {
-                    buffer.release();
-                }
             }
         };
     }
