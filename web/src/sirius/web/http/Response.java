@@ -30,6 +30,7 @@ import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Tuple;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Microtiming;
@@ -49,6 +50,8 @@ import java.nio.channels.ClosedChannelException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Represents a response which is used to reply to a HTTP request.
@@ -117,6 +120,11 @@ public class Response {
      */
     private SimpleDateFormat dateFormatter;
 
+    /*
+     * Determines if the response supports keepalive
+     */
+    private boolean responseKeepalive = true;
+
     /**
      * Creates a new response for the given request.
      *
@@ -172,9 +180,10 @@ public class Response {
 
         // Add keepalive header is required
         if (keepalive && isKeepalive()) {
+            responseKeepalive = true;
             response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
         } else {
-            keepalive = false;
+            responseKeepalive = false;
         }
 
         // Add cookies
@@ -184,7 +193,8 @@ public class Response {
         }
 
         // Add Server: nodeName as header
-        response.headers().set(HttpHeaders.Names.SERVER, CallContext.getCurrent().getNodeName());
+        response.headers()
+                .set(HttpHeaders.Names.SERVER, CallContext.getNodeName() + " (scireum SIRIUS - powered by Netty)");
 
         // Add a P3P-Header. This is used to disable the 3rd-Party auth handling of InternetExplorer
         // which is pretty broken and not used (google and facebook does the same).
@@ -228,7 +238,7 @@ public class Response {
     /*
      * Completes the response and closes the underlying channel if necessary
      */
-    private void complete(ChannelFuture future, final boolean keepalive) {
+    private void complete(ChannelFuture future, final boolean supportKeepalive) {
         if (wc.responseCompleted) {
             WebServer.LOG.FINE("Response for %s was already completed!", wc.getRequestedURI());
             return;
@@ -237,7 +247,9 @@ public class Response {
         if (WebServer.LOG.isFINE()) {
             WebServer.LOG.FINE("CLOSING: " + wc.getRequestedURI());
         }
-
+        // If we're still confident, that keepalive is supported, and we announced this in the response header,
+        // we'll keep the connection open. Otherwise it will be closed by the server
+        final boolean keepalive = supportKeepalive && responseKeepalive;
         final CallContext cc = CallContext.getCurrent();
         future.addListener(new ChannelFutureListener() {
             @Override
@@ -469,6 +481,8 @@ public class Response {
         complete(commit(response));
     }
 
+    private static final Pattern RANGE_HEADER = Pattern.compile("bytes=(\\d+)\\-(\\d+)?");
+
     /**
      * Sends the given file as response.
      * <p>
@@ -486,7 +500,6 @@ public class Response {
             error(HttpResponseStatus.NOT_FOUND);
             return;
         }
-
 
         if (!file.isFile()) {
             error(HttpResponseStatus.FORBIDDEN);
@@ -506,27 +519,48 @@ public class Response {
             return;
         }
         try {
-            final long fileLength = raf.length();
+            addHeaderIfNotExists(HttpHeaders.Names.ACCEPT_RANGES, HttpHeaders.Values.BYTES);
+            long fileLength = raf.length();
 
-            addHeaderIfNotExists(HttpHeaders.Names.CONTENT_LENGTH, fileLength);
+            // If there is a Range: header - try to parse it and send partial content
+            Tuple<Long, Long> range;
+            try {
+                range = parseRange(fileLength);
+            } catch (IllegalArgumentException e) {
+                error(HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+                return;
+            }
+
+            if (range == null) {
+                addHeaderIfNotExists(HttpHeaders.Names.CONTENT_LENGTH, fileLength);
+            } else {
+                setHeader(HttpHeaders.Names.CONTENT_LENGTH, range.getSecond() - range.getFirst() + 1);
+                setHeader(HttpHeaders.Names.CONTENT_RANGE,
+                          "bytes " + range.getFirst() + "-" + range.getSecond() + "/" + fileLength);
+            }
             String contentType = MimeHelper.guessMimeType(name != null ? name : file.getName());
             addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, contentType);
             setDateAndCacheHeaders(file.lastModified(), cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
             if (name != null) {
                 setContentDisposition(name, download);
             }
-            HttpResponse response = createChunkedResponse(HttpResponseStatus.OK, true);
-
+            HttpResponse response = createChunkedResponse(range != null ? HttpResponseStatus.PARTIAL_CONTENT : HttpResponseStatus.OK,
+                                                          true);
             commit(response, false);
 
             if (isSSL() || shouldBeCompressed(contentType)) {
                 // Send chunks of data which can be compressed
-                ctx.write(new ChunkedInputAdapter(new ChunkedFile(raf, 0, fileLength, 8192)));
+                ctx.write(new ChunkedInputAdapter(new ChunkedFile(raf,
+                                                                  range != null ? range.getFirst() : 0,
+                                                                  range != null ? range.getSecond() - range.getFirst() + 1 : fileLength,
+                                                                  8192)));
             } else {
                 // Forcefully disable the content compressor as it cannot compress a DefaultFileRegion
                 response.headers().set(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
                 // Send file using zero copy approach!
-                ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
+                ctx.write(new DefaultFileRegion(raf.getChannel(),
+                                                range != null ? range.getFirst() : 0,
+                                                range != null ? range.getSecond() - range.getFirst() + 1 : fileLength));
             }
 
             // Write the end marker
@@ -542,6 +576,32 @@ public class Response {
         } catch (Throwable e) {
             internalServerError(e);
         }
+    }
+
+    private Tuple<Long, Long> parseRange(long availableLength) {
+        String header = wc.getHeader(HttpHeaders.Names.RANGE);
+        if (Strings.isEmpty(header)) {
+            return null;
+        }
+        Matcher m = RANGE_HEADER.matcher(header);
+        if (!m.matches()) {
+            throw new IllegalArgumentException(Strings.apply("Unsupported range: %s", header));
+        }
+        Tuple<Long, Long> result = Tuple.create();
+        result.setFirst(Long.parseLong(m.group(1)));
+        if (m.groupCount() > 1) {
+            result.setSecond(Long.parseLong(m.group(2)));
+        } else {
+            result.setSecond(availableLength - 1);
+        }
+        if (result.getSecond() < result.getFirst()) {
+            return null;
+        }
+        if (result.getSecond() >= availableLength) {
+            throw new IllegalArgumentException(Strings.apply("Unsupported range: %s", header));
+        }
+
+        return result;
     }
 
     /*
@@ -569,7 +629,11 @@ public class Response {
     private void internalServerError(Throwable t) {
         WebServer.LOG.FINE(t);
         if (!(t instanceof ClosedChannelException)) {
-            error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.createHandled().error(t).handle());
+            if (t instanceof HandledException) {
+                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, ((HandledException)t));
+            } else {
+                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(t));
+            }
         }
         if (!ctx.channel().isOpen()) {
             ctx.channel().close();
@@ -912,7 +976,6 @@ public class Response {
             if (Strings.isFilled(range)) {
                 brb.addHeader(HttpHeaders.Names.RANGE, range);
             }
-
 
             // Tunnel it through...
             brb.execute(new AsyncHandler<String>() {
