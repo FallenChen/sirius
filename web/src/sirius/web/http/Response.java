@@ -245,7 +245,7 @@ public class Response {
         }
         wc.responseCompleted = true;
         if (WebServer.LOG.isFINE()) {
-            WebServer.LOG.FINE("CLOSING: " + wc.getRequestedURI());
+            WebServer.LOG.FINE("COMPLETING: " + wc.getRequestedURI());
         }
         // If we're still confident, that keepalive is supported, and we announced this in the response header,
         // we'll keep the connection open. Otherwise it will be closed by the server
@@ -266,8 +266,14 @@ public class Response {
                 }
                 WebServer.responseTime.addValue(cc.getWatch().elapsedMillis());
                 if (!keepalive) {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("CLOSING: " + wc.getRequestedURI());
+                    }
                     future.channel().close();
                 } else {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("KEEP-ALIVE: " + wc.getRequestedURI());
+                    }
                     WebServer.keepalives++;
                     if (WebServer.keepalives < 0) {
                         WebServer.keepalives = 0;

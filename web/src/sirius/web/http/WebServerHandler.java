@@ -255,7 +255,7 @@ class WebServerHandler extends ChannelDuplexHandler {
                     send100Continue(ctx);
                 }
 
-                if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.POST) {
+                if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.PUT) {
                     String contentType = req.headers().get(HttpHeaders.Names.CONTENT_TYPE);
                     if (Strings.isFilled(contentType) && (contentType.startsWith("multipart/form-data") || contentType.startsWith(
                             "application/x-www-form-urlencoded"))) {
