@@ -171,7 +171,7 @@ class WebServerHandler extends ChannelDuplexHandler {
                     }
                     if (!(currentRequest.getMethod() == HttpMethod.POST) && !(currentRequest.getMethod() == HttpMethod.PUT)) {
                         currentContext.respondWith()
-                                      .error(HttpResponseStatus.BAD_REQUEST, "Only POST or PUT may sent chunked data");
+                                .error(HttpResponseStatus.BAD_REQUEST, "Only POST or PUT may sent chunked data");
                         currentRequest = null;
                         return;
                     }
@@ -188,8 +188,8 @@ class WebServerHandler extends ChannelDuplexHandler {
             if (currentRequest != null) {
                 try {
                     currentContext.respondWith()
-                                  .error(HttpResponseStatus.BAD_REQUEST,
-                                         Exceptions.handle(WebServer.LOG, t).getMessage());
+                            .error(HttpResponseStatus.BAD_REQUEST,
+                                    Exceptions.handle(WebServer.LOG, t).getMessage());
                 } catch (Exception e) {
                     Exceptions.ignore(e);
                 }
@@ -207,7 +207,7 @@ class WebServerHandler extends ChannelDuplexHandler {
             WebServer.clientErrors = 0;
         }
         ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST))
-           .addListener(ChannelFutureListener.CLOSE);
+                .addListener(ChannelFutureListener.CLOSE);
         currentRequest = null;
     }
 
@@ -263,7 +263,7 @@ class WebServerHandler extends ChannelDuplexHandler {
                             WebServer.LOG.FINE("POST/PUT-FORM: " + req.getUri());
                         }
                         HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(),
-                                                                                        req);
+                                req);
                         currentContext.setPostDecoder(postDecoder);
                     } else {
                         if (WebServer.LOG.isFINE()) {
@@ -278,14 +278,14 @@ class WebServerHandler extends ChannelDuplexHandler {
                 } else if (!(currentRequest.getMethod() == HttpMethod.GET) && !(currentRequest.getMethod() == HttpMethod.HEAD) && !(currentRequest
                         .getMethod() == HttpMethod.DELETE)) {
                     currentContext.respondWith()
-                                  .error(HttpResponseStatus.BAD_REQUEST,
-                                         Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
-                                                       req.getMethod().name()));
+                            .error(HttpResponseStatus.BAD_REQUEST,
+                                    Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
+                                            req.getMethod().name()));
                     currentRequest = null;
                 }
             } catch (Throwable t) {
                 currentContext.respondWith()
-                              .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+                        .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
                 currentRequest = null;
             }
         } catch (Throwable t) {
@@ -303,7 +303,11 @@ class WebServerHandler extends ChannelDuplexHandler {
      * Sends an 100 CONTINUE response to conform to the keepalive protocol
      */
     private void send100Continue(ChannelHandlerContext e) {
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
+        if (WebServer.LOG.isFINE()) {
+            WebServer.LOG
+                    .FINE("100 - CONTINUE: " + currentContext.getRequestedURI());
+        }
+        HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
         e.channel().write(response);
     }
 
@@ -328,15 +332,15 @@ class WebServerHandler extends ChannelDuplexHandler {
             if (currentContext.getPostDecoder() != null) {
                 if (WebServer.LOG.isFINE()) {
                     WebServer.LOG
-                             .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
-                                                                                                    .readableBytes() + " bytes");
+                            .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                    .readableBytes() + " bytes");
                 }
                 currentContext.getPostDecoder().offer(chunk);
             } else if (currentContext.content != null) {
                 if (WebServer.LOG.isFINE()) {
                     WebServer.LOG
-                             .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
-                                                                                                    .readableBytes() + " bytes");
+                            .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                    .readableBytes() + " bytes");
                 }
                 currentContext.content.addContent(chunk.content().retain(), chunk instanceof LastHttpContent);
 
@@ -347,7 +351,7 @@ class WebServerHandler extends ChannelDuplexHandler {
             }
         } catch (Throwable ex) {
             currentContext.respondWith()
-                          .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
+                    .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
             currentRequest = null;
         }
     }
@@ -361,12 +365,12 @@ class WebServerHandler extends ChannelDuplexHandler {
                 WebServer.LOG.FINE("Not enough space to handle: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
-                          .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                                 Exceptions.handle()
-                                           .withSystemErrorMessage(
-                                                   "The web server is running out of temporary space to store the upload")
-                                           .to(WebServer.LOG)
-                                           .handle());
+                    .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
+                            Exceptions.handle()
+                                    .withSystemErrorMessage(
+                                            "The web server is running out of temporary space to store the upload")
+                                    .to(WebServer.LOG)
+                                    .handle());
             currentRequest = null;
         }
         if (file.length() > WebServer.getMaxUploadSize() && WebServer.getMaxUploadSize() > 0) {
@@ -374,13 +378,13 @@ class WebServerHandler extends ChannelDuplexHandler {
                 WebServer.LOG.FINE("Body is too large: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
-                          .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                                 Exceptions.handle()
-                                           .withSystemErrorMessage(
-                                                   "The uploaded file exceeds the maximal upload size of %d bytes",
-                                                   WebServer.getMaxUploadSize())
-                                           .to(WebServer.LOG)
-                                           .handle());
+                    .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
+                            Exceptions.handle()
+                                    .withSystemErrorMessage(
+                                            "The uploaded file exceeds the maximal upload size of %d bytes",
+                                            WebServer.getMaxUploadSize())
+                                    .to(WebServer.LOG)
+                                    .handle());
             currentRequest = null;
         }
     }
