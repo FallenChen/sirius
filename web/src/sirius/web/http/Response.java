@@ -466,14 +466,30 @@ public class Response {
 
 
     /**
-     * Sends a 302 (temporary redirect) to the given url as result.
+     * Sends a 307 or 301 (found / temporary redirect) to the given url as result, depending on the given HTTP
+     * protocol in the request.
      *
      * @param url the URL to redirect to
      */
     public void redirectTemporarily(String url) {
-        HttpResponse response = createFullResponse(HttpResponseStatus.TEMPORARY_REDIRECT, true, Unpooled.EMPTY_BUFFER);
-        response.headers().set(HttpHeaders.Names.LOCATION, url);
-        complete(commit(response));
+        if (wc.getRequest().getProtocolVersion() == HttpVersion.HTTP_1_0) {
+            // Fallback to HTTP/1.0 code 301 found, which does mostly the same job but has a bad image due to
+            // URL hijacking via faulty search engines. The main difference is that 307 will enforce the browser
+            // to use the same method for the request to the reported location. Where as 301 doesn't specify which
+            // method to used, so a POST might be re-sent as GET to the new location
+            HttpResponse response = createFullResponse(HttpResponseStatus.TEMPORARY_REDIRECT,
+                                                       true,
+                                                       Unpooled.EMPTY_BUFFER);
+            response.headers().set(HttpHeaders.Names.LOCATION, url);
+            complete(commit(response));
+        } else {
+            // Prefer the HTTP/1.1 code 307 as temporary redirect
+            HttpResponse response = createFullResponse(HttpResponseStatus.MOVED_PERMANENTLY,
+                                                       true,
+                                                       Unpooled.EMPTY_BUFFER);
+            response.headers().set(HttpHeaders.Names.LOCATION, url);
+            complete(commit(response));
+        }
     }
 
     /**
@@ -636,7 +652,7 @@ public class Response {
         WebServer.LOG.FINE(t);
         if (!(t instanceof ClosedChannelException)) {
             if (t instanceof HandledException) {
-                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, ((HandledException)t));
+                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, ((HandledException) t));
             } else {
                 error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(t));
             }
@@ -986,6 +1002,8 @@ public class Response {
             // Tunnel it through...
             brb.execute(new AsyncHandler<String>() {
 
+                public int responseCode = HttpResponseStatus.OK.code();
+
                 @Override
                 public AsyncHandler.STATE onHeadersReceived(HttpResponseHeaders h) throws Exception {
                     if (WebServer.LOG.isFINE()) {
@@ -1057,13 +1075,14 @@ public class Response {
                             }
                         } else {
                             if (bodyPart.isLast()) {
-                                HttpResponse response = createFullResponse(HttpResponseStatus.OK,
+                                HttpResponse response = createFullResponse(HttpResponseStatus.valueOf(responseCode),
                                                                            true,
                                                                            Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer()));
                                 HttpHeaders.setContentLength(response, bodyPart.getBodyByteBuffer().remaining());
                                 complete(commit(response));
                             } else {
-                                HttpResponse response = createChunkedResponse(HttpResponseStatus.OK, true);
+                                HttpResponse response = createChunkedResponse(HttpResponseStatus.valueOf(responseCode),
+                                                                              true);
                                 commit(response, false);
                                 ctx.channel()
                                    .writeAndFlush(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
@@ -1087,7 +1106,8 @@ public class Response {
                                        httpResponseStatus.getStatusCode(),
                                        wc.getRequestedURI());
                     }
-                    if (httpResponseStatus.getStatusCode() == HttpResponseStatus.OK.code()) {
+                    if (httpResponseStatus.getStatusCode() >= 200 && httpResponseStatus.getStatusCode() < 300) {
+                        responseCode = httpResponseStatus.getStatusCode();
                         return STATE.CONTINUE;
                     }
                     if (httpResponseStatus.getStatusCode() == HttpResponseStatus.NOT_MODIFIED.code()) {
@@ -1104,7 +1124,9 @@ public class Response {
                         WebServer.LOG.FINE("Tunnel - COMPLETE for %s", wc.getRequestedURI());
                     }
                     if (!wc.responseCommitted) {
-                        HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, Unpooled.EMPTY_BUFFER);
+                        HttpResponse response = createFullResponse(HttpResponseStatus.valueOf(responseCode),
+                                                                   true,
+                                                                   Unpooled.EMPTY_BUFFER);
                         HttpHeaders.setContentLength(response, 0);
                         complete(commit(response));
                     } else if (!wc.responseCompleted) {
