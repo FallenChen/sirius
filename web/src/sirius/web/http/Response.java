@@ -967,12 +967,11 @@ public class Response {
     }
 
     private static final AsyncHttpClient ASYNC_CLIENT = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setAllowPoolingConnection(
-            true).build());
+            true).setRequestTimeoutInMs(-1).build());
 
     private static final Set<String> NON_TUNNELLED_HEADERS = Sets.newHashSet(HttpHeaders.Names.TRANSFER_ENCODING,
                                                                              HttpHeaders.Names.SERVER,
-                                                                             HttpHeaders.Names.CONTENT_ENCODING,
-                                                                             HttpHeaders.Names.CONTENT_LENGTH);
+                                                                             HttpHeaders.Names.CONTENT_ENCODING);
 
     /**
      * Tunnels the contents retrieved from the given URL as result of this response.
@@ -998,7 +997,6 @@ public class Response {
             if (Strings.isFilled(range)) {
                 brb.addHeader(HttpHeaders.Names.RANGE, range);
             }
-
             // Tunnel it through...
             brb.execute(new AsyncHandler<String>() {
 
