@@ -8,10 +8,10 @@
 
 package sirius.web.jdbc;
 
+import com.google.common.collect.Lists;
 import sirius.kernel.commons.Tuple;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -23,11 +23,11 @@ import java.util.List;
 class SQLStatementStrategy implements StatementStrategy {
 
     private PreparedStatement stmt;
-    private List<Tuple<Integer, Object>> parameters = new ArrayList<Tuple<Integer, Object>>();
+    private List<Tuple<Integer, Object>> parameters = Lists.newArrayList();
     private Connection c;
     private StringBuilder sb;
     private boolean mysql;
-    private boolean retriveGeneratedKeys;
+    private boolean retrieveGeneratedKeys;
 
     protected SQLStatementStrategy(Connection c, boolean mysql) {
         this.c = c;
@@ -57,7 +57,7 @@ class SQLStatementStrategy implements StatementStrategy {
 
     public PreparedStatement getStmt() throws SQLException {
         if (stmt == null) {
-            if (retriveGeneratedKeys) {
+            if (retrieveGeneratedKeys) {
                 stmt = c.prepareStatement(sb.toString(), Statement.RETURN_GENERATED_KEYS);
             } else {
                 stmt = c.prepareStatement(sb.toString(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
@@ -74,11 +74,11 @@ class SQLStatementStrategy implements StatementStrategy {
         return stmt;
     }
 
-    public boolean isRetriveGeneratedKeys() {
-        return retriveGeneratedKeys;
+    public boolean isRetrieveGeneratedKeys() {
+        return retrieveGeneratedKeys;
     }
 
-    public void setRetriveGeneratedKeys(boolean retriveGeneratedKeys) {
-        this.retriveGeneratedKeys = retriveGeneratedKeys;
+    public void setRetrieveGeneratedKeys(boolean retrieveGeneratedKeys) {
+        this.retrieveGeneratedKeys = retrieveGeneratedKeys;
     }
 }

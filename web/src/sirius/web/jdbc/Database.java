@@ -22,10 +22,7 @@ import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricsCollector;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -188,9 +185,10 @@ public class Database {
      *
      * @param table the target table to insert a row
      * @param ctx   the parameter names and values to insert into the database
+     * @return a Row containing all generated keys
      * @throws SQLException in case of a database error
      */
-    public void insertRow(String table, Context ctx) throws SQLException {
+    public Row insertRow(String table, Context ctx) throws SQLException {
         Connection c = getConnection();
         try {
             StringBuilder fields = new StringBuilder();
@@ -208,7 +206,7 @@ public class Database {
                 }
             }
             String sql = "INSERT INTO " + table + " (" + fields.toString() + ") VALUES(" + values + ")";
-            PreparedStatement stmt = c.prepareStatement(sql);
+            PreparedStatement stmt = c.prepareStatement(sql,  Statement.RETURN_GENERATED_KEYS);
             try {
                 int index = 1;
                 for (Object o : valueList) {
@@ -220,6 +218,18 @@ public class Database {
                     }
                 }
                 stmt.executeUpdate();
+                ResultSet rs = stmt.getGeneratedKeys();
+                try {
+                    Row row = new Row();
+                    if (rs.next()) {
+                        for (int col = 1; col <= rs.getMetaData().getColumnCount(); col++) {
+                            row.fields.put(rs.getMetaData().getColumnLabel(col), rs.getObject(col));
+                        }
+                    }
+                    return row;
+                } finally {
+                    rs.close();
+                }
             } finally {
                 stmt.close();
             }

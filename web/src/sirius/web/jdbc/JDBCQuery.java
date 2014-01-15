@@ -128,7 +128,7 @@ public class JDBCQuery {
 
         } finally {
             c.close();
-            w.submitMicroTiming(finalSQL);
+            w.submitMicroTiming(sql);
         }
     }
 
@@ -139,7 +139,7 @@ public class JDBCQuery {
      * @param handler the row handler invoked for each row
      * @throws SQLException in case of a database error
      */
-    public void perform(RowHandler handler) throws SQLException {
+    public void perform(RowHandler handler, int maxRows) throws SQLException {
         Watch w = Watch.start();
         Connection c = ds.getConnection();
         String finalSQL = sql;
@@ -148,6 +148,9 @@ public class JDBCQuery {
             StatementCompiler.buildParameterizedStatement(sa, sql, params);
             if (sa.getStmt() == null) {
                 return;
+            }
+            if (maxRows > 0) {
+                sa.getStmt().setMaxRows(maxRows);
             }
             finalSQL = sa.getQueryString();
             ResultSet rs = sa.getStmt().executeQuery();
@@ -168,7 +171,7 @@ public class JDBCQuery {
 
         } finally {
             c.close();
-            w.submitMicroTiming(finalSQL);
+            w.submitMicroTiming(sql);
         }
     }
 
@@ -223,7 +226,7 @@ public class JDBCQuery {
 
         } finally {
             c.close();
-            w.submitMicroTiming(finalSQL);
+            w.submitMicroTiming(sql);
         }
     }
 
@@ -254,7 +257,7 @@ public class JDBCQuery {
             }
         } finally {
             c.close();
-            w.submitMicroTiming(finalSQL);
+            w.submitMicroTiming(sql);
         }
     }
 
@@ -274,7 +277,7 @@ public class JDBCQuery {
 
         try {
             SQLStatementStrategy sa = new SQLStatementStrategy(c, ds.isMySQL());
-            sa.setRetriveGeneratedKeys(true);
+            sa.setRetrieveGeneratedKeys(true);
             StatementCompiler.buildParameterizedStatement(sa, sql, params);
             if (sa.getStmt() == null) {
                 return new Row();
@@ -298,7 +301,7 @@ public class JDBCQuery {
             }
         } finally {
             c.close();
-            w.submitMicroTiming(finalSQL);
+            w.submitMicroTiming(sql);
         }
     }
 
