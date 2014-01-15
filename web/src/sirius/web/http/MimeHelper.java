@@ -52,6 +52,21 @@ public class MimeHelper {
     public static final String TEXT_CSS = "text/css".intern();
 
     /**
+     * Mime type of HTML files
+     */
+    public static final String TEXT_HTML = "text/html".intern();
+
+    /**
+     * Mime type of XML files
+     */
+    public static final String TEXT_XML = "text/xml".intern();
+
+    /**
+     * Mime type of csv files
+     */
+    public static final String TEXT_CSV = "text/comma-separated-values".intern();
+
+    /**
      * Mime type of javascript (JS) files
      */
     public static final String TEXT_JAVASCRIPT = "text/javascript".intern();
@@ -77,6 +92,11 @@ public class MimeHelper {
     private static final String VIDEO_MP4 = "video/mp4";
 
     /**
+     * Mime type of Blu-ray Disc Audio-Video (BDAV) MPEG-2 Transport Stream (M2TS)
+     */
+    private static final String VIDEO_MP2T = "video/MP2T";
+
+    /**
      * Mime type of zip files
      */
     private static final String APPLICATION_ZIP = "application/zip";
@@ -89,18 +109,14 @@ public class MimeHelper {
     private static final Map<String, String> mimeTable = new TreeMap<String, String>();
 
     /*
-     * The list is limited to the most common mime types known to be uncompressable. Compressing already compressed
+     * The list is limited to the most common mime types known to be compressable. Compressing already compressed
      * content does not harm other than wasting some CPU cycles.
      */
-    private static final Set<String> UNCOMPRESSABLE = Sets.newHashSet(IMAGE_PNG,
-                                                                      IMAGE_JPEG,
-                                                                      APPLICATION_PDF,
-                                                                      VIDEO_MP4,
-                                                                      VIDEO_MPEG,
-                                                                      VIDEO_OGG,
-                                                                      VIDEO_QUICKTIME,
-                                                                      APPLICATION_ZIP,
-                                                                      AUDIO_MPEG);
+    private static final Set<String> COMPRESSABLE = Sets.newHashSet(TEXT_CSS,
+                                                                    TEXT_JAVASCRIPT,
+                                                                    TEXT_HTML,
+                                                                    TEXT_CSV,
+                                                                    TEXT_XML);
 
     static {
         mimeTable.put("ai", "application/postscript");
@@ -121,7 +137,7 @@ public class MimeHelper {
         mimeTable.put("cpt", "application/mac-compactpro");
         mimeTable.put("csh", "application/x-csh");
         mimeTable.put("css", TEXT_CSS);
-        mimeTable.put("csv", "text/comma-separated-values");
+        mimeTable.put("csv", TEXT_CSV);
         mimeTable.put("dcr", "application/x-director");
         mimeTable.put("dif", "video/x-dv");
         mimeTable.put("dir", "application/x-director");
@@ -145,8 +161,8 @@ public class MimeHelper {
         mimeTable.put("gtar", "application/x-gtar");
         mimeTable.put("hdf", "application/x-hdf");
         mimeTable.put("hqx", "application/mac-binhex40");
-        mimeTable.put("htm", "text/html");
-        mimeTable.put("html", "text/html");
+        mimeTable.put("htm", TEXT_HTML);
+        mimeTable.put("html", TEXT_HTML);
         mimeTable.put("ice", "x-conference/x-cooltalk");
         mimeTable.put("ico", "image/x-icon");
         mimeTable.put("ics", "text/calendar");
@@ -270,7 +286,7 @@ public class MimeHelper {
         mimeTable.put("xhtml", "application/xhtml+xml");
         mimeTable.put("xls", "application/msexcel");
         mimeTable.put("xlsx", "application/msexcel");
-        mimeTable.put("xml", "text/xml");
+        mimeTable.put("xml", TEXT_XML);
         mimeTable.put("xpm", "image/x-xpixmap");
         mimeTable.put("xsl", "application/xml");
         mimeTable.put("xslt", "application/xslt+xml");
@@ -330,13 +346,13 @@ public class MimeHelper {
      * Determines if it is recommended to compress data of the given mime type.
      * <p>
      * It isn't very useful to compress JPEG or PNG files, as they are already compressed. This method is very
-     * optimistic: If the contentType is <tt>null</tt> or unknown it is considered compressable.
+     * pessimistic: Only a set of known content types is accepted as compressable.
      * </p>
      *
      * @param contentType the mime type to check
      * @return <tt>true</tt> if the mime type is recognized as compressable, <tt>false</tt> otherwise
      */
     public static boolean isCompressable(String contentType) {
-        return contentType == null ? true : !UNCOMPRESSABLE.contains(contentType);
+        return contentType != null && COMPRESSABLE.contains(contentType);
     }
 }
