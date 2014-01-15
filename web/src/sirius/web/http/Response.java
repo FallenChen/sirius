@@ -1000,7 +1000,7 @@ public class Response {
             // Tunnel it through...
             brb.execute(new AsyncHandler<String>() {
 
-                public int responseCode = HttpResponseStatus.OK.code();
+                private int responseCode = HttpResponseStatus.OK.code();
 
                 @Override
                 public AsyncHandler.STATE onHeadersReceived(HttpResponseHeaders h) throws Exception {
@@ -1010,7 +1010,7 @@ public class Response {
                     FluentCaseInsensitiveStringsMap headers = h.getHeaders();
 
 
-                    boolean contentTypeFound = false;
+                    String contentType = null;
                     long lastModified = 0;
 
                     for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
@@ -1027,7 +1027,7 @@ public class Response {
                                 }
                             }
                             if (HttpHeaders.Names.CONTENT_TYPE.equals(entry.getKey())) {
-                                contentTypeFound = true;
+                                contentType = entry.getValue().get(0);
                             }
                         }
                     }
@@ -1036,8 +1036,12 @@ public class Response {
                         return STATE.ABORT;
                     }
 
-                    if (!contentTypeFound) {
+                    if (contentType != null) {
                         setContentTypeHeader(name != null ? name : url);
+                        if (!shouldBeCompressed(contentType)) {
+                            // Forcefully disable the content compressor as it cannot compress a DefaultFileRegion
+                            setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
+                        }
                     }
                     setDateAndCacheHeaders(lastModified, cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
                     if (name != null) {
@@ -1068,8 +1072,12 @@ public class Response {
                                 ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
                                 complete(writeFuture);
                             } else {
-                                ctx.channel()
-                                   .writeAndFlush(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
+                                ChannelFuture writeFuture = ctx.channel()
+                                                               .writeAndFlush(new DefaultHttpContent(Unpooled.wrappedBuffer(
+                                                                       bodyPart.getBodyByteBuffer())));
+                                while (!ctx.channel().isWritable() && ctx.channel().isOpen()) {
+                                    writeFuture.await(5, TimeUnit.SECONDS);
+                                }
                             }
                         } else {
                             if (bodyPart.isLast()) {
