@@ -1213,18 +1213,6 @@ public class Response {
                 }
             }
 
-            private void waitAndClearBuffer(ChannelFuture cf) throws IOException {
-                try {
-                    if (!cf.await(10, TimeUnit.SECONDS)) {
-                        throw new InterruptedException();
-                    }
-                } catch (InterruptedException e) {
-                    open = false;
-                    ctx.channel().close();
-                    throw new IOException("Interrupted while waiting for a chunk to be written", e);
-                }
-            }
-
             private void flushBuffer(boolean last) throws IOException {
                 if ((buffer == null || buffer.readableBytes() == 0) && !last) {
                     if (buffer != null) {
@@ -1241,7 +1229,16 @@ public class Response {
                         ctx.write(new DefaultHttpContent(buffer));
                         complete(ctx.writeAndFlush(new DefaultLastHttpContent()));
                     } else {
-                        waitAndClearBuffer(ctx.writeAndFlush(new DefaultHttpContent(buffer)));
+                        ChannelFuture future = ctx.writeAndFlush(new DefaultHttpContent(buffer));
+                        while (!ctx.channel().isWritable() && open && ctx.channel().isOpen()) {
+                            try {
+                                future.await(5, TimeUnit.SECONDS);
+                            } catch (InterruptedException e) {
+                                open = false;
+                                ctx.channel().close();
+                                throw new IOException("Interrupted while waiting for a chunk to be written", e);
+                            }
+                        }
                         buffer = ctx.alloc().buffer(BUFFER_SIZE);
                     }
                 } else {
@@ -1267,7 +1264,7 @@ public class Response {
                     } else {
                         HttpResponse response = createChunkedResponse(HttpResponseStatus.OK, true);
                         commit(response, false);
-                        waitAndClearBuffer(ctx.channel().writeAndFlush(new DefaultHttpContent(buffer)));
+                        ctx.channel().writeAndFlush(new DefaultHttpContent(buffer));
                         buffer = ctx.alloc().buffer(BUFFER_SIZE);
                     }
                 }
