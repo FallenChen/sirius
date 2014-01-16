@@ -295,6 +295,7 @@ class WebServerHandler extends ChannelDuplexHandler {
             } catch (Exception ex) {
                 Exceptions.ignore(ex);
             }
+           cleanup();
             currentRequest = null;
         }
     }

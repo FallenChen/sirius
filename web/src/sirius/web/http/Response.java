@@ -261,6 +261,7 @@ public class Response {
                         Exceptions.handle(WebServer.LOG, e);
                     }
                 }
+                wc.release();
                 if (wc.microtimingKey != null && Microtiming.isEnabled()) {
                     cc.getWatch().submitMicroTiming(wc.microtimingKey);
                 }
