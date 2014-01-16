@@ -1005,6 +1005,12 @@ public class Response {
 
                 @Override
                 public AsyncHandler.STATE onHeadersReceived(HttpResponseHeaders h) throws Exception {
+                    if (wc.responseCommitted) {
+                        if (WebServer.LOG.isFINE()) {
+                            WebServer.LOG.FINE("Tunnel - BLOCKED HEADERS (already sent) for %s", wc.getRequestedURI());
+                        }
+                        return STATE.CONTINUE;
+                    }
                     if (WebServer.LOG.isFINE()) {
                         WebServer.LOG.FINE("Tunnel - HEADERS for %s", wc.getRequestedURI());
                     }

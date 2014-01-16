@@ -8,6 +8,7 @@
 
 package sirius.web.http;
 
+import com.google.common.collect.Maps;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -29,11 +30,13 @@ import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Average;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
+import sirius.kernel.timer.EveryTenSeconds;
 import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricsCollector;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Responsible for setting up and starting netty as HTTP server.
@@ -218,7 +221,7 @@ public class WebServer implements Lifecycle, MetricProvider {
     protected static volatile long idleTimeouts = 0;
     protected static volatile long clientErrors = 0;
     protected static volatile long serverErrors = 0;
-    protected static AtomicLong openConnections = new AtomicLong();
+    protected static Map<WebServerHandler, WebServerHandler> openConnections = Maps.newConcurrentMap();
     protected static Average responseTime = new Average();
 
     /**
@@ -277,7 +280,7 @@ public class WebServer implements Lifecycle, MetricProvider {
         bootstrap.group(bossGroup, workerGroup)
                  .channel(NioServerSocketChannel.class)
                 .childHandler(ctx.wire(new WebServerInitializer()))
-                        // At mose have 128 connection waiting to be "connected" - drop everything else...
+                        // At mose have 128 connections waiting to be "connected" - drop everything else...
                 .option(ChannelOption.SO_BACKLOG, 128)
                         // Send a KEEPALIVE packet every 2h and expect and ACK on the TCP layer
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
@@ -374,8 +377,8 @@ public class WebServer implements Lifecycle, MetricProvider {
      *
      * @return the number of open connections on the http port
      */
-    public static AtomicLong getOpenConnections() {
-        return openConnections;
+    public static long getNumberOfOpenConnections() {
+        return openConnections.size();
     }
 
     /**
@@ -459,8 +462,32 @@ public class WebServer implements Lifecycle, MetricProvider {
                                      "HTTP Server Errors (5xx)",
                                      serverErrors,
                                      null);
-        collector.metric("http-open-connections", "HTTP Open Connections", openConnections.get(), null);
+        collector.metric("http-open-connections", "HTTP Open Connections", openConnections.size(), null);
         collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAvg(), "ms");
         collector.metric("http-sessions", "HTTP Sessions", ServerSession.getSessions().size(), null);
+    }
+
+    @Register
+    public static class BandwidthUpdater implements EveryTenSeconds {
+
+        @Override
+        public void runTimer() throws Exception {
+            for (WebServerHandler handler : openConnections.values()) {
+                handler.updateBandwidth();
+            }
+        }
+    }
+
+
+    public static void addOpenConnection(WebServerHandler webServerHandler) {
+        openConnections.put(webServerHandler, webServerHandler);
+    }
+
+    public static void removeOpenConnection(WebServerHandler webServerHandler) {
+        openConnections.remove(webServerHandler);
+    }
+
+    public static Collection<? extends ActiveHTTPConnection> getOpenConnections() {
+        return (Collection<? extends ActiveHTTPConnection>) openConnections.values();
     }
 }

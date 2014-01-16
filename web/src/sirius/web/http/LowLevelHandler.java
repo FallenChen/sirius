@@ -51,13 +51,7 @@ class LowLevelHandler extends ChannelDuplexHandler {
                 return;
             }
         }
-        WebServer.openConnections.incrementAndGet();
         super.connect(ctx, remoteAddress, localAddress, future);
-    }
-
-    @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
-        WebServer.openConnections.decrementAndGet();
     }
 
     @Override
@@ -71,6 +65,7 @@ class LowLevelHandler extends ChannelDuplexHandler {
             if (WebServer.messagesIn < 0) {
                 WebServer.messagesIn = 0;
             }
+            ctx.pipeline().get(WebServerHandler.class).inbound(((ByteBuf) msg).readableBytes());
         }
         super.channelRead(ctx, msg);
     }
@@ -86,6 +81,7 @@ class LowLevelHandler extends ChannelDuplexHandler {
             if (WebServer.messagesOut < 0) {
                 WebServer.messagesOut = 0;
             }
+            ctx.pipeline().get(WebServerHandler.class).outbound(((ByteBuf) msg).readableBytes());
         }
         super.write(ctx, msg, promise);
     }

@@ -56,7 +56,10 @@ class WebServerInitializer extends ChannelInitializer<SocketChannel> {
         }
         pipeline.addLast("compressor", new SmartHttpContentCompressor());
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());
-        pipeline.addLast("handler", new WebServerHandler(getSortedDispatchers()));
+        if (WebServerHandler.sortedDispatchers == null) {
+            WebServerHandler.sortedDispatchers = getSortedDispatchers();
+        }
+        pipeline.addLast("handler", new WebServerHandler());
     }
 
     /*

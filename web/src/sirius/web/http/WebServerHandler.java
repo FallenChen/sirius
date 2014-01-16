@@ -11,20 +11,21 @@ package sirius.web.http;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.util.AttributeKey;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
+import sirius.kernel.nls.NLS;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Handles incoming HTTP requests.
@@ -36,29 +37,54 @@ import java.util.List;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08
  */
-class WebServerHandler extends ChannelDuplexHandler {
+class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnection {
 
-    private List<WebDispatcher> sortedDispatchers;
+    protected static List<WebDispatcher> sortedDispatchers;
     private int numKeepAlive = 5;
     private HttpRequest currentRequest;
     private WebContext currentContext;
+    private CallContext currentCall;
+    private volatile long connected;
+    private volatile long bytesIn;
+    private volatile long bytesOut;
+    private volatile long currentBytesIn;
+    private volatile long currentBytesOut;
+    private volatile long uplink;
+    private volatile long downlink;
+    private volatile long lastBandwidthUpdate;
+    private SocketAddress remoteAddress;
 
     /**
-     * Creates a new instance based on a pre sorted list of dispatchers.
-     *
-     * @param sortedDispatchers the sorted list of dispatchers responsible for handling HTTP requests.
+     * Creates a new instance and initializes some statistics.
      */
-    WebServerHandler(List<WebDispatcher> sortedDispatchers) {
-        this.sortedDispatchers = sortedDispatchers;
+    WebServerHandler() {
+        this.connected = System.currentTimeMillis();
     }
 
-    public static final AttributeKey<CallContext> CALL_CONTEXT_ATTRIBUTE_KEY = AttributeKey.valueOf("sirius.CallContext");
+    protected void updateBandwidth() {
+        long now = System.currentTimeMillis();
+        if (lastBandwidthUpdate > 0) {
+            uplink = currentBytesIn / TimeUnit.SECONDS
+                                                       .convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
+            downlink = currentBytesOut / TimeUnit.SECONDS
+                                                          .convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
+        }
+        currentBytesIn = 0;
+        currentBytesOut = 0;
+        lastBandwidthUpdate = now;
+    }
+
+    @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        WebServer.addOpenConnection(this);
+        this.remoteAddress = ctx.channel().remoteAddress();
+        super.channelRegistered(ctx);
+    }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) throws Exception {
-        io.netty.util.Attribute<CallContext> attr = ctx.attr(CALL_CONTEXT_ATTRIBUTE_KEY);
-        if (attr != null) {
-            CallContext.setCurrent(attr.get());
+        if (currentCall != null) {
+            CallContext.setCurrent(currentCall);
         }
         if (e instanceof ClosedChannelException) {
             WebServer.LOG.FINE(e);
@@ -81,42 +107,38 @@ class WebServerHandler extends ChannelDuplexHandler {
      * Binds the request to the CallContext
      */
     private WebContext setupContext(ChannelHandlerContext ctx, HttpRequest req) {
-        CallContext cc = CallContext.initialize();
-        cc.addToMDC("uri", req.getUri());
-        WebContext wc = cc.get(WebContext.class);
+        currentCall = CallContext.initialize();
+        currentCall.addToMDC("uri", req.getUri());
+        WebContext wc = currentCall.get(WebContext.class);
         wc.setCtx(ctx);
         wc.setRequest(req);
-        ctx.attr(CALL_CONTEXT_ATTRIBUTE_KEY).set(cc);
         return wc;
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
-            io.netty.util.Attribute<CallContext> attr = ctx.attr(CALL_CONTEXT_ATTRIBUTE_KEY);
-            if (attr != null) {
-                CallContext callContext = attr.get();
-                if (callContext == null) {
-                    ctx.channel().close();
-                    return;
+            if (currentCall != null) {
+                CallContext.setCurrent(currentCall);
+            } else {
+                ctx.channel().close();
+                return;
+            }
+            WebContext wc = currentCall.get(WebContext.class);
+            if (wc == null) {
+                ctx.channel().close();
+                return;
+            }
+            if (!wc.isLongCall() && !wc.responseCompleted) {
+                if (WebServer.LOG.isFINE()) {
+                    WebServer.LOG.FINE("IDLE: " + wc.getRequestedURI());
                 }
-                CallContext.setCurrent(callContext);
-                WebContext wc = callContext.get(WebContext.class);
-                if (wc == null) {
-                    ctx.channel().close();
-                    return;
+                WebServer.idleTimeouts++;
+                if (WebServer.idleTimeouts < 0) {
+                    WebServer.idleTimeouts = 0;
                 }
-                if (!wc.isLongCall()) {
-                    if (WebServer.LOG.isFINE()) {
-                        WebServer.LOG.FINE("IDLE: " + wc.getRequestedURI());
-                    }
-                    WebServer.idleTimeouts++;
-                    if (WebServer.idleTimeouts < 0) {
-                        WebServer.idleTimeouts = 0;
-                    }
-                    ctx.channel().close();
-                    return;
-                }
+                ctx.channel().close();
+                return;
             }
         }
     }
@@ -141,16 +163,19 @@ class WebServerHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise future) throws Exception {
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         cleanup();
-        WebServer.openConnections.decrementAndGet();
-        super.disconnect(ctx, future);
+        WebServer.removeOpenConnection(this);
+        super.channelUnregistered(ctx);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
             if (msg instanceof HttpRequest) {
+                // Reset stats
+                bytesIn = 0;
+                bytesOut = 0;
                 handleRequest(ctx, (HttpRequest) msg);
             } else if (msg instanceof LastHttpContent) {
                 try {
@@ -171,7 +196,7 @@ class WebServerHandler extends ChannelDuplexHandler {
                     }
                     if (!(currentRequest.getMethod() == HttpMethod.POST) && !(currentRequest.getMethod() == HttpMethod.PUT)) {
                         currentContext.respondWith()
-                                .error(HttpResponseStatus.BAD_REQUEST, "Only POST or PUT may sent chunked data");
+                                      .error(HttpResponseStatus.BAD_REQUEST, "Only POST or PUT may sent chunked data");
                         currentRequest = null;
                         return;
                     }
@@ -188,8 +213,8 @@ class WebServerHandler extends ChannelDuplexHandler {
             if (currentRequest != null) {
                 try {
                     currentContext.respondWith()
-                            .error(HttpResponseStatus.BAD_REQUEST,
-                                    Exceptions.handle(WebServer.LOG, t).getMessage());
+                                  .error(HttpResponseStatus.BAD_REQUEST,
+                                         Exceptions.handle(WebServer.LOG, t).getMessage());
                 } catch (Exception e) {
                     Exceptions.ignore(e);
                 }
@@ -207,7 +232,7 @@ class WebServerHandler extends ChannelDuplexHandler {
             WebServer.clientErrors = 0;
         }
         ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST))
-                .addListener(ChannelFutureListener.CLOSE);
+           .addListener(ChannelFutureListener.CLOSE);
         currentRequest = null;
     }
 
@@ -220,7 +245,6 @@ class WebServerHandler extends ChannelDuplexHandler {
             if (WebServer.requests < 0) {
                 WebServer.requests = 0;
             }
-
             cleanup();
             if (WebServer.LOG.isFINE()) {
                 WebServer.LOG.FINE("OPEN: " + req.getUri());
@@ -263,7 +287,7 @@ class WebServerHandler extends ChannelDuplexHandler {
                             WebServer.LOG.FINE("POST/PUT-FORM: " + req.getUri());
                         }
                         HttpPostRequestDecoder postDecoder = new HttpPostRequestDecoder(WebServer.getHttpDataFactory(),
-                                req);
+                                                                                        req);
                         currentContext.setPostDecoder(postDecoder);
                     } else {
                         if (WebServer.LOG.isFINE()) {
@@ -278,14 +302,14 @@ class WebServerHandler extends ChannelDuplexHandler {
                 } else if (!(currentRequest.getMethod() == HttpMethod.GET) && !(currentRequest.getMethod() == HttpMethod.HEAD) && !(currentRequest
                         .getMethod() == HttpMethod.DELETE)) {
                     currentContext.respondWith()
-                            .error(HttpResponseStatus.BAD_REQUEST,
-                                    Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
-                                            req.getMethod().name()));
+                                  .error(HttpResponseStatus.BAD_REQUEST,
+                                         Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
+                                                       req.getMethod().name()));
                     currentRequest = null;
                 }
             } catch (Throwable t) {
                 currentContext.respondWith()
-                        .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
+                              .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
                 currentRequest = null;
             }
         } catch (Throwable t) {
@@ -295,7 +319,7 @@ class WebServerHandler extends ChannelDuplexHandler {
             } catch (Exception ex) {
                 Exceptions.ignore(ex);
             }
-           cleanup();
+            cleanup();
             currentRequest = null;
         }
     }
@@ -305,8 +329,7 @@ class WebServerHandler extends ChannelDuplexHandler {
      */
     private void send100Continue(ChannelHandlerContext e) {
         if (WebServer.LOG.isFINE()) {
-            WebServer.LOG
-                    .FINE("100 - CONTINUE: " + currentContext.getRequestedURI());
+            WebServer.LOG.FINE("100 - CONTINUE: " + currentContext.getRequestedURI());
         }
         HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
         e.channel().write(response);
@@ -330,18 +353,19 @@ class WebServerHandler extends ChannelDuplexHandler {
             if (chunk.content().readableBytes() == 0) {
                 return;
             }
+
             if (currentContext.getPostDecoder() != null) {
                 if (WebServer.LOG.isFINE()) {
                     WebServer.LOG
-                            .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
-                                    .readableBytes() + " bytes");
+                             .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                                                                                    .readableBytes() + " bytes");
                 }
                 currentContext.getPostDecoder().offer(chunk);
             } else if (currentContext.content != null) {
                 if (WebServer.LOG.isFINE()) {
                     WebServer.LOG
-                            .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
-                                    .readableBytes() + " bytes");
+                             .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                                                                                    .readableBytes() + " bytes");
                 }
                 currentContext.content.addContent(chunk.content().retain(), chunk instanceof LastHttpContent);
 
@@ -352,7 +376,7 @@ class WebServerHandler extends ChannelDuplexHandler {
             }
         } catch (Throwable ex) {
             currentContext.respondWith()
-                    .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
+                          .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, ex));
             currentRequest = null;
         }
     }
@@ -366,12 +390,12 @@ class WebServerHandler extends ChannelDuplexHandler {
                 WebServer.LOG.FINE("Not enough space to handle: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
-                    .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                            Exceptions.handle()
-                                    .withSystemErrorMessage(
-                                            "The web server is running out of temporary space to store the upload")
-                                    .to(WebServer.LOG)
-                                    .handle());
+                          .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
+                                 Exceptions.handle()
+                                           .withSystemErrorMessage(
+                                                   "The web server is running out of temporary space to store the upload")
+                                           .to(WebServer.LOG)
+                                           .handle());
             currentRequest = null;
         }
         if (file.length() > WebServer.getMaxUploadSize() && WebServer.getMaxUploadSize() > 0) {
@@ -379,13 +403,13 @@ class WebServerHandler extends ChannelDuplexHandler {
                 WebServer.LOG.FINE("Body is too large: " + currentContext.getRequestedURI());
             }
             currentContext.respondWith()
-                    .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                            Exceptions.handle()
-                                    .withSystemErrorMessage(
-                                            "The uploaded file exceeds the maximal upload size of %d bytes",
-                                            WebServer.getMaxUploadSize())
-                                    .to(WebServer.LOG)
-                                    .handle());
+                          .error(HttpResponseStatus.INSUFFICIENT_STORAGE,
+                                 Exceptions.handle()
+                                           .withSystemErrorMessage(
+                                                   "The uploaded file exceeds the maximal upload size of %d bytes",
+                                                   WebServer.getMaxUploadSize())
+                                           .to(WebServer.LOG)
+                                           .handle());
             currentRequest = null;
         }
     }
@@ -413,5 +437,62 @@ class WebServerHandler extends ChannelDuplexHandler {
         }
     }
 
+    @Override
+    public int getNumKeepAlive() {
+        return numKeepAlive;
+    }
 
+    @Override
+    public String getURL() {
+        if (currentContext == null) {
+            return "";
+        }
+        if (currentContext.responseCompleted) {
+            return currentContext.getRequestedURI() + " (completed)";
+        } else if (currentContext.responseCommitted) {
+            return currentContext.getRequestedURI() + " (committed)";
+        } else {
+            return currentContext.getRequestedURI();
+        }
+    }
+
+    protected void inbound(long bytes) {
+        bytesIn += bytes;
+        currentBytesIn += bytes;
+    }
+
+    protected void outbound(long bytes) {
+        bytesOut += bytes;
+        currentBytesOut += bytes;
+    }
+
+    @Override
+    public String getConnectedSince() {
+        return TimeUnit.SECONDS.convert(System.currentTimeMillis() - connected, TimeUnit.MILLISECONDS) + "s";
+    }
+
+    @Override
+    public String getBytesIn() {
+        return NLS.formatSize(bytesIn);
+    }
+
+    @Override
+    public String getBytesOut() {
+        return NLS.formatSize(bytesOut);
+    }
+
+    @Override
+    public String getUplink() {
+        return NLS.formatSize(uplink)+"/s";
+    }
+
+    @Override
+    public String getDownlink() {
+        return NLS.formatSize(downlink)+"/s";
+    }
+
+    @Override
+    public String getRemoteAddress() {
+        return String.valueOf(remoteAddress);
+    }
 }
