@@ -44,6 +44,11 @@ public class ServiceDispatcher implements WebDispatcher {
     private GlobalContext gc;
 
     @Override
+    public boolean preDispatch(WebContext ctx) throws Exception {
+        return false;
+    }
+
+    @Override
     public boolean dispatch(final WebContext ctx) throws Exception {
         // We use the translated URI because legacy /services might have been routed elsewhere.
         if (!ctx.getRequestedURI().startsWith("/service")) {

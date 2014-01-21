@@ -42,6 +42,11 @@ public class AssetsDispatcher implements WebDispatcher {
     }
 
     @Override
+    public boolean preDispatch(WebContext ctx) throws Exception {
+        return false;
+    }
+
+    @Override
     public boolean dispatch(WebContext ctx) throws Exception {
         if (!ctx.getRequest().getUri().startsWith("/assets") || HttpMethod.GET != ctx.getRequest().getMethod()) {
             return false;

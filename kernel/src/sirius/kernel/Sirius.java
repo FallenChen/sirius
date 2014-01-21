@@ -65,7 +65,14 @@ public class Sirius {
     private static Classpath classpath;
     private static boolean started = false;
     private static boolean initialized = false;
+
     protected static final Log LOG = Log.get("sirius");
+
+    /**
+     * This debug logger will be logging all messages when {@link sirius.kernel.Sirius#isDev()} is true. Otherwise,
+     * this logger is set to "OFF".
+     */
+    public static final Log DEBUG = Log.get("debug");
 
     @Parts(Lifecycle.class)
     private static PartCollection<Lifecycle> lifecycleParticipants;
@@ -99,6 +106,11 @@ public class Sirius {
      * loggers
      */
     private static void setupLogLevels() {
+        if (Sirius.isDev()) {
+            setLevel("debug", Level.ALL);
+        } else {
+            setLevel("debug", Level.OFF);
+        }
         if (!config.hasPath("logging")) {
             return;
         }
@@ -106,17 +118,16 @@ public class Sirius {
         Config logging = config.getConfig("logging");
         for (Map.Entry<String, com.typesafe.config.ConfigValue> entry : logging.entrySet()) {
             LOG.INFO("* Setting %s to: %s", entry.getKey(), logging.getString(entry.getKey()));
-
-            // Setup log4j
-            Logger.getLogger(entry.getKey()).setLevel(Level.toLevel(logging.getString(entry.getKey())));
-
-            // Setup java.util.health
-            java.util
-                    .logging
-                    .Logger
-                    .getLogger(entry.getKey())
-                    .setLevel(convertLog4jLevel(Level.toLevel(logging.getString(entry.getKey()))));
+            setLevel(entry.getKey(), Level.toLevel(logging.getString(entry.getKey())));
         }
+    }
+
+    private static void setLevel(String logger, Level level) {
+        // Setup log4j
+        Logger.getLogger(logger).setLevel(level);
+
+        // Setup java.util.health
+        java.util.logging.Logger.getLogger(logger).setLevel(convertLog4jLevel(level));
     }
 
     /*

@@ -37,6 +37,11 @@ public class HelpDispatcher implements WebDispatcher {
     private String indexTemplate;
 
     @Override
+    public boolean preDispatch(WebContext ctx) throws Exception {
+        return false;
+    }
+
+    @Override
     public boolean dispatch(WebContext ctx) throws Exception {
         if (!ctx.getRequest().getUri().startsWith("/help") || HttpMethod.GET != ctx.getRequest().getMethod()) {
             return false;

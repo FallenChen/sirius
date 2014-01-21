@@ -17,6 +17,7 @@ import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
+import sirius.web.http.InputStreamHandler;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 
@@ -41,9 +42,24 @@ public class ControllerDispatcher implements WebDispatcher {
     @Parts(Interceptor.class)
     private Collection<Interceptor> interceptors;
 
+    /**
+     * The priority of this controller is <code>PriorityCollector.DEFAULT_PRIORITY + 10</code> as it is quite complex
+     * to check each request against each route.
+     *
+     * @return the priority of this dispatcher
+     */
     @Override
     public int getPriority() {
-        return PriorityCollector.DEFAULT_PRIORITY + 10;
+        return PriorityCollector.DEFAULT_PRIORITY - 10;
+    }
+
+    @Override
+    public boolean preDispatch(WebContext ctx) throws Exception {
+        if (routes == null) {
+            buildRouter();
+        }
+
+        return route(ctx, true);
     }
 
     @Override
@@ -52,14 +68,21 @@ public class ControllerDispatcher implements WebDispatcher {
             buildRouter();
         }
 
-        return route(ctx);
+        return route(ctx, false);
     }
 
-    private boolean route(final WebContext ctx) {
+    private boolean route(final WebContext ctx, boolean preDispatch) {
         for (final Route route : routes) {
             try {
-                final List<Object> params = route.matches(ctx, ctx.getRequestedURI());
+                final List<Object> params = route.matches(ctx, ctx.getRequestedURI(), preDispatch);
                 if (params != null) {
+                    // If a route is pre-dispatchable we inject an InputStream as last parameter of the
+                    // call. This is also checked by the route-compiler
+                    if (preDispatch) {
+                        InputStreamHandler ish = new InputStreamHandler();
+                        params.add(ish);
+                        ctx.setContentHandler(ish);
+                    }
                     Async.executor("web-mvc").fork(new Runnable() {
                         @Override
                         public void run() {
@@ -115,13 +138,16 @@ public class ControllerDispatcher implements WebDispatcher {
         }
     }
 
+    /*
+     * Compiles all available controllers and their methods into a route table
+     */
     private void buildRouter() {
         PriorityCollector<Route> collector = PriorityCollector.create();
         for (final Controller controller : Injector.context().getParts(Controller.class)) {
             for (final Method m : controller.getClass().getMethods()) {
                 if (m.isAnnotationPresent(Routed.class)) {
                     Routed routed = m.getAnnotation(Routed.class);
-                    Route route = compileMethod(routed.value(), controller, m);
+                    Route route = compileMethod(routed, controller, m);
                     if (route != null) {
                         collector.add(routed.priority(), route);
                     }
@@ -132,9 +158,13 @@ public class ControllerDispatcher implements WebDispatcher {
         routes = collector.getData();
     }
 
-    private Route compileMethod(String uri, final Controller controller, final Method m) {
+    /*
+     * Compiles a method wearing a Routed annotation.
+     */
+    private Route compileMethod(Routed routed, final Controller controller, final Method m) {
         try {
-            final Route route = Route.compile(uri, m.getParameterTypes());
+            final Route route = Route.compile(routed, m.getParameterTypes());
+            route.setPreDispatchable(routed.preDispatchable());
             route.setController(controller);
             route.setSuccessCallback(m);
             return route;
@@ -142,7 +172,7 @@ public class ControllerDispatcher implements WebDispatcher {
             LOG.WARN("Skipping '%s' in controller '%s' - Cannot compile route '%s': %s (%s)",
                      m.getName(),
                      controller.getClass().getName(),
-                     uri,
+                     routed.value(),
                      e.getMessage(),
                      e.getClass().getName());
             return null;

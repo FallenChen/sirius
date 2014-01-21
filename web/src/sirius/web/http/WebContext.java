@@ -184,6 +184,11 @@ public class WebContext {
     private boolean longCall;
 
     /*
+     * If set, will be supplied with all incoming content (instead of buffering on disk or in memory)
+     */
+    protected ContentHandler contentHandler;
+
+    /*
      * Name of the cookie used to store and load the client session
      */
     @ConfigValue("http.sessionCookieName")
@@ -319,6 +324,16 @@ public class WebContext {
      */
     public void markAsLongCall() {
         this.longCall = true;
+    }
+
+    /**
+     * Can be set from within {@link WebDispatcher#preDispatch(WebContext)} to manually handle incoming content.
+     *
+     * @param handler the handler to be supplied with content. If <tt>null</tt>, the default (memory/disk buffering)
+     *                handler is applied.
+     */
+    public void setContentHandler(ContentHandler handler) {
+        this.contentHandler = handler;
     }
 
     /**
@@ -1193,7 +1208,15 @@ public class WebContext {
      * Releases all data associated with this request.
      */
     void release() {
-        if (postDecoder != null) {
+        if (contentHandler != null) {
+            try {
+                contentHandler.cleanup();
+            } catch (Exception e) {
+                Exceptions.handle(WebServer.LOG, e);
+            }
+            postDecoder = null;
+        }
+       if (postDecoder != null) {
             try {
                 postDecoder.cleanFiles();
             } catch (Exception e) {

@@ -16,6 +16,7 @@ import sirius.kernel.commons.Tuple;
 import sirius.kernel.commons.Value;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
+import sirius.web.http.InputStreamHandler;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebServer;
 
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
  * @since 2013/11
  */
 class Route {
+
     private static final Pattern EXPR = Pattern.compile("(:|#|\\$)\\{?(.+?)}?");
 
     private String format;
@@ -43,21 +45,22 @@ class Route {
     private String uri;
     private Class<?>[] parameterTypes;
     private Controller controller;
+    private boolean preDispatchable;
 
     /**
      * Compiles a method defined by a {@link Controller}
      *
-     * @param uri            the URI template defined by the {@link Routed} annotation
+     * @param routed         the {@link Routed} annotation
      * @param parameterTypes the parameters defined by the method
      * @return a compiled matcher handling matching URIs
      */
-    protected static Route compile(String uri, Class<?>[] parameterTypes) {
+    protected static Route compile(Routed routed, Class<?>[] parameterTypes) {
         Route result = new Route();
-        result.uri = uri;
+        result.uri = routed.value();
         result.parameterTypes = parameterTypes;
-        result.format = uri;
+        result.format = routed.value();
 
-        String[] elements = uri.split("/");
+        String[] elements = routed.value().split("/");
         StringBuilder finalPattern = new StringBuilder();
         int params = 0;
         for (String element : elements) {
@@ -82,10 +85,17 @@ class Route {
                 }
             }
         }
+        if (routed.preDispatchable()) {
+            params++;
+            if (!InputStreamHandler.class.equals(parameterTypes[parameterTypes.length - 1])) {
+                throw new IllegalArgumentException(Strings.apply("Pre-Dispatchable method needs '%s' as last parameter",
+                                                                 InputStreamHandler.class.getName()));
+            }
+        }
         if (parameterTypes.length - 1 != params) {
             throw new IllegalArgumentException(Strings.apply("Method has %d parameters, route '%s' has %d",
                                                              parameterTypes.length,
-                                                             uri,
+                                                             routed.value(),
                                                              params));
         }
         if (!WebContext.class.equals(parameterTypes[0])) {
@@ -105,10 +115,14 @@ class Route {
      *
      * @param ctx          defines the current request
      * @param requestedURI contains the request uri as string
+     * @param preDispatch
      * @return <tt>null</tt> if the route does not match or a list of extracted object from the URI as defined by the template
      */
-    protected List<Object> matches(WebContext ctx, String requestedURI) {
+    protected List<Object> matches(WebContext ctx, String requestedURI, boolean preDispatch) {
         try {
+            if (preDispatch && !this.preDispatchable) {
+                return null;
+            }
             Matcher m = pattern.matcher(requestedURI);
             List<Object> result = new ArrayList<Object>(parameterTypes.length);
             if (m.matches()) {
@@ -144,25 +158,67 @@ class Route {
         }
     }
 
-    protected Method getSuccessCallback() {
-        return successCallback;
-    }
-
-    protected void setSuccessCallback(Method successCallback) {
-        this.successCallback = successCallback;
-    }
-
-    protected void setController(Controller controller) {
-        this.controller = controller;
-    }
-
-    protected Controller getController() {
-        return controller;
-    }
 
     @Override
     public String toString() {
         return uri;
+    }
+
+    /**
+     * Returns the method which is to be invoked if the an URI can be successfully routed using this route
+     * (all parameters match).
+     *
+     * @return the method to be invoke in order to route a request using this route
+     */
+    protected Method getSuccessCallback() {
+        return successCallback;
+    }
+
+    /**
+     * Sets the method which is used to route a request by this route.
+     *
+     * @param successCallback the method to be used
+     */
+    protected void setSuccessCallback(Method successCallback) {
+        this.successCallback = successCallback;
+    }
+
+    /**
+     * Sets the controller which owns (defined) this route.
+     *
+     * @param controller the controller owning this rout
+     */
+    protected void setController(Controller controller) {
+        this.controller = controller;
+    }
+
+    /**
+     * Returns the controller owning this route.
+     *
+     * @return the controller owning this route
+     */
+    protected Controller getController() {
+        return controller;
+    }
+
+    /**
+     * Sets the pre dispatchable flag of this route. This will be defined by the {@link Routed} annotation and
+     * determines if this route can dispatch requests which payload was not processed yet.
+     *
+     * @param preDispatchable
+     */
+    protected void setPreDispatchable(boolean preDispatchable) {
+        this.preDispatchable = preDispatchable;
+    }
+
+    /**
+     * Determines if the route is pre dispatchable. In order to process requests, the last parameter of the method
+     * must be of type {@link InputStreamHandler} which will be used to process the payload of the request.
+     *
+     * @return <tt>true</tt> if the request is pre dispatchable, <tt>false</tt> otherwise
+     */
+    protected boolean isPreDispatchable() {
+        return preDispatchable;
     }
 }
 

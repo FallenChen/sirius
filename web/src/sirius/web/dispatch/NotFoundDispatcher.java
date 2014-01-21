@@ -31,6 +31,11 @@ public class NotFoundDispatcher implements WebDispatcher {
     }
 
     @Override
+    public boolean preDispatch(WebContext ctx) throws Exception {
+        return false;
+    }
+
+    @Override
     public boolean dispatch(WebContext ctx) throws Exception {
         ctx.respondWith()
            .error(HttpResponseStatus.NOT_FOUND,

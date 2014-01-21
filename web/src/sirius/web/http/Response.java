@@ -215,6 +215,9 @@ public class Response {
      */
     private ChannelFuture commit(HttpResponse response, boolean flush) {
         if (wc.responseCommitted) {
+            if (response instanceof FullHttpResponse) {
+                ((FullHttpResponse) response).release();
+            }
             throw Exceptions.handle()
                             .to(WebServer.LOG)
                             .error(new IllegalStateException())
@@ -226,6 +229,16 @@ public class Response {
         }
         wc.responseCommitted = true;
         return flush ? ctx.writeAndFlush(response) : ctx.write(response);
+    }
+
+    /**
+     * Disables keep-alive protocol (even if it would have been otherwise supported).
+     *
+     * @return the response itself for fluent method calls
+     */
+    public Response noKeepalive() {
+        responseKeepalive = false;
+        return this;
     }
 
     /*
@@ -853,7 +866,9 @@ public class Response {
     }
 
     /**
-     * Directly sends the given string as response, without any content type.
+     * Directly sends the given string as response, without any content type. Enable the caller to close the
+     * underlying channel (without caring about keep-alive). This can be used to report errors as JSON result to
+     * AJAX callers.
      * <p>
      * This should only be used when really required (meaning when you really know what you're doing.
      * The encoding used will be UTF-8).
@@ -1333,4 +1348,5 @@ public class Response {
     public String toString() {
         return "Response for: " + wc.toString();
     }
+
 }

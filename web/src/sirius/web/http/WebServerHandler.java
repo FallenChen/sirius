@@ -53,6 +53,8 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
     private volatile long downlink;
     private volatile long lastBandwidthUpdate;
     private SocketAddress remoteAddress;
+    private boolean preDispatched = false;
+    private boolean dispatched = false;
 
     /**
      * Creates a new instance and initializes some statistics.
@@ -61,19 +63,24 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         this.connected = System.currentTimeMillis();
     }
 
+    /**
+     * Periodically called by {@link sirius.web.http.WebServer.BandwidthUpdater#runTimer()} to recompute the current
+     * bandwidth.
+     */
     protected void updateBandwidth() {
         long now = System.currentTimeMillis();
-        if (lastBandwidthUpdate > 0) {
-            uplink = currentBytesIn / TimeUnit.SECONDS
-                                                       .convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
-            downlink = currentBytesOut / TimeUnit.SECONDS
-                                                          .convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
+        if (lastBandwidthUpdate > 0 && now - lastBandwidthUpdate > 0) {
+            uplink = currentBytesIn / TimeUnit.SECONDS.convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
+            downlink = currentBytesOut / TimeUnit.SECONDS.convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
         }
         currentBytesIn = 0;
         currentBytesOut = 0;
         lastBandwidthUpdate = now;
     }
 
+    /*
+     * Used when this handler is bound to an incoming connection
+     */
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         WebServer.addOpenConnection(this);
@@ -81,6 +88,9 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         super.channelRegistered(ctx);
     }
 
+    /*
+     * Get notified about each exception which occurs while processing channel events
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) throws Exception {
         if (currentCall != null) {
@@ -115,6 +125,9 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         return wc;
     }
 
+    /*
+     * Will be notified by the IdleStateHandler if a channel is completely idle for a certain amount of time
+     */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
@@ -162,6 +175,10 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         super.channelReadComplete(ctx);
     }
 
+    /*
+     * Called once a connection is closed. Note that due to keep-alive approaches specified by HTTP 1.1, several
+     * independent requests can be handled via one connection
+     */
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         cleanup();
@@ -169,6 +186,9 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         super.channelUnregistered(ctx);
     }
 
+    /*
+     * Notified if a new message is available
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
@@ -183,11 +203,17 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
                         WebServer.LOG.FINE("Ignoring CHUNK without request: " + msg);
                         return;
                     }
-                    processContent(ctx, (HttpContent) msg);
+                    if (currentContext.contentHandler != null) {
+                        currentContext.contentHandler.handle(((HttpContent) msg).content(), true);
+                    } else {
+                        processContent(ctx, (HttpContent) msg);
+                    }
                 } finally {
                     ((HttpContent) msg).release();
                 }
-                dispatch();
+                if (!preDispatched) {
+                    dispatch();
+                }
             } else if (msg instanceof HttpContent) {
                 try {
                     if (currentRequest == null) {
@@ -204,22 +230,29 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
                     if (WebServer.chunks < 0) {
                         WebServer.chunks = 0;
                     }
-                    processContent(ctx, (HttpContent) msg);
+                    if (currentContext.contentHandler != null) {
+                        currentContext.contentHandler.handle(((HttpContent) msg).content(), false);
+                    } else {
+                        processContent(ctx, (HttpContent) msg);
+                    }
                 } finally {
                     ((HttpContent) msg).release();
                 }
             }
         } catch (Throwable t) {
-            if (currentRequest != null) {
+            if (currentRequest != null && currentContext != null) {
                 try {
-                    currentContext.respondWith()
-                                  .error(HttpResponseStatus.BAD_REQUEST,
-                                         Exceptions.handle(WebServer.LOG, t).getMessage());
+                    if (!currentContext.responseCompleted) {
+                        currentContext.respondWith()
+                                      .error(HttpResponseStatus.BAD_REQUEST,
+                                             Exceptions.handle(WebServer.LOG, t).getMessage());
+                    }
                 } catch (Exception e) {
                     Exceptions.ignore(e);
                 }
                 currentRequest = null;
             }
+            ctx.channel().close();
         }
     }
 
@@ -255,6 +288,8 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
                 return;
             }
             currentRequest = req;
+            preDispatched = false;
+            dispatched = false;
             currentContext = setupContext(ctx, req);
 
             try {
@@ -280,6 +315,10 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
                 }
 
                 if (req.getMethod() == HttpMethod.POST || req.getMethod() == HttpMethod.PUT) {
+                    preDispatched = preDispatch();
+                    if (preDispatched) {
+                        return;
+                    }
                     String contentType = req.headers().get(HttpHeaders.Names.CONTENT_TYPE);
                     if (Strings.isFilled(contentType) && (contentType.startsWith("multipart/form-data") || contentType.startsWith(
                             "application/x-www-form-urlencoded"))) {
@@ -415,13 +454,38 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
     }
 
     /*
+     * Tries to dispatch a POST or PUT request before it is completely received so that the handler can install
+     * a ContentHandler to process all incoming data.
+     */
+    private boolean preDispatch() throws Exception {
+        if (WebServer.LOG.isFINE() && currentContext != null) {
+            WebServer.LOG.FINE("DISPATCHING: " + currentContext.getRequestedURI());
+        }
+
+        for (WebDispatcher wd : sortedDispatchers) {
+            try {
+                if (wd.preDispatch(currentContext)) {
+                    if (WebServer.LOG.isFINE()) {
+                        WebServer.LOG.FINE("PRE-DISPATCHED: " + currentContext.getRequestedURI() + " to " + wd);
+                    }
+                    return true;
+                }
+            } catch (Exception e) {
+                Exceptions.handle(WebServer.LOG, e);
+            }
+        }
+
+        return false;
+    }
+
+    /*
      * Dispatches the completely read request.
      */
     private void dispatch() throws Exception {
         if (WebServer.LOG.isFINE() && currentContext != null) {
             WebServer.LOG.FINE("DISPATCHING: " + currentContext.getRequestedURI());
         }
-
+        dispatched = true;
         for (WebDispatcher wd : sortedDispatchers) {
             try {
                 if (wd.dispatch(currentContext)) {
@@ -451,16 +515,26 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
             return currentContext.getRequestedURI() + " (completed)";
         } else if (currentContext.responseCommitted) {
             return currentContext.getRequestedURI() + " (committed)";
+        } else if (preDispatched) {
+            return currentContext.getRequestedURI() + " (pre-dispatched)";
+        } else if (dispatched) {
+            return currentContext.getRequestedURI() + " (dispatched)";
         } else {
             return currentContext.getRequestedURI();
         }
     }
 
+    /*
+     * Updates inbound traffic (called via LowLevelHandler)
+     */
     protected void inbound(long bytes) {
         bytesIn += bytes;
         currentBytesIn += bytes;
     }
 
+    /*
+     * Updates outbound traffic (called via LowLevelHandler)
+     */
     protected void outbound(long bytes) {
         bytesOut += bytes;
         currentBytesOut += bytes;
@@ -473,22 +547,34 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
 
     @Override
     public String getBytesIn() {
+        if (bytesIn == 0) {
+            return "-";
+        }
         return NLS.formatSize(bytesIn);
     }
 
     @Override
     public String getBytesOut() {
+        if (bytesOut == 0) {
+            return "-";
+        }
         return NLS.formatSize(bytesOut);
     }
 
     @Override
     public String getUplink() {
-        return NLS.formatSize(uplink)+"/s";
+        if (uplink == 0) {
+            return "-";
+        }
+        return NLS.formatSize(uplink) + "/s";
     }
 
     @Override
     public String getDownlink() {
-        return NLS.formatSize(downlink)+"/s";
+        if (downlink == 0) {
+            return "-";
+        }
+        return NLS.formatSize(downlink) + "/s";
     }
 
     @Override

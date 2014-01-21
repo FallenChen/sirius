@@ -28,7 +28,7 @@ public class TimerCommand implements Command {
     @Override
     public void execute(Output output, String... params) throws Exception {
         if (params.length == 0) {
-            output.line("Usage: timer all|oneMinute|tenMinutes|oneHour");
+            output.line("Usage: timer all|oneMinute|tenMinutes|oneHour|everyDay");
         } else {
             if ("all".equalsIgnoreCase(params[0]) || "oneMinute".equalsIgnoreCase(params[0])) {
                 output.line("Executing one minute timers...");
@@ -41,6 +41,10 @@ public class TimerCommand implements Command {
             if ("all".equalsIgnoreCase(params[0]) || "oneHour".equalsIgnoreCase(params[0])) {
                 output.line("Executing one hour timers...");
                 ts.runOneHourTimers();
+            }
+            if ("all".equalsIgnoreCase(params[0]) || "everyDay".equalsIgnoreCase(params[0])) {
+                output.line("Executing daily timers...");
+                ts.runEveryDayTimers(true);
             }
         }
         output.blankLine();

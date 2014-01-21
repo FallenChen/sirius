@@ -1,5 +1,7 @@
 package sirius.kernel.timer;
 
+import org.joda.time.DateTime;
+import sirius.kernel.Sirius;
 import sirius.kernel.async.Async;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.PartCollection;
@@ -51,6 +53,9 @@ public class TimerService implements Lifecycle {
     private PartCollection<EveryHour> everyHour;
     private long lastHourExecution = 0;
 
+    @Parts(EveryDay.class)
+    private PartCollection<EveryDay> everyDay;
+
     private Timer timer;
     private ReentrantLock timerLock = new ReentrantLock();
 
@@ -72,6 +77,7 @@ public class TimerService implements Lifecycle {
                 if (TimeUnit.MINUTES
                             .convert(System.currentTimeMillis() - lastHourExecution, TimeUnit.MILLISECONDS) >= 60) {
                     runOneHourTimers();
+                    runEveryDayTimers(false);
                 }
             } catch (Throwable t) {
                 Exceptions.handle(LOG, t);
@@ -230,6 +236,28 @@ public class TimerService implements Lifecycle {
             executeTask(task);
         }
         lastHourExecution = System.currentTimeMillis();
+    }
+
+    /**
+     * Executes all daily timers (implementing <tt>EveryDay</tt>) if applicable, or if outOfASchedule is <tt>true</tt>.
+     *
+     * @param outOfSchedule determines if the 'timers.daily.[configKeyName]' should be checked if now is the right
+     *                      hour of day to execute this task, or if it should be executed in any case (<tt>true</tt>).
+     */
+    public void runEveryDayTimers(boolean outOfSchedule) {
+        for (final EveryDay task : everyDay.getParts()) {
+            int hour = -1;
+            if (!Sirius.getConfig().hasPath("timer.daily." + task.getConfigKeyName())) {
+                LOG.WARN("Skipping daily timer %s as config key '%s' is missing!",
+                         task.getClass().getName(),
+                         "timer.daily." + task.getConfigKeyName());
+            } else {
+                if (outOfSchedule || Sirius.getConfig()
+                                           .getInt("timer.daily." + task.getConfigKeyName()) == new DateTime().getHourOfDay()) {
+                    executeTask(task);
+                }
+            }
+        }
     }
 
 }
