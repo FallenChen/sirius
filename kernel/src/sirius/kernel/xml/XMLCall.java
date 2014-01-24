@@ -22,17 +22,37 @@ public class XMLCall {
     private Outcall outcall;
 
     /**
-     * Creates a new XMLCall for the given url.
+     * Creates a new XMLCall for the given url with Content-Type 'text/xml'.
      *
      * @param url the target URL to call
      * @return an <tt>XMLCall</tt> which can be used to send and receive XML
      * @throws IOException in case of an IO error
      */
     public static XMLCall to(URL url) throws IOException {
+        return to(url, "text/xml");
+    }
+
+    /**
+     * Creates a new XMLCall for the given url.
+     *
+     * @param url the target URL to call
+     * @param contentType the Content-Type to use
+     * @throws IOException in case of an IO error
+     */
+    public static XMLCall to(URL url, String contentType) throws IOException {
         XMLCall result = new XMLCall();
         result.outcall = new Outcall(url);
-        result.outcall.setRequestProperty("Content-Type", "text/xml");
+        result.outcall.setRequestProperty("Content-Type", contentType);
         return result;
+    }
+
+    /**
+     * Adds a custom headerfield to the call
+     * @param name name of the field
+     * @param value value of the field
+     */
+    public void addHeader(String name, String value){
+        outcall.setRequestProperty(name, value);
     }
 
     /**
