@@ -353,6 +353,13 @@ public class MimeHelper {
      * @return <tt>true</tt> if the mime type is recognized as compressable, <tt>false</tt> otherwise
      */
     public static boolean isCompressable(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        int idx = contentType.indexOf(";");
+        if (idx >= 0) {
+            contentType = contentType.substring(0, idx);
+        }
         return contentType != null && COMPRESSABLE.contains(contentType);
     }
 }

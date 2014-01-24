@@ -542,6 +542,9 @@ public class Response {
             return;
         }
 
+        String contentType = MimeHelper.guessMimeType(name != null ? name : file.getName());
+        addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, contentType);
+
         if (!wasModified(file.lastModified())) {
             return;
         }
@@ -574,8 +577,6 @@ public class Response {
                 setHeader(HttpHeaders.Names.CONTENT_RANGE,
                           "bytes " + range.getFirst() + "-" + range.getSecond() + "/" + fileLength);
             }
-            String contentType = MimeHelper.guessMimeType(name != null ? name : file.getName());
-            addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, contentType);
             setDateAndCacheHeaders(file.lastModified(), cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
             if (name != null) {
                 setContentDisposition(name, download);

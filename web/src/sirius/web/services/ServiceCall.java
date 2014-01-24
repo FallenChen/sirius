@@ -38,7 +38,7 @@ public abstract class ServiceCall {
     public void handle(String errorCode, Throwable error) {
         HandledException he = Exceptions.handle(LOG, error);
         StructuredOutput out = createOutput();
-        out.beginResult("error");
+        out.beginResult();
         out.property("success", false);
         out.property("message", he.getMessage());
         Throwable cause = error.getCause();
@@ -51,6 +51,8 @@ public abstract class ServiceCall {
         out.property("type", cause.getClass().getName());
         if (Strings.isFilled(errorCode)) {
             out.property("code", errorCode);
+        } else {
+            out.property("code", "ERROR");
         }
         out.property("flow", CallContext.getCurrent().getMDCValue(CallContext.MDC_FLOW));
         out.endResult();
