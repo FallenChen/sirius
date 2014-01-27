@@ -103,7 +103,9 @@ public class SystemMetricProvider implements MetricProvider {
     private void gatherFS(MetricsCollector collector) throws SigarException {
         for (FileSystem fs : sigar.getFileSystemList()) {
             FileSystemUsage fsu = sigar.getMountedFileSystemUsage(fs.getDirName());
-            collector.metric("sys-fs", "FS: Usage of " + fs.getDirName(), fsu.getUsePercent() * 100d, "%");
+            if (fsu.getFree() != 0 || fsu.getUsePercent() != 0d) {
+                collector.metric("sys-fs", "FS: Usage of " + fs.getDirName(), fsu.getUsePercent() * 100d, "%");
+            }
         }
     }
 
