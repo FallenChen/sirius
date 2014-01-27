@@ -487,18 +487,18 @@ public class Response {
      */
     public void redirectTemporarily(String url) {
         if (wc.getRequest().getProtocolVersion() == HttpVersion.HTTP_1_0) {
-            // Fallback to HTTP/1.0 code 301 found, which does mostly the same job but has a bad image due to
+            // Fallback to HTTP/1.0 code 302 found, which does mostly the same job but has a bad image due to
             // URL hijacking via faulty search engines. The main difference is that 307 will enforce the browser
-            // to use the same method for the request to the reported location. Where as 301 doesn't specify which
+            // to use the same method for the request to the reported location. Where as 302 doesn't specify which
             // method to used, so a POST might be re-sent as GET to the new location
-            HttpResponse response = createFullResponse(HttpResponseStatus.TEMPORARY_REDIRECT,
+            HttpResponse response = createFullResponse(HttpResponseStatus.FOUND,
                                                        true,
                                                        Unpooled.EMPTY_BUFFER);
             response.headers().set(HttpHeaders.Names.LOCATION, url);
             complete(commit(response));
         } else {
             // Prefer the HTTP/1.1 code 307 as temporary redirect
-            HttpResponse response = createFullResponse(HttpResponseStatus.MOVED_PERMANENTLY,
+            HttpResponse response = createFullResponse(HttpResponseStatus.TEMPORARY_REDIRECT,
                                                        true,
                                                        Unpooled.EMPTY_BUFFER);
             response.headers().set(HttpHeaders.Names.LOCATION, url);
