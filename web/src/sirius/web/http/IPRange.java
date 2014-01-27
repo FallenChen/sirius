@@ -117,8 +117,11 @@ public class IPRange {
     private static RangeSet createLocalHostRangeSet() {
         RangeSet result = new RangeSet();
         result.ranges = Lists.newArrayList();
-        result.ranges.add(IPV4_LOCALHOST);
-        result.ranges.add(IPV6_LOCALHOST);
+        // Do not use the constants defined above, as these might not be initialized yet.
+        // As the definition of localhost shouldn't change, we live with double defined constants rather than
+        // using static/lazy initializer magic...
+        result.ranges.add(IPRange.parseRange("127.0.0.1"));
+        result.ranges.add(IPRange.parseRange("0:0:0:0:0:0:0:1"));
         return result;
     }
 

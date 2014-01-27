@@ -109,7 +109,7 @@ public class Log {
             frozen.set(Boolean.TRUE);
             if (taps != null) {
                 for (LogTap tap : taps) {
-                    tap.handleLogMessage(new LogMessage(NLS.toUserString(msg), level, this, wouldLog));
+                    tap.handleLogMessage(new LogMessage(NLS.toUserString(msg), level, this, wouldLog, Thread.currentThread().getName()));
                 }
             }
         } finally {

@@ -8,7 +8,9 @@
 
 package sirius.kernel.health;
 
+import org.joda.time.DateTime;
 import sirius.kernel.commons.Tuple;
+import sirius.kernel.nls.NLS;
 
 import java.util.List;
 
@@ -18,10 +20,12 @@ import java.util.List;
 public class Incident {
     private String category;
     private String location;
+    private long timestamp;
     private List<Tuple<String, String>> mdc;
     private HandledException exception;
 
     protected Incident(String category, String location, List<Tuple<String, String>> mdc, HandledException exception) {
+        this.timestamp = System.currentTimeMillis();
         this.category = category;
         this.location = location;
         this.mdc = mdc;
@@ -62,5 +66,23 @@ public class Incident {
      */
     public HandledException getException() {
         return exception;
+    }
+
+    /**
+     * Returns the timestamp when this incident was created as string.
+     *
+     * @return the timestamp when this incident was created, formatted as string
+     */
+    public String getTimestampAsString() {
+        return NLS.toUserString(new DateTime(timestamp), true);
+    }
+
+    /**
+     * Returns the timestamp when this incident was created.
+     *
+     * @return the timestamp when this incident0 was created
+     */
+    public long getTimestamp() {
+        return timestamp;
     }
 }

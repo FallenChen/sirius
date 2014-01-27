@@ -20,7 +20,7 @@ package sirius.web.http;
  * then sorted according to that in an ascending manner. As default priority
  * {@link sirius.kernel.commons.PriorityCollector#DEFAULT_PRIORITY} can be used. Note that this will only be done
  * once, therefore <tt>getPriority()</tt> must only return a constant value as it is never re-evaluated. By default,
- * a not found handler ({@link sirius.web.dispatch.NotFoundDispatcher} is registered with 999 as priority, so higher
+ * a not found handler ({@link sirius.web.dispatch.DefaultDispatcher} is registered with 999 as priority, so higher
  * priorities will never be executed.
  * </p>
  * <p>
@@ -50,7 +50,7 @@ public interface WebDispatcher {
      * <p>
      * Dispatchers are sorted ascending (lower is better). The default priority is
      * {@link sirius.kernel.commons.PriorityCollector#DEFAULT_PRIORITY}, the max. value is 998 as everything above
-     * will be handled by the {@link sirius.web.dispatch.NotFoundDispatcher}.
+     * will be handled by the {@link sirius.web.dispatch.DefaultDispatcher}.
      * </p>
      *
      * @return the priority of the dispatcher

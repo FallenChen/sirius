@@ -442,7 +442,9 @@ public class WebContext {
         if (Strings.isFilled(encodedSession)) {
             Tuple<String, String> sessionInfo = Strings.split(encodedSession, ":");
             if (Strings.areEqual(sessionInfo.getFirst(),
-                                 Hashing.md5().hashString(sessionInfo.getSecond() + getSessionSecret()).toString())) {
+                                 Hashing.sha512()
+                                        .hashString(sessionInfo.getSecond() + getSessionSecret())
+                                        .toString())) {
                 QueryStringDecoder qsd = new QueryStringDecoder(encodedSession);
                 for (Map.Entry<String, List<String>> entry : qsd.parameters().entrySet()) {
                     session.put(entry.getKey(), Iterables.getFirst(entry.getValue(), null));
@@ -482,6 +484,18 @@ public class WebContext {
             initSession();
         }
         return Value.of(session.get(key));
+    }
+
+    /**
+     * Returns a list of all known session keys for the current session
+     *
+     * @return a list of all known keys for the current session
+     */
+    public List<String> getSessionKeys() {
+        if (session == null) {
+            return Collections.emptyList();
+        }
+        return Lists.newArrayList(session.keySet());
     }
 
     /**
@@ -808,7 +822,7 @@ public class WebContext {
                 encoder.addParam(e.getKey(), e.getValue());
             }
             String value = encoder.toString();
-            String protection = Hashing.md5().hashString(value + getSessionSecret()).toString();
+            String protection = Hashing.sha512().hashString(value + getSessionSecret()).toString();
             setHTTPSessionCookie(sessionCookieName, protection + ":" + value);
         }
         return cookiesOut == null ? null : cookiesOut.values();
@@ -1216,7 +1230,7 @@ public class WebContext {
             }
             postDecoder = null;
         }
-       if (postDecoder != null) {
+        if (postDecoder != null) {
             try {
                 postDecoder.cleanFiles();
             } catch (Exception e) {

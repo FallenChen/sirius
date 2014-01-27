@@ -8,7 +8,10 @@
 
 package sirius.web.health;
 
+import com.google.common.collect.Lists;
 import org.joda.time.DateTime;
+
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -22,8 +25,11 @@ public class NodeInfo {
     private int priority;
     private String endpoint;
     private DateTime lastPing;
+    private int pingFailures;
     private Metrics.MetricState nodeState;
     private Metrics.MetricState clusterState;
+    private List<Metric> metrics = Lists.newArrayList();
+
 
     public String getName() {
         return name;
@@ -71,5 +77,21 @@ public class NodeInfo {
 
     protected void setClusterState(Metrics.MetricState clusterState) {
         this.clusterState = clusterState;
+    }
+
+    public List<Metric> getMetrics() {
+        return metrics;
+    }
+
+    public int getPingFailures() {
+        return pingFailures;
+    }
+
+    public void incPingFailures() {
+        this.pingFailures++;
+    }
+
+    public void resetPingFailures() {
+        this.pingFailures = 0;
     }
 }

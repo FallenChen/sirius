@@ -37,9 +37,9 @@ public class MemoryBasedHealthMonitor implements ExceptionHandler, LogTap {
     @ConfigValue("health.memory.max-logs")
     private int maxMsg;
 
-    private volatile Counter numIncidents = new Counter();
-    private volatile Counter numUniqueIncidents = new Counter();
-    private volatile Counter numLogMessages = new Counter();
+    private final Counter numIncidents = new Counter();
+    private final Counter numUniqueIncidents = new Counter();
+    private final Counter numLogMessages = new Counter();
 
     @Override
     public void handle(Incident incident) throws Exception {

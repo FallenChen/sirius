@@ -44,20 +44,20 @@ public class SystemMetricProvider implements MetricProvider {
                                          "sys-gc",
                                          "GC - " + gc.getName(),
                                          gc.getCollectionCount(),
-                                         null);
+                                         "/min");
         }
         collector.differentialMetric("sys-interactions",
                                      "sys-interactions",
                                      "Interactions",
                                      CallContext.getInteractionCounter().getCount(),
-                                     null);
-        collector.differentialMetric("sys-logs", "sys-logs", "Log Messages", monitor.getNumLogMessages(), null);
-        collector.differentialMetric("sys-incidents", "sys-incidents", "Incidents", monitor.getNumIncidents(), null);
+                                     "/min");
+        collector.differentialMetric("sys-logs", "sys-logs", "Log Messages", monitor.getNumLogMessages(), "/min");
+        collector.differentialMetric("sys-incidents", "sys-incidents", "Incidents", monitor.getNumIncidents(), "/min");
         collector.differentialMetric("sys-unique-incidents",
                                      "sys-unique-incidents",
                                      "Unique Incidents",
                                      monitor.getNumUniqueIncidents(),
-                                     null);
+                                     "/min");
 
         try {
             if (sigarEnabled) {

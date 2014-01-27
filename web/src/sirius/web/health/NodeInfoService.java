@@ -8,6 +8,7 @@
 
 package sirius.web.health;
 
+import sirius.kernel.async.CallContext;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.xml.StructuredOutput;
@@ -27,12 +28,26 @@ public class NodeInfoService implements StructuredService {
     @Part
     private Cluster cluster;
 
+    @Part
+    private Metrics metrics;
+
     @Override
     public void call(ServiceCall call, StructuredOutput out) throws Exception {
         out.beginResult();
+        out.property("name", CallContext.getNodeName());
         out.property("nodeState", cluster.getNodeState().toString());
         out.property("clusterState", cluster.getClusterState().toString());
         out.property("priority", cluster.getPriority());
+        out.beginArray("metrics");
+        for (Metric m : metrics.getMetrics()) {
+            out.beginObject("metric");
+            out.property("name", m.getName());
+            out.property("value", m.getValue());
+            out.property("unit", m.getUnit());
+            out.property("state", m.getState().name());
+            out.endObject();
+        }
+        out.endArray();
         out.endResult();
     }
 }

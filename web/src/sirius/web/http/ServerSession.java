@@ -8,6 +8,7 @@
 
 package sirius.web.http;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.joda.time.Duration;
 import sirius.kernel.commons.Strings;
@@ -219,6 +220,15 @@ public class ServerSession {
     @Nonnull
     public Value getValue(String key) {
         return Value.of(values.get(key));
+    }
+
+    /**
+     * Returns a list of all keys for which a value is stored in the session
+     *
+     * @return a list of all keys for which a value is stored
+     */
+    public List<String> getKeys() {
+        return Lists.newArrayList(values.keySet());
     }
 
     /**

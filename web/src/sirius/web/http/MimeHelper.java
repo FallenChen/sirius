@@ -47,6 +47,11 @@ public class MimeHelper {
     public static final String APPLICATION_PDF = "application/pdf".intern();
 
     /**
+     * Mime type of plain text files
+     */
+    public static final String TEXT_PLAIN = "text/plain";
+
+    /**
      * Mime type of CSS files
      */
     public static final String TEXT_CSS = "text/css".intern();
@@ -123,7 +128,7 @@ public class MimeHelper {
         mimeTable.put("aif", "audio/x-aiff");
         mimeTable.put("aifc", "audio/x-aiff");
         mimeTable.put("aiff", "audio/x-aiff");
-        mimeTable.put("asc", "text/plain");
+        mimeTable.put("asc", TEXT_PLAIN);
         mimeTable.put("atom", "application/atom+xml");
         mimeTable.put("au", "audio/basic");
         mimeTable.put("avi", "video/x-msvideo");

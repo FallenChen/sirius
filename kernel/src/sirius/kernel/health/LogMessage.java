@@ -9,6 +9,8 @@
 package sirius.kernel.health;
 
 import org.apache.log4j.Level;
+import org.joda.time.DateTime;
+import sirius.kernel.nls.NLS;
 
 /**
  * Contains a log message passed from {@link Log} to {@link LogTap}.
@@ -18,11 +20,15 @@ import org.apache.log4j.Level;
  */
 public class LogMessage {
     private String message;
+    private long timestamp;
     private Level logLevel;
     private Log receiver;
     boolean receiverWouldLog;
+    private String thread;
 
-    protected LogMessage(String message, Level logLevel, Log receiver, boolean receiverWouldLog) {
+    protected LogMessage(String message, Level logLevel, Log receiver, boolean receiverWouldLog, String thread) {
+        this.thread = thread;
+        this.timestamp = System.currentTimeMillis();
         this.message = message;
         this.logLevel = logLevel;
         this.receiver = receiver;
@@ -59,9 +65,36 @@ public class LogMessage {
     /**
      * Returns whether the receiver has logged this message.
      *
-     * @return wether the receiver has logged this message
+     * @return whether the receiver has logged this message
      */
     public boolean isReceiverWouldLog() {
         return receiverWouldLog;
+    }
+
+    /**
+     * Returns the timestamp when this message was created as string.
+     *
+     * @return the timestamp when this message was created, formatted as string
+     */
+    public String getTimestampAsString() {
+        return NLS.toUserString(new DateTime(timestamp), true);
+    }
+
+    /**
+     * Returns the timestamp when this message was created.
+     *
+     * @return the timestamp when this message was created
+     */
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    /**
+     * Returns the name of the thread which logged the message.
+     *
+     * @return the name of the thread which logged the message
+     */
+    public String getThread() {
+        return thread;
     }
 }
