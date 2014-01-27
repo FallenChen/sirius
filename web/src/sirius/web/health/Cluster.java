@@ -154,6 +154,8 @@ public class Cluster implements EveryMinute {
                 }
             } catch (Throwable t) {
                 Exceptions.handle(LOG, t);
+                info.setNodeState(Metrics.MetricState.RED);
+                info.setClusterState(Metrics.MetricState.RED);
                 newClusterState = Metrics.MetricState.RED;
                 info.incPingFailures();
             }
