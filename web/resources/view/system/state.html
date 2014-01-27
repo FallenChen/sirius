@@ -61,47 +61,40 @@
             </div>
             @if (!cluster.getNodeInfos().isEmpty()) {
                 <h1>Cluster</h1>
-                <div class="row">
-                    @for(sirius.web.health.NodeInfo info : cluster.getNodeInfos()) {
-                        <div class="span6">
-                            <div class="well">
-                                <h2>
-                                    <span class="@info.getNodeState()">@info.getName()</span><br />
-                                    <small>@info.getEndpoint()</small>
-                                </h2>
-                                <div style="text-align: center">
-                                    Last Ping: @NLS.toUserString(info.getLastPing(), true)
-                                </div>
-                                @if (info.getPingFailures() > 0) {
-                                    <div style="text-align: center; font-weight: bold">
-                                        Ping Failures: @info.getPingFailures()
-                                    </div>
-                                } else {
-                                    <div style="text-align: center; font-weight: bold">
-                                        &nbsp;
-                                    </div>
-                                }
-                                <br />
-                                @if (!info.getMetrics().isEmpty()) {
-                                    <table class="table">
-                                        @for(sirius.web.health.Metric m : info.getMetrics()) {
-                                            @if (all || m.getState() != sirius.web.health.Metrics.MetricState.GREEN) {
-                                                <tr class="@m.getState()">
-                                                    <td style="overflow: hidden">
-                                                        @m.getName()
-                                                    </td>
-                                                    <td style="text-align: right; overflow: hidden">
-                                                        @m.getValueAsString()
-                                                    </td>
-                                                </tr>
-                                            }
-                                        }
-                                    </table>
-                                }
+                @for(sirius.web.health.NodeInfo info : cluster.getNodeInfos()) {
+                    <div>
+                        <div class="well">
+                            <h2>
+                                <span class="@info.getNodeState()">@info.getName()</span> <small>@info.getEndpoint()</small>
+                            </h2>
+                            <div style="text-align: center">
+                                Last Ping: @NLS.toUserString(info.getLastPing(), true)
                             </div>
+                            @if (info.getPingFailures() > 0) {
+                                <div style="text-align: center; font-weight: bold">
+                                    Ping Failures: @info.getPingFailures()
+                                </div>
+                            }
+                            <br />
+                            @if (!info.getMetrics().isEmpty()) {
+                                <table class="table">
+                                    @for(sirius.web.health.Metric m : info.getMetrics()) {
+                                        @if (all || m.getState() != sirius.web.health.Metrics.MetricState.GREEN) {
+                                            <tr class="@m.getState()">
+                                                <td style="overflow: hidden">
+                                                    @m.getName()
+                                                </td>
+                                                <td style="text-align: right; overflow: hidden">
+                                                    @m.getValueAsString()
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </table>
+                            }
                         </div>
-                    }
-                </div>
+                    </div>
+                }
             }
         </div>
     </body>
