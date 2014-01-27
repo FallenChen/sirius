@@ -491,9 +491,7 @@ public class Response {
             // URL hijacking via faulty search engines. The main difference is that 307 will enforce the browser
             // to use the same method for the request to the reported location. Where as 302 doesn't specify which
             // method to used, so a POST might be re-sent as GET to the new location
-            HttpResponse response = createFullResponse(HttpResponseStatus.FOUND,
-                                                       true,
-                                                       Unpooled.EMPTY_BUFFER);
+            HttpResponse response = createFullResponse(HttpResponseStatus.FOUND, true, Unpooled.EMPTY_BUFFER);
             response.headers().set(HttpHeaders.Names.LOCATION, url);
             complete(commit(response));
         } else {
@@ -705,6 +703,8 @@ public class Response {
             }
         } else {
             addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, HttpHeaders.Values.NO_CACHE);
+            addHeaderIfNotExists(HttpHeaders.Names.PRAGMA, HttpHeaders.Values.NO_CACHE);
+            addHeaderIfNotExists(HttpHeaders.Names.EXPIRES, dateFormatter.format(new Date(0)));
         }
         if (lastModifiedMillis > 0 && (keySet == null || !keySet.contains(HttpHeaders.Names.LAST_MODIFIED))) {
             addHeaderIfNotExists(HttpHeaders.Names.
