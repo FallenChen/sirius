@@ -54,7 +54,12 @@ else
 	echo "Use a custom config.sh to override the settings listed below"
 fi
 
+if [ -z "$SIRIUS_HOME" ]; then
+    SIRIUS_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+fi
+
 echo ""
+echo "SIRIUS_HOME    $SIRIUS_HOME"
 echo "JAVA_CMD:      $JAVA_CMD"
 echo "JAVA_OPTS:     $JAVA_OPTS"
 echo "SHUTDOWN_PORT: $SHUTDOWN_PORT"
@@ -64,6 +69,7 @@ echo ""
 
 case "$1" in
 start)
+    cd $SIRIUS_HOME
 	if [ -f $STDOUT ] 
 	then 
 		rm $STDOUT 
@@ -73,11 +79,13 @@ start)
     ;;
 
 stop) 
+    cd $SIRIUS_HOME
     echo "Stopping Application..."
 	$JAVA_CMD -Dkill=true -Dport=$SHUTDOWN_PORT IPL
     ;;
 
 restart)
+    cd $SIRIUS_HOME
     echo "Stopping Application..."
     java -Dkill=true -Dport=$SHUTDOWN_PORT IPL
 	if [ -f $STDOUT ] 
@@ -88,8 +96,23 @@ restart)
     $JAVA_CMD $JAVA_OPTS IPL >> $STDOUT $CMD_SUFFIX &
 	;;
 
+patch)
+    cd $SIRIUS_HOME
+    echo "Stopping Application..."
+    $JAVA_CMD -Dkill=true -Dport=$SHUTDOWN_PORT IPL
+
+    sds pull
+
+	if [ -f $STDOUT ]
+	then
+		rm $STDOUT
+	fi
+	echo "Starting Application..."
+   	$JAVA_CMD $JAVA_OPTS IPL >> $STDOUT $CMD_SUFFIX &
+    ;;
+
 *)
-    echo "Usage: sirius.sh start|stop|restart"
+    echo "Usage: sirius.sh start|stop|restart|patch"
     exit 1
     ;;
 
