@@ -81,8 +81,8 @@ public class SystemMetricProvider implements MetricProvider {
             rxSum += stat.getRxBytes();
             txSum += stat.getTxBytes();
         }
-        collector.differentialMetric("sys-eth-tx", "sys-eth-tx", "Network Bytes-Out", txSum / 1024d, "KB");
-        collector.differentialMetric("sys-eth-rx", "sys-eth-rx", "Network Bytes-In", rxSum / 1024d, "KB");
+        collector.differentialMetric("sys-eth-tx", "sys-eth-tx", "Network Bytes-Out", txSum / 1024d / 60, "KB/s");
+        collector.differentialMetric("sys-eth-rx", "sys-eth-rx", "Network Bytes-In", rxSum / 1024d / 60, "KB/s");
     }
 
     private void gatherCPUandMem(MetricsCollector collector) throws SigarException {

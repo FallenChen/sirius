@@ -27,10 +27,6 @@ echo ""
 JAVA_CMD="java"
 CMD_SUFFIX=""
 
-# Java options to use. This should probably be customized according to the
-# applications heap requirements
-JAVA_OPTS="-server -Xmx1024m -XX:MaxPermSize=128M -Djava.net.preferIPv4Stack=true"
-
 # Shutdown port used to signal the application to shut down. Used different
 # ports for different apps or disaster will strike !
 SHUTDOWN_PORT="9191"
@@ -56,6 +52,14 @@ fi
 
 if [ -z "$SIRIUS_HOME" ]; then
     SIRIUS_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+fi
+
+if [ -z "$JAVA_XMX" ]; then
+    JAVA_XMX = "1024m"
+fi
+
+if [ -z "$JAVA_OPTS" ]; then
+    JAVA_OPTS="-server -Xmx$JAVA_XMX -XX:MaxPermSize=128M -Djava.net.preferIPv4Stack=true"
 fi
 
 echo ""

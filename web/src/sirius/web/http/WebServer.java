@@ -469,22 +469,22 @@ public class WebServer implements Lifecycle, MetricProvider {
 
     @Override
     public void gather(MetricsCollector collector) {
-        collector.differentialMetric("http-bytes-in", "http-bytes-in", "HTTP Bytes-In", bytesIn / 1024d, "KB");
-        collector.differentialMetric("http-bytes-out", "http-bytes-out", "HTTP Bytes-Out", bytesOut / 1024d, "KB");
-        collector.differentialMetric("http-connects", "http-connects", "HTTP Connects", connections, null);
-        collector.differentialMetric("http-requests", "http-requests", "HTTP Requests", requests, null);
-        collector.differentialMetric("http-blocks", "http-blocks", "HTTP Blocked Requests", blocks, null);
-        collector.differentialMetric("http-timeouts", "http-timeouts", "HTTP Idle Timeouts", idleTimeouts, null);
+        collector.differentialMetric("http-bytes-in", "http-bytes-in", "HTTP Bytes-In", bytesIn / 1024d / 60, "KB/s");
+        collector.differentialMetric("http-bytes-out", "http-bytes-out", "HTTP Bytes-Out", bytesOut / 1024d / 60, "KB/s");
+        collector.differentialMetric("http-connects", "http-connects", "HTTP Connects", connections, "/min");
+        collector.differentialMetric("http-requests", "http-requests", "HTTP Requests", requests, "/min");
+        collector.differentialMetric("http-blocks", "http-blocks", "HTTP Blocked Requests", blocks, "/min");
+        collector.differentialMetric("http-timeouts", "http-timeouts", "HTTP Idle Timeouts", idleTimeouts, "/min");
         collector.differentialMetric("http-client-errors",
                                      "http-errors",
                                      "HTTP Client Errors (4xx)",
                                      clientErrors,
-                                     null);
+                                     "/min");
         collector.differentialMetric("http-server-errors",
                                      "http-errors",
                                      "HTTP Server Errors (5xx)",
                                      serverErrors,
-                                     null);
+                                     "/min");
         collector.metric("http-open-connections", "HTTP Open Connections", openConnections.size(), null);
         collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAvg(), "ms");
         collector.metric("http-sessions", "HTTP Sessions", ServerSession.getSessions().size(), null);
