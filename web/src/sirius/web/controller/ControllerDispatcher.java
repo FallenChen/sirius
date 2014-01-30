@@ -50,7 +50,7 @@ public class ControllerDispatcher implements WebDispatcher {
      */
     @Override
     public int getPriority() {
-        return PriorityCollector.DEFAULT_PRIORITY - 10;
+        return PriorityCollector.DEFAULT_PRIORITY + 10;
     }
 
     @Override
