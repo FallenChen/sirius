@@ -161,7 +161,7 @@ public class MetricsDB implements Lifecycle, EveryTenMinutes {
         if (!metric.matches("[a-z0-9\\-_]+")) {
             Exceptions.handle()
                       .withSystemErrorMessage(
-                              "Invalid metic name: %s. A metric must only consist of characters, digits or dashes.",
+                              "Invalid metric name: %s. A metric must only consist of characters, digits or dashes.",
                               metric)
                       .handle();
             return;
