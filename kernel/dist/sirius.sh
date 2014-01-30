@@ -55,7 +55,7 @@ if [ -z "$SIRIUS_HOME" ]; then
 fi
 
 if [ -z "$JAVA_XMX" ]; then
-    JAVA_XMX = "1024m"
+    JAVA_XMX="1024m"
 fi
 
 if [ -z "$JAVA_OPTS" ]; then
