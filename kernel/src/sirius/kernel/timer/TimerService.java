@@ -176,6 +176,11 @@ public class TimerService implements Lifecycle {
     }
 
     @Override
+    public void awaitTermination() {
+        // Not necessary
+    }
+
+    @Override
     public String getName() {
         return "timer (System Timer Services)";
     }

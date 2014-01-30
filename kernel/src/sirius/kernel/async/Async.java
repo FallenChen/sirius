@@ -9,6 +9,7 @@
 package sirius.kernel.async;
 
 import com.google.common.collect.Maps;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.ValueProvider;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.Register;
@@ -21,6 +22,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Static helper for managing and scheduling asynchronus background tasks.
@@ -254,8 +256,30 @@ public class Async {
 
         @Override
         public void stopped() {
+            // Try an ordered (fair) shutdown...
             for (AsyncExecutor exec : executors.values()) {
-                exec.shutdownNow();
+                exec.shutdown();
+            }
+        }
+
+        @Override
+        public void awaitTermination() {
+            for (Map.Entry<String, AsyncExecutor> e : executors.entrySet()) {
+                AsyncExecutor exec = e.getValue();
+                if (!exec.isTerminated()) {
+                    LOG.INFO("Waiting for async executor '%s' to terminate...", e.getKey());
+                    try {
+                        if (!exec.awaitTermination(60, TimeUnit.SECONDS)) {
+                            LOG.SEVERE(Strings.apply("Executor '%s' did not terminate within 60s. Interrupting tasks...", e.getKey()));
+                            exec.shutdownNow();
+                            if (!exec.awaitTermination(30, TimeUnit.SECONDS)) {
+                                LOG.SEVERE(Strings.apply("Executor '%s' did not terminate after another 30s!", e.getKey()));
+                            }
+                        }
+                    } catch (InterruptedException ex) {
+                        LOG.SEVERE(Strings.apply("Interrupted while waiting for '%s' to terminate!", e.getKey()));
+                    }
+                }
             }
         }
 

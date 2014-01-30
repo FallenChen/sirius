@@ -209,6 +209,11 @@ public class RythmConfig implements Lifecycle {
     }
 
     @Override
+    public void awaitTermination() {
+        // Not necessary
+    }
+
+    @Override
     public String getName() {
         return "templates (Rythm)";
     }

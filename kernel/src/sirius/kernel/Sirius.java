@@ -237,6 +237,22 @@ public class Sirius {
                           .handle();
             }
         }
+        LOG.INFO("---------------------------------------------------------");
+        LOG.INFO("Awaiting system halt...");
+        LOG.INFO("---------------------------------------------------------");
+        for (Lifecycle lifecycle : lifecycleParticipants.getParts()) {
+            try {
+                Watch w = Watch.start();
+                lifecycle.awaitTermination();
+                LOG.INFO("Terminated: %s (Took: %s)", lifecycle.getName(), w.duration());
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Termination of: %s failed!", lifecycle.getName())
+                          .handle();
+            }
+        }
         if (Sirius.isDev()) {
             LOG.INFO("---------------------------------------------------------");
             LOG.INFO("Thread State");

@@ -64,6 +64,11 @@ public class MetricsDB implements Lifecycle, EveryTenMinutes {
         flushDatabase();
     }
 
+    @Override
+    public void awaitTermination() {
+        // Not necessary
+    }
+
     private void flushDatabase() {
         synchronized (entries) {
             if (Strings.isEmpty(statsBaseDir)) {

@@ -37,6 +37,7 @@ import sirius.web.health.MetricsCollector;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Responsible for setting up and starting netty as HTTP server.
@@ -307,10 +308,32 @@ public class WebServer implements Lifecycle, MetricProvider {
                 channel.close().sync();
             }
         } catch (InterruptedException e) {
-            Exceptions.handle(e);
+            LOG.SEVERE("Interrupted while waiting for the channel to shut down");
         }
+
         bossGroup.shutdownGracefully();
         workerGroup.shutdownGracefully();
+
+        Response.ASYNC_CLIENT.close();
+    }
+
+    @Override
+    public void awaitTermination() {
+        try {
+            if (!bossGroup.terminationFuture().await(10, TimeUnit.SECONDS)) {
+                LOG.SEVERE("Boss Group did not shutdown within 10 seconds!");
+            }
+        } catch (InterruptedException e) {
+            LOG.SEVERE("Interrupted while waiting for the Boss Group to shut down");
+        }
+
+        try {
+            if (!workerGroup.terminationFuture().await(10, TimeUnit.SECONDS)) {
+                LOG.SEVERE("Worker Group did not shutdown within 10 seconds!");
+            }
+        } catch (InterruptedException e) {
+            LOG.SEVERE("Interrupted while waiting for the Worker Group to shut down");
+        }
     }
 
     @Override
@@ -488,6 +511,6 @@ public class WebServer implements Lifecycle, MetricProvider {
     }
 
     public static Collection<? extends ActiveHTTPConnection> getOpenConnections() {
-        return (Collection<? extends ActiveHTTPConnection>) openConnections.values();
+        return openConnections.values();
     }
 }

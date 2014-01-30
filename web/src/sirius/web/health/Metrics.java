@@ -37,6 +37,12 @@ public class Metrics implements EveryMinute {
             final Collector<Metric> collector = Collector.create();
             for (MetricProvider provider : providers) {
                 provider.gather(new MetricsCollector() {
+
+                    @Override
+                    public void metric(String title, double value, String unit, MetricState state) {
+                        collector.add(new Metric(title, value, state, unit));
+                    }
+
                     @Override
                     public void metric(String limitType, String title, double value, String unit) {
                         collector.add(new Metric(title, value, computeState(limitType, value), unit));

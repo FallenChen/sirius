@@ -27,8 +27,20 @@ public interface Lifecycle {
 
     /**
      * Invoked when the framework shuts down.
+     * <p>
+     * This method must not block (and wait for internals to stop). This can be done in {@link #awaitTermination()}.
+     * </p>
      */
     void stopped();
+
+    /**
+     * Called after {@link #stopped()} has been called to wait until all tasks are fully finished.
+     * <p>
+     * This method may block for a certain amount of time to permit the subsystem to shut down properly. However,
+     * it should not block infinitely...
+     * </p>
+     */
+    void awaitTermination();
 
     /**
      * Returns a short name for this lifecycle.

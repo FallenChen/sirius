@@ -19,5 +19,7 @@ public interface MetricsCollector {
 
     void metric(String limitType, String title, double value, String unit);
 
+    void metric(String title, double value, String unit, Metrics.MetricState state);
+
     void differentialMetric(String id, String limitType, String title, double currentValue, String unit);
 }
