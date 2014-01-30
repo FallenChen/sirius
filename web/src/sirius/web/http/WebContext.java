@@ -189,6 +189,12 @@ public class WebContext {
     protected ContentHandler contentHandler;
 
     /*
+     * Contains the timestamp this request was dispatched. (Will not be filled in predispatch, as we only
+     * want to measure how long it takes to generate an "average" result, not how long an upload took....
+     */
+    protected long started = 0;
+
+    /*
      * Name of the cookie used to store and load the client session
      */
     @ConfigValue("http.sessionCookieName")

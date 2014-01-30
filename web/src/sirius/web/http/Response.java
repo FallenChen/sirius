@@ -278,7 +278,9 @@ public class Response {
                 if (wc.microtimingKey != null && Microtiming.isEnabled()) {
                     cc.getWatch().submitMicroTiming(wc.microtimingKey);
                 }
-                WebServer.responseTime.addValue(cc.getWatch().elapsedMillis());
+                if (!wc.isLongCall() && wc.started > 0) {
+                    WebServer.responseTime.addValue(System.currentTimeMillis() - wc.started);
+                }
                 if (!keepalive) {
                     if (WebServer.LOG.isFINE()) {
                         WebServer.LOG.FINE("CLOSING: " + wc.getRequestedURI());

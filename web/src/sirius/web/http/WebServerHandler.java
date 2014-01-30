@@ -485,6 +485,7 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         if (WebServer.LOG.isFINE() && currentContext != null) {
             WebServer.LOG.FINE("DISPATCHING: " + currentContext.getRequestedURI());
         }
+        currentContext.started = System.currentTimeMillis();
         dispatched = true;
         for (WebDispatcher wd : sortedDispatchers) {
             try {
