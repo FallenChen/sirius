@@ -95,10 +95,6 @@ public class Metrics implements EveryMinute {
         return MetricState.GREEN;
     }
 
-    public static enum MetricState {
-        GREEN, YELLOW, RED;
-    }
-
     @Parts(MetricProvider.class)
     private Collection<MetricProvider> providers;
     private List<Metric> metrics = Lists.newArrayList();

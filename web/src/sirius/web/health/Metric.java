@@ -21,9 +21,9 @@ public class Metric implements Comparable<Metric> {
     private final String unit;
     private String name;
     private double value;
-    private Metrics.MetricState state;
+    private MetricState state;
 
-    public Metric(String name, double value, Metrics.MetricState state, String unit) {
+    public Metric(String name, double value, MetricState state, String unit) {
         this.unit = unit;
         this.name = name;
         this.value = value;
@@ -46,7 +46,7 @@ public class Metric implements Comparable<Metric> {
         return Amount.of(value).toSmartRoundedString(NumberFormat.TWO_DECIMAL_PLACES).append(" ", unit).toString();
     }
 
-    public Metrics.MetricState getState() {
+    public MetricState getState() {
         return state;
     }
 

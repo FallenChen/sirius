@@ -45,8 +45,8 @@ public class Cluster implements EveryMinute {
 
     public static final Log LOG = Log.get("cluster");
 
-    private Metrics.MetricState nodeState = Metrics.MetricState.GREEN;
-    private Metrics.MetricState clusterState = Metrics.MetricState.GREEN;
+    private MetricState nodeState = MetricState.GREEN;
+    private MetricState clusterState = MetricState.GREEN;
     private List<NodeInfo> nodes = null;
 
     @ConfigValue("health.cluster.priority")
@@ -71,7 +71,7 @@ public class Cluster implements EveryMinute {
 
     public NodeInfo getBestAvailableNode() {
         for (NodeInfo info : nodes) {
-            if (info.getPriority() < priority && info.getNodeState() == Metrics.MetricState.GREEN) {
+            if (info.getPriority() < priority && info.getNodeState() == MetricState.GREEN) {
                 return info;
             }
         }
@@ -81,7 +81,7 @@ public class Cluster implements EveryMinute {
 
     public boolean isBestAvailableNode() {
         for (NodeInfo info : nodes) {
-            if (info.getPriority() < priority && info.getNodeState() == Metrics.MetricState.GREEN) {
+            if (info.getPriority() < priority && info.getNodeState() == MetricState.GREEN) {
                 return false;
             }
         }
@@ -89,22 +89,22 @@ public class Cluster implements EveryMinute {
         return true;
     }
 
-    public Metrics.MetricState getNodeState() {
+    public MetricState getNodeState() {
         return nodeState;
     }
 
-    protected void setNodeState(Metrics.MetricState state) {
+    protected void setNodeState(MetricState state) {
         this.nodeState = state;
     }
 
-    public Metrics.MetricState getClusterState() {
+    public MetricState getClusterState() {
         return clusterState;
     }
 
     @Override
     public void runTimer() throws Exception {
         // Compute local state
-        Metrics.MetricState newNodeState = Metrics.MetricState.GREEN;
+        MetricState newNodeState = MetricState.GREEN;
         for (Metric m : metrics.getMetrics()) {
             if (m.getState().ordinal() > newNodeState.ordinal()) {
                 newNodeState = m.getState();
@@ -113,7 +113,7 @@ public class Cluster implements EveryMinute {
         setNodeState(newNodeState);
 
         // Compute cluster state
-        Metrics.MetricState newClusterState = newNodeState;
+        MetricState newClusterState = newNodeState;
         LOG.FINE("Scanning cluster...");
         for (NodeInfo info : getNodeInfos()) {
             try {
@@ -127,11 +127,11 @@ public class Cluster implements EveryMinute {
                     JSONObject response = JSON.parseObject(CharStreams.toString(new InputStreamReader(in,
                                                                                                       Charsets.UTF_8)));
                     info.setName(response.getString("name"));
-                    info.setNodeState(Metrics.MetricState.valueOf(response.getString("nodeState")));
+                    info.setNodeState(MetricState.valueOf(response.getString("nodeState")));
                     if (info.getNodeState().ordinal() > newClusterState.ordinal()) {
                         newClusterState = info.getNodeState();
                     }
-                    info.setClusterState(Metrics.MetricState.valueOf(response.getString("clusterState")));
+                    info.setClusterState(MetricState.valueOf(response.getString("clusterState")));
                     info.setPriority(response.getInteger("priority"));
                     info.setUptime(response.getString("uptime"));
                     info.setLastPing(new DateTime());
@@ -142,7 +142,7 @@ public class Cluster implements EveryMinute {
                             JSONObject metric = (JSONObject) metrics.get(i);
                             Metric m = new Metric(metric.getString("name"),
                                                   metric.getDoubleValue("value"),
-                                                  Metrics.MetricState.valueOf(metric.getString("state")),
+                                                  MetricState.valueOf(metric.getString("state")),
                                                   metric.getString("unit"));
                             info.getMetrics().add(m);
                         } catch (Throwable e) {
@@ -155,9 +155,9 @@ public class Cluster implements EveryMinute {
                 }
             } catch (Throwable t) {
                 Exceptions.handle(LOG, t);
-                info.setNodeState(Metrics.MetricState.RED);
-                info.setClusterState(Metrics.MetricState.RED);
-                newClusterState = Metrics.MetricState.RED;
+                info.setNodeState(MetricState.RED);
+                info.setClusterState(MetricState.RED);
+                newClusterState = MetricState.RED;
                 info.incPingFailures();
             }
         }
@@ -171,7 +171,7 @@ public class Cluster implements EveryMinute {
         }
 
         // Check cluster state
-        if (clusterState == Metrics.MetricState.RED && newClusterState == Metrics.MetricState.RED) {
+        if (clusterState == MetricState.RED && newClusterState == MetricState.RED) {
             LOG.FINE("Cluster was RED and remained RED - ensuring alert...");
             ensureAlertClusterFailure();
         }
@@ -184,8 +184,8 @@ public class Cluster implements EveryMinute {
             // Check if a node with a better priority also detected the cluster failure and considers itself GREEN
             for (NodeInfo info : getNodeInfos()) {
                 if (info.getPriority() < getPriority() &&
-                        info.getClusterState() == Metrics.MetricState.RED &&
-                        info.getNodeState() == Metrics.MetricState.GREEN) {
+                        info.getClusterState() == MetricState.RED &&
+                        info.getNodeState() == MetricState.GREEN) {
                     // Another node took care of it...
                     LOG.FINE("Node %s is in charge of sending an alert", info.getName());
                     return;

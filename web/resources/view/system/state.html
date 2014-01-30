@@ -47,7 +47,7 @@
                         </div>
                         <table class="table">
                             @for(sirius.web.health.Metric m : metrics.getMetrics()) {
-                            @if (all || m.getState() != sirius.web.health.Metrics.MetricState.GREEN) {
+                            @if (all || m.getState() != sirius.web.health.MetricState.GREEN) {
                             <tr class="@m.getState()">
                                 <td style="overflow: hidden">
                                     @m.getName()
@@ -83,7 +83,7 @@
                             @if (!info.getMetrics().isEmpty()) {
                                 <table class="table">
                                     @for(sirius.web.health.Metric m : info.getMetrics()) {
-                                        @if (all || m.getState() != sirius.web.health.Metrics.MetricState.GREEN) {
+                                        @if (all || m.getState() != sirius.web.health.MetricState.GREEN) {
                                             <tr class="@m.getState()">
                                                 <td style="overflow: hidden">
                                                     @m.getName()

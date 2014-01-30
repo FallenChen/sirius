@@ -27,8 +27,8 @@ public class NodeInfo {
     private DateTime lastPing;
     private int pingFailures;
     private String uptime;
-    private Metrics.MetricState nodeState;
-    private Metrics.MetricState clusterState;
+    private MetricState nodeState;
+    private MetricState clusterState;
     private List<Metric> metrics = Lists.newArrayList();
 
 
@@ -64,19 +64,19 @@ public class NodeInfo {
         this.lastPing = lastPing;
     }
 
-    public Metrics.MetricState getNodeState() {
+    public MetricState getNodeState() {
         return nodeState;
     }
 
-    protected void setNodeState(Metrics.MetricState nodeState) {
+    protected void setNodeState(MetricState nodeState) {
         this.nodeState = nodeState;
     }
 
-    public Metrics.MetricState getClusterState() {
+    public MetricState getClusterState() {
         return clusterState;
     }
 
-    protected void setClusterState(Metrics.MetricState clusterState) {
+    protected void setClusterState(MetricState clusterState) {
         this.clusterState = clusterState;
     }
 
