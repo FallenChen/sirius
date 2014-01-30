@@ -26,6 +26,7 @@ public class NodeInfo {
     private String endpoint;
     private DateTime lastPing;
     private int pingFailures;
+    private String uptime;
     private Metrics.MetricState nodeState;
     private Metrics.MetricState clusterState;
     private List<Metric> metrics = Lists.newArrayList();
@@ -93,5 +94,13 @@ public class NodeInfo {
 
     public void resetPingFailures() {
         this.pingFailures = 0;
+    }
+
+    public String getUptime() {
+        return uptime;
+    }
+
+    public void setUptime(String uptime) {
+        this.uptime = uptime;
     }
 }

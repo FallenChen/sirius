@@ -8,9 +8,11 @@
 
 package sirius.web.health;
 
+import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
+import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredOutput;
 import sirius.web.services.ServiceCall;
 import sirius.web.services.StructuredService;
@@ -37,6 +39,7 @@ public class NodeInfoService implements StructuredService {
         out.property("name", CallContext.getNodeName());
         out.property("nodeState", cluster.getNodeState().toString());
         out.property("clusterState", cluster.getClusterState().toString());
+        out.property("uptime", NLS.convertDuration(Sirius.getUptimeInMilliseconds(), true, false));
         out.property("priority", cluster.getPriority());
         out.beginArray("metrics");
         for (Metric m : metrics.getMetrics()) {

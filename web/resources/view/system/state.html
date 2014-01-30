@@ -41,7 +41,10 @@
                     <div class="span2 @cluster.getClusterState() big">@cluster.getClusterState()</div>
                 </div>
                 <div class="row">
-                    <div class="span10">
+                    <div class="span12">
+                        <div style="text-align: center">
+                            Uptime: @NLS.convertDuration(sirius.kernel.Sirius.getUptimeInMilliseconds, true, false)
+                        </div>
                         <table class="table">
                             @for(sirius.web.health.Metric m : metrics.getMetrics()) {
                             @if (all || m.getState() != sirius.web.health.Metrics.MetricState.GREEN) {
@@ -68,7 +71,8 @@
                                 <span class="@info.getNodeState()">@info.getName()</span> <small>@info.getEndpoint()</small>
                             </h2>
                             <div style="text-align: center">
-                                Last Ping: @NLS.toUserString(info.getLastPing(), true)
+                                Last Ping: @NLS.toUserString(info.getLastPing(), true)<br />
+                                Uptime: @info.getUptime()<br />
                             </div>
                             @if (info.getPingFailures() > 0) {
                                 <div style="text-align: center; font-weight: bold">

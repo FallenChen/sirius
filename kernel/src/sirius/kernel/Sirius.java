@@ -65,6 +65,7 @@ public class Sirius {
     private static Classpath classpath;
     private static boolean started = false;
     private static boolean initialized = false;
+    private static final long startTimestamp = System.currentTimeMillis();
 
     protected static final Log LOG = Log.get("sirius");
 
@@ -568,6 +569,15 @@ public class Sirius {
      */
     public static String getProductVersion() {
         return productVersion;
+    }
+
+    /**
+     * Returns the up time of the system in milliseconds.
+     *
+     * @return the number of milliseconds the system is running
+     */
+    public static long getUptimeInMilliseconds() {
+        return System.currentTimeMillis() - startTimestamp;
     }
 
 

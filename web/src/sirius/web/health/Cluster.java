@@ -133,6 +133,7 @@ public class Cluster implements EveryMinute {
                     }
                     info.setClusterState(Metrics.MetricState.valueOf(response.getString("clusterState")));
                     info.setPriority(response.getInteger("priority"));
+                    info.setUptime(response.getString("uptime"));
                     info.setLastPing(new DateTime());
                     info.getMetrics().clear();
                     JSONArray metrics = response.getJSONArray("metrics");
