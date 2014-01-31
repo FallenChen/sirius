@@ -40,8 +40,8 @@ public class SystemMetricProvider implements MetricProvider {
     @Override
     public void gather(MetricsCollector collector) {
         for (GarbageCollectorMXBean gc : gcs) {
-            collector.differentialMetric("sys-gc-" + gc.getName(),
-                                         "sys-gc",
+            collector.differentialMetric("jvm-gc-" + gc.getName(),
+                                         "jvm-gc",
                                          "GC - " + gc.getName(),
                                          gc.getCollectionCount(),
                                          "/min");

@@ -72,4 +72,9 @@ public class Average {
     public long getCount() {
         return count;
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(getAvg()) + " (" + count + ")";
+    }
 }

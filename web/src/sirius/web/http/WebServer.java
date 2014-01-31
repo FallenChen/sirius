@@ -476,12 +476,12 @@ public class WebServer implements Lifecycle, MetricProvider {
         collector.differentialMetric("http-blocks", "http-blocks", "HTTP Blocked Requests", blocks, "/min");
         collector.differentialMetric("http-timeouts", "http-timeouts", "HTTP Idle Timeouts", idleTimeouts, "/min");
         collector.differentialMetric("http-client-errors",
-                                     "http-errors",
+                                     "http-client-errors",
                                      "HTTP Client Errors (4xx)",
                                      clientErrors,
                                      "/min");
         collector.differentialMetric("http-server-errors",
-                                     "http-errors",
+                                     "http-client-errors",
                                      "HTTP Server Errors (5xx)",
                                      serverErrors,
                                      "/min");

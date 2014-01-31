@@ -69,9 +69,11 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
      */
     protected void updateBandwidth() {
         long now = System.currentTimeMillis();
-        if (lastBandwidthUpdate > 0 && now - lastBandwidthUpdate > 0) {
-            uplink = currentBytesIn / TimeUnit.SECONDS.convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
-            downlink = currentBytesOut / TimeUnit.SECONDS.convert(now - lastBandwidthUpdate, TimeUnit.MILLISECONDS);
+        long lastUpdate = lastBandwidthUpdate;
+        long deltaInSeconds = TimeUnit.SECONDS.convert(now - lastUpdate, TimeUnit.MILLISECONDS);
+        if (lastUpdate > 0 && deltaInSeconds > 0) {
+            uplink = currentBytesIn / deltaInSeconds;
+            downlink = currentBytesOut / deltaInSeconds;
         }
         currentBytesIn = 0;
         currentBytesOut = 0;

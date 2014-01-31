@@ -92,4 +92,9 @@ public class Counter {
         startTimeMillis = System.currentTimeMillis();
         count = 0;
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(count);
+    }
 }

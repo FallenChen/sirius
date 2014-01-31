@@ -8,5 +8,5 @@ package sirius.web.health;
 * To change this template use File | Settings | File Templates.
 */
 public enum MetricState {
-    GREEN, YELLOW, RED;
+    GRAY, GREEN, YELLOW, RED;
 }

@@ -5,6 +5,9 @@
         <title>[@cluster.getClusterState()/@cluster.getNodeState()] @product - Status</title>
         <link rel="stylesheet" media="screen" href="@prefix/assets/system/css/bootstrap.css">
         <style>
+            .GRAY {
+                color: #555555;
+            }
             .GREEN {
                 color: #168d12;
             }
@@ -47,7 +50,7 @@
                         </div>
                         <table class="table">
                             @for(sirius.web.health.Metric m : metrics.getMetrics()) {
-                            @if (all || m.getState() != sirius.web.health.MetricState.GREEN) {
+                            @if (all || m.getState() != sirius.web.health.MetricState.GRAY) {
                             <tr class="@m.getState()">
                                 <td style="overflow: hidden">
                                     @m.getName()
@@ -83,7 +86,7 @@
                             @if (!info.getMetrics().isEmpty()) {
                                 <table class="table">
                                     @for(sirius.web.health.Metric m : info.getMetrics()) {
-                                        @if (all || m.getState() != sirius.web.health.MetricState.GREEN) {
+                                        @if (all || m.getState() != sirius.web.health.MetricState.GRAY) {
                                             <tr class="@m.getState()">
                                                 <td style="overflow: hidden">
                                                     @m.getName()

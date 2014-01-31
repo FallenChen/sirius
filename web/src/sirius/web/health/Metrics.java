@@ -12,7 +12,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Collector;
-import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.timer.EveryMinute;
@@ -68,28 +67,39 @@ public class Metrics implements EveryMinute {
         }
     }
 
+    private class Limit {
+        double gray = 0;
+        double yellow = 0;
+        double red = 0;
+
+        @Override
+        public String toString() {
+            return "(" + gray + " / " + yellow + " / " + red + ")";
+        }
+    }
+
     private MetricState computeState(String limitType, double value) {
-        Tuple<Double, Double> limit = limits.get(limitType);
+        Limit limit = limits.get(limitType);
         if (limit == null) {
-            limit = Tuple.create();
+            limit = new Limit();
+            if (Sirius.getConfig().hasPath("health.limits." + limitType + ".gray")) {
+                limit.gray = Sirius.getConfig().getDouble("health.limits." + limitType + ".gray");
+            }
             if (Sirius.getConfig().hasPath("health.limits." + limitType + ".warning")) {
-                limit.setFirst(Sirius.getConfig().getDouble("health.limits." + limitType + ".warning"));
-                if (limit.getFirst() == 0d) {
-                    limit.setFirst(null);
-                }
+                limit.yellow = Sirius.getConfig().getDouble("health.limits." + limitType + ".warning");
             }
             if (Sirius.getConfig().hasPath("health.limits." + limitType + ".error")) {
-                limit.setSecond(Sirius.getConfig().getDouble("health.limits." + limitType + ".error"));
-                if (limit.getSecond() == 0d) {
-                    limit.setSecond(null);
-                }
+                limit.red = Sirius.getConfig().getDouble("health.limits." + limitType + ".error");
             }
             limits.put(limitType, limit);
         }
-        if (limit.getSecond() != null && value >= limit.getSecond()) {
+        if (limit.gray > 0 && value <= limit.gray) {
+            return MetricState.GRAY;
+        }
+        if (limit.red > 0 && value >= limit.red) {
             return MetricState.RED;
         }
-        if (limit.getFirst() != null && value >= limit.getFirst()) {
+        if (limit.yellow > 0 && value >= limit.yellow) {
             return MetricState.YELLOW;
         }
         return MetricState.GREEN;
@@ -98,7 +108,7 @@ public class Metrics implements EveryMinute {
     @Parts(MetricProvider.class)
     private Collection<MetricProvider> providers;
     private List<Metric> metrics = Lists.newArrayList();
-    private Map<String, Tuple<Double, Double>> limits = Maps.newHashMap();
+    private Map<String, Limit> limits = Maps.newHashMap();
     private Map<String, Double> differentials = Maps.newHashMap();
 
     public List<Metric> getMetrics() {
