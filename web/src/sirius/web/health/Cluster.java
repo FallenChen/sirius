@@ -15,7 +15,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharStreams;
-import org.joda.time.DateTime;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
@@ -34,19 +33,46 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.12.13
- * Time: 16:22
- * To change this template use File | Settings | File Templates.
+ * Manages and monitors the state of a cluster of machines.
+ * <p>
+ * Permits to couple a number of machines to a cluster where each member monitors the others. In case or a failure
+ * an alert will be triggered. Additionally the cluster state can be visualized using the web interface (/system/state).
+ * </p>
+ * <p>
+ * Even in a single machine installation, this class will take care of monitoring all metrics and triggering an
+ * alert (if possible).
+ * </p>
+ * <p>
+ * Cluster members are defined via the configuration by listing all HTTP-Endpoints under
+ * <dd>health.cluster.nodes</dd> in the form of <dd>http://hostname:port</dd>. Each node always defines a priority
+ * (<dd>health.cluster.priority</dd>). The node with the lowest number (which is still functional) is in charge
+ * of triggering an alert in case of faulting or unreachable members.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(classes = {Cluster.class, EveryMinute.class})
 public class Cluster implements EveryMinute {
 
+    /*
+     * Logger used by the cluster system
+     */
     public static final Log LOG = Log.get("cluster");
 
+    /*
+     * Contains the state of the local node
+     */
     private MetricState nodeState = MetricState.GREEN;
+
+    /*
+     * Contains the overall state of the cluster (which is equal to the "worst" node state among all members).
+     */
     private MetricState clusterState = MetricState.GREEN;
+
+    /*
+     * Contains a list of all cluster members.
+     */
     private List<NodeInfo> nodes = null;
 
     @ConfigValue("health.cluster.priority")
@@ -55,6 +81,15 @@ public class Cluster implements EveryMinute {
     @Part
     private Metrics metrics;
 
+    /**
+     * Reports infos for all known cluster members.
+     * <p>
+     * During startup (before the initial communication took place) some information (like the node name) might
+     * be missing.
+     * </p>
+     *
+     * @return a list of all cluster members along with their last known state
+     */
     public List<NodeInfo> getNodeInfos() {
         if (nodes == null) {
             List<NodeInfo> result = Lists.newArrayList();
@@ -69,6 +104,11 @@ public class Cluster implements EveryMinute {
         return nodes;
     }
 
+    /**
+     * Returns the best node which is still functional and has the highest priority (lowest number).
+     *
+     * @return all known data about the best functional cluster node
+     */
     public NodeInfo getBestAvailableNode() {
         for (NodeInfo info : nodes) {
             if (info.getPriority() < priority && info.getNodeState() == MetricState.GREEN) {
@@ -79,6 +119,11 @@ public class Cluster implements EveryMinute {
         return null;
     }
 
+    /**
+     * Determines if the current node is the best (highest priority, still functional) cluster node.
+     *
+     * @return <tt>true</tt> if the current node is the best node in this cluster
+     */
     public boolean isBestAvailableNode() {
         for (NodeInfo info : nodes) {
             if (info.getPriority() < priority && info.getNodeState() == MetricState.GREEN) {
@@ -89,18 +134,27 @@ public class Cluster implements EveryMinute {
         return true;
     }
 
+    /**
+     * Returns the determined state of this node.
+     *
+     * @return the state of this node, which is computed every minute
+     */
     public MetricState getNodeState() {
         return nodeState;
     }
 
-    protected void setNodeState(MetricState state) {
-        this.nodeState = state;
-    }
-
+    /**
+     * Returns the overall state of the cluster.
+     *
+     * @return the cluster state, which is the "worst" state among all members
+     */
     public MetricState getClusterState() {
         return clusterState;
     }
 
+    /*
+     * Re-computes the node and cluster state...
+     */
     @Override
     public void runTimer() throws Exception {
         // Compute local state
@@ -110,7 +164,7 @@ public class Cluster implements EveryMinute {
                 newNodeState = m.getState();
             }
         }
-        setNodeState(newNodeState);
+        this.nodeState = newNodeState;
 
         // Compute cluster state
         MetricState newClusterState = newNodeState;
@@ -134,7 +188,6 @@ public class Cluster implements EveryMinute {
                     info.setClusterState(MetricState.valueOf(response.getString("clusterState")));
                     info.setPriority(response.getInteger("priority"));
                     info.setUptime(response.getString("uptime"));
-                    info.setLastPing(new DateTime());
                     info.getMetrics().clear();
                     JSONArray metrics = response.getJSONArray("metrics");
                     for (int i = 0; i < metrics.size(); i++) {
@@ -150,7 +203,7 @@ public class Cluster implements EveryMinute {
                             LOG.FINE(e);
                         }
                     }
-                    info.resetPingFailures();
+                    info.pingSucceeded();
                     LOG.FINE("Node: %s is %s (%s)", info.getName(), info.getNodeState(), info.getClusterState());
                 }
             } catch (Throwable t) {
@@ -179,11 +232,14 @@ public class Cluster implements EveryMinute {
         clusterState = newClusterState;
     }
 
+    /*
+     * Ensures that an alram is triggered in case of a critical cluster state
+     */
     private void ensureAlertClusterFailure() {
         if (!isBestAvailableNode()) {
             // Check if a node with a better priority also detected the cluster failure and considers itself GREEN
             for (NodeInfo info : getNodeInfos()) {
-                if (info.getPriority() < getPriority() &&
+                if (info.getPriority() < getNodePriority() &&
                         info.getClusterState() == MetricState.RED &&
                         info.getNodeState() == MetricState.GREEN) {
                     // Another node took care of it...
@@ -202,7 +258,12 @@ public class Cluster implements EveryMinute {
 
     }
 
-    public int getPriority() {
+    /**
+     * Returns the priority of this node.
+     *
+     * @return the priority of this node (lower is better)
+     */
+    public int getNodePriority() {
         return priority;
     }
 }

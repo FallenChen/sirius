@@ -18,11 +18,13 @@ import sirius.web.services.ServiceCall;
 import sirius.web.services.StructuredService;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 27.12.13
- * Time: 16:47
- * To change this template use File | Settings | File Templates.
+ * Provides statistics for this node.
+ * <p>
+ * This service will be called by the {@link Cluster} manager running on the other members.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(name = "system/node-info")
 public class NodeInfoService implements StructuredService {
@@ -40,7 +42,7 @@ public class NodeInfoService implements StructuredService {
         out.property("nodeState", cluster.getNodeState().toString());
         out.property("clusterState", cluster.getClusterState().toString());
         out.property("uptime", NLS.convertDuration(Sirius.getUptimeInMilliseconds(), true, false));
-        out.property("priority", cluster.getPriority());
+        out.property("priority", cluster.getNodePriority());
         out.beginArray("metrics");
         for (Metric m : metrics.getMetrics()) {
             out.beginObject("metric");

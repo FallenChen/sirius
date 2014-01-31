@@ -18,7 +18,10 @@ import sirius.web.controller.Routed;
 import sirius.web.http.WebContext;
 
 /**
- * Contains the default admin GUI and some default responses (e.g. robots.txt).
+ * Contains the default admin GUI.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 @Register(classes = Controller.class)
 public class SystemController implements Controller {
@@ -57,6 +60,9 @@ public class SystemController implements Controller {
         ctx.respondWith().status(HttpResponseStatus.OK);
     }
 
+    /**
+     * Can be used to forcefully create an error. (A NullPointerException in this case.)
+     */
     @Routed("/system/fail")
     public void fail(WebContext ctx) {
         Object n = null;

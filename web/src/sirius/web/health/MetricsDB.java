@@ -27,6 +27,9 @@ import java.util.Map;
  * <p>
  * This class provides a simple way of storing time dependent statistical values.
  * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/01
  */
 public class MetricsDB implements Lifecycle, EveryTenMinutes {
 

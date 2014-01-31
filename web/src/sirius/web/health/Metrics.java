@@ -22,13 +22,53 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created with IntelliJ IDEA.
+ * Collects and stores metrics for various parts of the system.
+ * <p>
+ * To provide custom metrics, implement {@link MetricProvider} and register it in the component model using the
+ * {@link Register} annotation.
+ * </p>
+ * <p>
+ * The collected metrics are updated once every minute.
+ * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/09
  */
 @Register(classes = {Metrics.class, EveryMinute.class})
 public class Metrics implements EveryMinute {
+
+    @Parts(MetricProvider.class)
+    private Collection<MetricProvider> providers;
+
+    /*
+     * Contains all collected metrics
+     */
+    private List<Metric> metrics = Lists.newArrayList();
+
+    /*
+     * Internal structure to combine the three limits available for each metric: gray, warning (yellow), error (red)
+     */
+    private class Limit {
+        double gray = 0;
+        double yellow = 0;
+        double red = 0;
+
+        @Override
+        public String toString() {
+            return "(" + gray + " / " + yellow + " / " + red + ")";
+        }
+    }
+
+    /*
+     * Contains all limits as defined in the system config
+     */
+    private Map<String, Limit> limits = Maps.newHashMap();
+
+    /*
+     * Contains the last value of each metric in order to compute differential metrics
+     */
+    private Map<String, Double> differentials = Maps.newHashMap();
+
 
     @Override
     public void runTimer() throws Exception {
@@ -67,17 +107,9 @@ public class Metrics implements EveryMinute {
         }
     }
 
-    private class Limit {
-        double gray = 0;
-        double yellow = 0;
-        double red = 0;
-
-        @Override
-        public String toString() {
-            return "(" + gray + " / " + yellow + " / " + red + ")";
-        }
-    }
-
+    /*
+     * Computes the state of the metric based in the limits given in the config
+     */
     private MetricState computeState(String limitType, double value) {
         Limit limit = limits.get(limitType);
         if (limit == null) {
@@ -105,12 +137,11 @@ public class Metrics implements EveryMinute {
         return MetricState.GREEN;
     }
 
-    @Parts(MetricProvider.class)
-    private Collection<MetricProvider> providers;
-    private List<Metric> metrics = Lists.newArrayList();
-    private Map<String, Limit> limits = Maps.newHashMap();
-    private Map<String, Double> differentials = Maps.newHashMap();
-
+    /**
+     * Returns a list of all collected metrics so far.
+     *
+     * @return a list of all metrics
+     */
     public List<Metric> getMetrics() {
         return Collections.unmodifiableList(metrics);
     }

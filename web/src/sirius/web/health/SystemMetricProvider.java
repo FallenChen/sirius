@@ -21,7 +21,7 @@ import java.lang.management.ManagementFactory;
 import java.util.List;
 
 /**
- * Created with IntelliJ IDEA.
+ * Provides core metrics for the operating system, the Java Virtual Machine and central Frameworks.
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/09
