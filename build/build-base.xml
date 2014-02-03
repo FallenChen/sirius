@@ -15,11 +15,15 @@
 
     You must specify the following properties:
      * app.name - Name of the application
-     * app.version - Current version of the app
      * app.filename - File-compatible name of the app
 
-    You can provide: no-app, no-web or no-kernel to disable the respective modules.
+    You can set app.version (otherwise it will use a 4-digit date code)
+     * app.version - Current version of the app
+    You can also set app.build, which will then be appended to the version:
+     * app.build - Current build number used
 
+
+    You can provide: no-app, no-web or no-kernel to disable the respective modules.
 -->
 <project name="sirius" default="ivy" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
 
@@ -91,12 +95,29 @@
         <ivy:report todir="${build.dir}/lib/report" conf="compile" graph="false" />
     </target>
 
+    <!-- =========================================================================================================== -->
+    <!-- Generates app.version using a 4 digit date code and appending the jenkins BUILD number if available -->
+    <!-- =========================================================================================================== -->
+    <condition property="hasBuild">
+        <isset property="app.build" />
+    </condition>
+
+    <target name="genDateCode">
+        <tstamp>
+            <format property="dateCode" pattern="yyww" />
+        </tstamp>
+    </target>
+    <target name="makeVersionA" depends="genDateCode" if="hasBuild">
+        <property name="app.version" value="${dateCode}-${app.build}" />
+    </target>
+    <target name="makeVersionB" depends="genDateCode" unless="hasBuild">
+        <property name="app.version" value="${dateCode}" />
+    </target>
 
     <!-- =========================================================================================================== -->
     <!-- Builds and bundles the complete application for distribution -->
     <!-- =========================================================================================================== -->
-    <target name="make" depends="ivy" description="Builds and bundles the complete application for distribution ">
-
+    <target name="make" depends="ivy,makeVersionA,makeVersionB" description="Builds and bundles the complete application for distribution ">
         <!-- Create distribution directory -->
         <mkdir dir="${dist.dir}" />
         <delete>
@@ -312,7 +333,7 @@
     <!-- =========================================================================================================== -->
     <target name="mvn-init" depends="mvn-install" description="Checks if mvn is present or downloads it otherwise">
         <taskdef resource="org/apache/maven/artifact/ant/antlib.xml"
-                 uri="antlib:org.apache.maven.ant"
+                 uri="antlib:org.apache.maven.artifact.ant"
                  classpath="${mvn.home}/${mvn.jar.name}"/>
     </target>
 
@@ -321,10 +342,10 @@
     <!-- =========================================================================================================== -->
     <!-- Generates a maven artifact -->
     <!-- =========================================================================================================== -->
-    <target name="maven-prepare" depends="mvn-init,ivy-init" description="Generates a maven artifact">
+    <target name="maven-prepare" depends="mvn-init,make" description="Generates a maven artifact">
         <ivy:makepom ivyfile="${build.dir}/ivy.xml" pomfile="${build.dir}/pom.xml" />
-        <jar destfile="${dist.dir}/${app.filename}-${app.version}.jar" basedir="${dist.dir}/app" />
-        <jar destfile="${dist.dir}/${app.filename}-${app.version}-javadoc.jar" basedir="${site.dir}/docs" />
+        <jar destfile="${dist.dir}/${app.filename}.jar" basedir="${dist.dir}/app" />
+        <jar destfile="${dist.dir}/${app.filename}-javadoc.jar" basedir="${site.dir}/docs" />
     </target>
 
     <!-- =========================================================================================================== -->
@@ -336,7 +357,7 @@
             <arg value="-Durl=${maven-snapshots-repository-url}" />
             <arg value="-DrepositoryId=${maven-snapshots-repository-id}" />
             <arg value="-DpomFile=pom.xml" />
-            <arg value="-Dfile=${dist.dir}/${app.filename}-${app.version}.jar" />
+            <arg value="-Dfile=${dist.dir}/${app.filename}.jar" />
         </artifact:mvn>
     </target>
 
@@ -351,18 +372,7 @@
             <arg value="-Durl=${maven-staging-repository-url}" />
             <arg value="-DrepositoryId=${maven-staging-repository-id}" />
             <arg value="-DpomFile=pom.xml" />
-            <arg value="-Dfile=${maven-jar}" />
-            <arg value="-Pgpg" />
-        </artifact:mvn>
-
-        <!-- sign and deploy the sources artifact -->
-        <artifact:mvn>
-            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
-            <arg value="-Durl=${maven-staging-repository-url}" />
-            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
-            <arg value="-DpomFile=pom.xml" />
-            <arg value="-Dfile=${maven-sources-jar}" />
-            <arg value="-Dclassifier=sources" />
+            <arg value="-Dfile=${dist.dir}/${app.filename}.jar" />
             <arg value="-Pgpg" />
         </artifact:mvn>
 
@@ -372,7 +382,7 @@
             <arg value="-Durl=${maven-staging-repository-url}" />
             <arg value="-DrepositoryId=${maven-staging-repository-id}" />
             <arg value="-DpomFile=pom.xml" />
-            <arg value="-Dfile=${maven-javadoc-jar}" />
+            <arg value="-Dfile=${dist.dir}/${app.filename}-javadoc.jar" />
             <arg value="-Dclassifier=javadoc" />
             <arg value="-Pgpg" />
         </artifact:mvn>
