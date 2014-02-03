@@ -16,6 +16,7 @@ import sirius.kernel.health.Exceptions;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -213,7 +214,11 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
         if (buffer == null) {
             return -1;
         }
-        return buffer.readByte();
+        try {
+            return buffer.readByte();
+        } finally {
+            buffer.release();
+        }
     }
 
     @Override
@@ -222,9 +227,13 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
         if (buffer == null) {
             return -1;
         }
-        len = Math.min(buffer.readableBytes(), len);
-        buffer.readBytes(b, off, len);
-        return len;
+        try {
+            len = Math.min(buffer.readableBytes(), len);
+            buffer.readBytes(b, off, len);
+            return len;
+        } finally {
+            buffer.release();
+        }
     }
 
     @Override
@@ -233,12 +242,16 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
         if (buffer == null) {
             return -1;
         }
-        if (n > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("n > Integer.MAX_VALUE");
+        try {
+            if (n > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("n > Integer.MAX_VALUE");
+            }
+            int nBytes = Math.min(buffer.readableBytes(), (int) n);
+            buffer.skipBytes(nBytes);
+            return nBytes;
+        } finally {
+            buffer.release();
         }
-        int nBytes = Math.min(buffer.readableBytes(), (int) n);
-        buffer.skipBytes(nBytes);
-        return nBytes;
     }
 
     @Override
@@ -247,7 +260,11 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
         if (buffer == null) {
             return 0;
         }
-        return buffer.readableBytes();
+        try {
+            return buffer.readableBytes();
+        } finally {
+            buffer.release();
+        }
     }
 
     @Override
@@ -265,19 +282,29 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
         return false;
     }
 
+    /**
+     * Determines if this stream is in an ERROR state or not.
+     *
+     * @return <tt>true</tt> if a failure occurred, <tt>false</tt> otherwise
+     */
+    public boolean isFailed() {
+        return error;
+    }
+
     private ByteBuf getBuffer() throws IOException {
         try {
             if (error) {
-                throw new IOException("Tried to read from a stream which had an error on either side");
+                throw new InterruptedIOException("Tried to read from a stream which had an error on either side");
             }
             if (!open) {
                 // Stream was closed by reading site...
                 error = true;
                 release();
-                throw new IOException("Tried to read an already closed stream");
+                throw new InterruptedIOException("Tried to read an already closed stream");
             }
-            if (currentBuffer != null) {
+            if (currentBuffer != null && currentBuffer.refCnt() > 0) {
                 if (currentBuffer.readableBytes() > 0) {
+                    currentBuffer.retain();
                     return currentBuffer;
                 } else {
                     currentBuffer.release();
@@ -288,7 +315,7 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
                 return null;
             }
             currentBuffer = transferQueue.poll(readTimeout, unit);
-            if (error || currentBuffer == null) {
+            if (error || currentBuffer == null || currentBuffer.refCnt() == 0) {
                 if (currentBuffer != null) {
                     currentBuffer.release();
                     currentBuffer = null;
@@ -304,6 +331,7 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
                 currentBuffer = null;
                 return null;
             }
+            currentBuffer.retain();
             return currentBuffer;
         } catch (InterruptedException e) {
             error = true;

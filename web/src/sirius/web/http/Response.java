@@ -704,7 +704,7 @@ public class Response {
                 addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, "public, max-age=" + cacheSeconds);
             }
         } else {
-            addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, HttpHeaders.Values.NO_CACHE+", max-age=0");
+            addHeaderIfNotExists(HttpHeaders.Names.CACHE_CONTROL, HttpHeaders.Values.NO_CACHE + ", max-age=0");
         }
         if (lastModifiedMillis > 0 && (keySet == null || !keySet.contains(HttpHeaders.Names.LAST_MODIFIED))) {
             addHeaderIfNotExists(HttpHeaders.Names.
@@ -1340,7 +1340,12 @@ public class Response {
                 }
                 open = false;
                 super.close();
-                flushBuffer(true);
+                if (ctx.channel().isOpen()) {
+                    flushBuffer(true);
+                } else if (buffer != null) {
+                    buffer.release();
+                    buffer = null;
+                }
             }
         };
     }
