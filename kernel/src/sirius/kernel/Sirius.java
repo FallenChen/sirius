@@ -556,7 +556,7 @@ public class Sirius {
      * @return the name of the product for which the framework was started.
      */
     public static String getProductName() {
-        return productName;
+        return "@PRODUCT@".equals(productName) ? "SIRIUS" : productName;
     }
 
     /**
@@ -568,7 +568,7 @@ public class Sirius {
      * @return the version of the product for which the framework was started.
      */
     public static String getProductVersion() {
-        return productVersion;
+        return "@VERSION@".equals(productVersion) ? "DEV" : productVersion;
     }
 
     /**
