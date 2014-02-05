@@ -84,6 +84,13 @@ public class ServiceDispatcher implements WebDispatcher {
                     call = new XMLServiceCall(ctx);
                 } else if ("json".equals(type)) {
                     call = new JSONServiceCall(ctx);
+                } else {
+                    if (Strings.isFilled(service)) {
+                        service = type + "/" + service;
+                    } else {
+                        service = type;
+                    }
+                    call = new RawServiceCall(ctx);
                 }
 
                 if (call == null) {
