@@ -227,10 +227,11 @@ public class Exceptions {
                         try {
                             frozen.set(Boolean.TRUE);
                             String location = null;
-                            if (ex != null) {
-                                location = formatStackTraceElement(ex.getStackTrace().length == 0 ? null : ex.getStackTrace()[0]);
-                            } else {
-                                location = formatStackTraceElement(result.getStackTrace().length == 0 ? null : result.getStackTrace()[0]);
+                            if (ex != null && ex.getStackTrace().length > 0) {
+                                location = formatStackTraceElement(ex.getStackTrace()[0]);
+                            } else if (result.getStackTrace().length > 0) {
+                                location = formatStackTraceElement(result.getStackTrace().length > 1 ? result.getStackTrace()[1] : result
+                                        .getStackTrace()[0]);
                             }
                             for (ExceptionHandler handler : handlers) {
                                 try {
