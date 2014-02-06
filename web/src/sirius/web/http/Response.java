@@ -1105,7 +1105,6 @@ public class Response {
                     if (contentType != null) {
                         setContentTypeHeader(name != null ? name : url);
                         if (!shouldBeCompressed(contentType)) {
-                            // Forcefully disable the content compressor as it cannot compress a DefaultFileRegion
                             setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
                         }
                     }
@@ -1225,7 +1224,7 @@ public class Response {
                             ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
                             complete(writeFuture);
                         } else {
-                            ChannelFuture writeFuture = ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
+                            ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
                             complete(writeFuture);
                         }
                     }
