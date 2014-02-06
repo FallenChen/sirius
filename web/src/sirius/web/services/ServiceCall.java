@@ -40,6 +40,7 @@ public abstract class ServiceCall {
         StructuredOutput out = createOutput();
         out.beginResult();
         out.property("success", false);
+        out.property("error", true);
         out.property("message", he.getMessage());
         Throwable cause = error.getCause();
         while (cause != null && cause.getCause() != null && !cause.getCause().equals(cause)) {
