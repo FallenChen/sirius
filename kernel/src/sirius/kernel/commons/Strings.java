@@ -302,4 +302,23 @@ public class Strings {
         }
         return sb.toString();
     }
+
+    /**
+     * Replaces german umlauts to HTML entities as some email clients fail otherwise. Using UTF-8 as encoding this
+     * shouldn't normally be necessary and is just there to support legacy software.
+     *
+     * @param input the input to escape
+     * @return a string where all known (supported) umlauts are replaced by HTML entities
+     */
+    public static String replaceUmlautsToHtml(String input) {
+        String textToReplace = input;
+        textToReplace = textToReplace.replace("ö", "&ouml;");
+        textToReplace = textToReplace.replace("ä", "&auml;");
+        textToReplace = textToReplace.replace("ü", "&uuml;");
+        textToReplace = textToReplace.replace("ß", "&szlig;");
+        textToReplace = textToReplace.replace("Ö", "&Ouml;");
+        textToReplace = textToReplace.replace("Ä", "&Auml;");
+        textToReplace = textToReplace.replace("Ü", "&Uuml;");
+        return textToReplace;
+    }
 }

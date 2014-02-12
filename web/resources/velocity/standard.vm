@@ -1,0 +1,5 @@
+## Translates the given key into the users language.
+#macro(nls $key)${nls.get($key)}#end
+
+## Converts the given value to a string representation matching the users locale settings.
+#macro(string $key)${nls.toUserString($key)}#end

@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.web.mails;
 
 /**
@@ -33,4 +41,11 @@ public interface SMTPConfiguration {
      * Contains the default sender name
      */
     String getMailSenderName();
+
+    /**
+     * Determines if mails sent via this configuration use a SENDER: header with the mail sender / senderName or not.
+     *
+     * @return <tt>true</tt> if a SENDER: header should be set, <tt>false</tt> otherwise
+     */
+    boolean isUseSenderAndEnvelopeFrom();
 }

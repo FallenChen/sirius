@@ -27,7 +27,6 @@ import java.util.TreeMap;
 public class Context implements Map<String, Object> {
 
     protected Map<String, Object> data = new TreeMap<String, Object>();
-    protected Runnable changeListener;
 
     @Override
     public int size() {
@@ -90,17 +89,11 @@ public class Context implements Map<String, Object> {
     @Override
     public void putAll(Map<? extends String, ? extends Object> m) {
         data.putAll(m);
-        if (changeListener != null) {
-            changeListener.run();
-        }
     }
 
     @Override
     public void clear() {
         data.clear();
-        if (changeListener != null) {
-            changeListener.run();
-        }
     }
 
     @Override
@@ -137,17 +130,6 @@ public class Context implements Map<String, Object> {
         return new Context();
     }
 
-    /**
-     * Creates a new context which the given change listener attached
-     *
-     * @param listener a change listener which is notified if a value changes
-     * @return a newly created and empty context
-     */
-    public static Context create(Runnable listener) {
-        Context result = new Context();
-        result.changeListener = listener;
-        return result;
-    }
 
     /**
      * Associates the given <tt>value</tt> to the given <tt>key</tt>, while returning <tt>this</tt>
@@ -158,10 +140,7 @@ public class Context implements Map<String, Object> {
      * @return <tt>this</tt> to permit fluent method calls
      */
     public Context set(String key, Object value) {
-        Object original = data.put(key, value);
-        if (!Strings.areEqual(value, original) && changeListener != null) {
-            changeListener.run();
-        }
+        data.put(key, value);
         return this;
     }
 
@@ -173,9 +152,6 @@ public class Context implements Map<String, Object> {
      */
     public Context setAll(Map<String, Object> data) {
         putAll(data);
-        if (changeListener != null) {
-            changeListener.run();
-        }
         return this;
     }
 

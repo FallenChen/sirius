@@ -509,13 +509,13 @@ public class Sirius {
     }
 
     /*
-     * Set UTF-8 as encoding (expect for mails - which require ISO-8859-1)
+     * Set UTF-8 as encoding
      */
     private static void setupEncoding() {
         LOG.INFO("Setting " + Charsets.UTF_8.name() + " as default encoding (file.encoding)");
         System.setProperty("file.encoding", Charsets.UTF_8.name());
         LOG.INFO("Setting " + Charsets.ISO_8859_1.name() + " as default mime encoding (mail.mime.charset)");
-        System.setProperty("mail.mime.charset", Charsets.ISO_8859_1.name());
+        System.setProperty("mail.mime.charset", Charsets.UTF_8.name());
     }
 
     /*

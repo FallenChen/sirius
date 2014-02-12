@@ -66,7 +66,7 @@ public class NLS {
     private static Set<String> supportedLanguages;
 
     /**
-     * Returns the currently active langauge as two-letter code.
+     * Returns the currently active language as two-letter code.
      *
      * @return a two-letter code of the currently active language, as defined in
      *         {@link sirius.kernel.async.CallContext#getLang()}

@@ -1,6 +1,17 @@
+<!-- Provides the tools to load the system configuration -->
 <dependency org="com.typesafe" name="config" rev="1.0.2" conf="compile" />
+
+<!-- Sane date/time API -->
 <dependency org="joda-time" name="joda-time" rev="2.2" conf="compile" />
+
+<!-- Useful helper classes by Google -->
 <dependency org="com.google.guava" name="guava" rev="14.0.1" conf="compile" />
+
+<!-- The logging framework we use -->
 <dependency org="log4j" name="log4j" rev="1.2.17" conf="compile" />
+
+<!-- Testframework - could be removed from production deployments, but isn't a big deal either -->
 <dependency org="junit" name="junit" rev="4.11" conf="compile" />
+
+<!-- JSR305 annotations like @Nonnull etc. -->
 <dependency org="com.google.code.findbugs" name="jsr305" rev="2.0.2" conf="compile" />

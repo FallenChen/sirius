@@ -1,7 +1,13 @@
+<!-- Netty is the foundation of the built in web server -->
 <dependency org="io.netty" name="netty-all" rev="4.0.14.Final" />
+
+<!-- Rythm is the template engine used to create dynamic web pages -->
 <dependency org="org.rythmengine" name="rythm-engine" rev="1.0-b9" conf="compile" />
-<dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.13" conf="compile" />
+
+<!-- DBCP is the connection pool used to access JDBC data sources -->
 <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="compile" />
+
+<!-- Async http client used to tunnel http data from a backend server -->
 <dependency org="com.ning" name="async-http-client" rev="1.7.19" conf="compile">
 <!--
     We better live with 2 netty versions (netty 3.6.6 for this) and netty 4.0 as our server base.
@@ -13,4 +19,17 @@
     async-http-client is used by Response#tunnel(...)
 -->
 </dependency>
+
+<!-- Required logging bridge to make slf4j log to log4j -->
 <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.7.5" conf="compile" />
+
+<!-- Used to generate QR codes -->
+<dependency org="com.google.zxing" name="core" rev="2.2" conf="compile" />
+<dependency org="com.google.zxing" name="javase" rev="2.2" conf="compile" />
+
+<!-- Used to send and receive mails -->
+<dependency org="javax.mail" name="mail" rev="1.4.7" conf="compile" />
+
+<!-- Velocity and xhtml renderer are mainly used to generate mails and attachments -->
+<dependency org="org.apache.velocity" name="velocity" rev="1.7" conf="compile" />
+<dependency org="org.xhtmlrenderer" name="core-renderer" rev="R8" conf="compile" />
