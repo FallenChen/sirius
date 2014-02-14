@@ -22,11 +22,12 @@ import java.util.Collection;
 
 /**
  * Adapter to make Velocity use our {@link Resolver} framework.
+ * <p>This class needs to be public so it can be instantiated by Velocity.</p>
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2014/01
  */
-class VelocityResourceLoader extends ResourceLoader {
+public class VelocityResourceLoader extends ResourceLoader {
 
     @Parts(Resolver.class)
     private static Collection<Resolver> resolvers;
@@ -39,13 +40,16 @@ class VelocityResourceLoader extends ResourceLoader {
     }
 
     private URL resolve(String name) {
+        if (name == null) {
+            return null;
+        }
         for (Resolver res : resolvers) {
             URL result = res.resolve(name);
             if (result != null) {
                 return result;
             }
         }
-        return getClass().getResource(name);
+        return getClass().getResource(name.startsWith("/") ? name : "/" + name);
     }
 
     /**

@@ -39,4 +39,9 @@ public class VelocityContentHandler implements ContentHandler {
 
         return true;
     }
+
+    @Override
+    public int getPriority() {
+        return 999;
+    }
 }

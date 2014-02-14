@@ -47,4 +47,9 @@ public class VelocityPDFContentHandler implements ContentHandler {
 
         return true;
     }
+
+    @Override
+    public int getPriority() {
+        return DEFAULT_PRIORITY;
+    }
 }

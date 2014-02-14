@@ -17,6 +17,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.CharStreams;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.commons.Context;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Part;
@@ -24,6 +25,7 @@ import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.kernel.timer.EveryMinute;
+import sirius.web.mails.MailService;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -63,12 +65,12 @@ public class Cluster implements EveryMinute {
     /*
      * Contains the state of the local node
      */
-    private MetricState nodeState = MetricState.GREEN;
+    private MetricState nodeState = MetricState.GRAY;
 
     /*
      * Contains the overall state of the cluster (which is equal to the "worst" node state among all members).
      */
-    private MetricState clusterState = MetricState.GREEN;
+    private MetricState clusterState = MetricState.GRAY;
 
     /*
      * Contains a list of all cluster members.
@@ -77,6 +79,9 @@ public class Cluster implements EveryMinute {
 
     @ConfigValue("health.cluster.priority")
     private int priority;
+
+    @ConfigValue("health.cluster.alerts.mail")
+    private List<String> alertReceivers;
 
     @Part
     private Metrics metrics;
@@ -252,10 +257,21 @@ public class Cluster implements EveryMinute {
         alertClusterFailure();
     }
 
-    private void alertClusterFailure() {
-        // TODO PANIC REAL HARD!
-        LOG.SEVERE("Cluster is RED!");
+    @Part
+    private MailService ms;
 
+    private void alertClusterFailure() {
+        Context ctx = Context.create()
+                             .set("app", Sirius.getProductName())
+                             .set("node", CallContext.getNodeName())
+                             .set("nodeState", nodeState.name())
+                             .set("clusterState", clusterState.name())
+                             .set("metrics", metrics)
+                             .set("nodes", nodes);
+        for (String receiver : alertReceivers) {
+            ms.createEmail().useMailTemplate("system-alert", ctx).toEmail(receiver).send();
+        }
+        LOG.WARN("NodeState: %s, ClusterState: %s", nodeState, clusterState);
     }
 
     /**

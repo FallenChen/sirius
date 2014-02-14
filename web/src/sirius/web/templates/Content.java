@@ -18,7 +18,8 @@ import sirius.kernel.commons.Context;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
-import sirius.kernel.di.std.Part;
+import sirius.kernel.di.std.Parts;
+import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
@@ -36,10 +37,10 @@ public class Content implements Lifecycle {
     public static final String ENCODING = "encoding";
     public static Log LOG = Log.get("content-generator");
 
-    @Part
+    @PriorityParts(ContentHandler.class)
     private Collection<ContentHandler> handlers;
 
-    @Part
+    @Parts(ContentContextExtender.class)
     private Collection<ContentContextExtender> extenders;
 
     @sirius.kernel.di.std.Context
@@ -175,7 +176,7 @@ public class Content implements Lifecycle {
             for (Map.Entry<String, ConfigValue> e : Sirius.getConfig()
                                                           .getConfig("content.velocity-libraries")
                                                           .entrySet()) {
-                libraryPath.append(e.getValue().render());
+                libraryPath.append(e.getValue().unwrapped());
                 libraryPath.append(",");
             }
             Velocity.setProperty(Velocity.VM_LIBRARY, libraryPath.toString());

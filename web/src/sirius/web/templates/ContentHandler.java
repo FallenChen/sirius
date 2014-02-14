@@ -1,5 +1,7 @@
 package sirius.web.templates;
 
+import sirius.kernel.di.std.Priorized;
+
 import java.io.OutputStream;
 
 /**
@@ -9,7 +11,7 @@ import java.io.OutputStream;
  * Time: 12:57
  * To change this template use File | Settings | File Templates.
  */
-public interface ContentHandler {
+public interface ContentHandler extends Priorized {
 
     boolean generate(Content.Generator generator, OutputStream out) throws Exception;
 

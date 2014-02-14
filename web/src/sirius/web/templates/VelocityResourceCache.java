@@ -18,11 +18,12 @@ import java.util.Iterator;
 /**
  * Simple implementation of the resource cache as we might use complex lookups which are not reflected in the template
  * name or url.
+ * <p>This class needs to be public so it can be instantiated by Velocity.</p>
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2014/01
  */
-class VelocityResourceCache implements ResourceCache {
+public class VelocityResourceCache implements ResourceCache {
 
     @Override
     public void initialize(RuntimeServices rs) {

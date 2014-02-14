@@ -2,6 +2,7 @@ package sirius.web.templates;
 
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Context;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.nls.NLS;
@@ -28,6 +29,7 @@ public class DefaultContentContextExtender implements ContentContextExtender {
         context.put("product", Sirius.getProductName());
         context.put("version", Sirius.getProductVersion());
         context.put("nls", NLS.class);
+        context.put("strings", Strings.class);
         context.put("log", Content.LOG);
 
         Calendar now = Calendar.getInstance();

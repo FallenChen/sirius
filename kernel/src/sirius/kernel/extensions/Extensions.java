@@ -10,9 +10,7 @@ package sirius.kernel.extensions;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.typesafe.config.ConfigException;
-import com.typesafe.config.ConfigObject;
-import com.typesafe.config.ConfigValue;
+import com.typesafe.config.*;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.commons.Value;
@@ -244,6 +242,34 @@ public class Extensions {
                 return Value.of(def.get(path).unwrapped()).translate();
             }
             return Value.of(null);
+        }
+
+        @Nullable
+        @Override
+        public Config getConfig(String key) {
+            if (config.containsKey(key)) {
+                return config.toConfig().getConfig(key);
+            }
+            if (def != null && def.containsKey(key)) {
+                return config.toConfig().getConfig(key);
+            }
+            return null;
+        }
+
+        @Nonnull
+        @Override
+        public List<Config> getConfigs(String key) {
+            List<Config> result = Lists.newArrayList();
+            Config cfg = getConfig(key);
+            if (cfg != null) {
+                for (Map.Entry<String, ConfigValue> e : cfg.root().entrySet()) {
+                    if (e.getValue().valueType() == ConfigValueType.OBJECT) {
+                        Config subCfg = ((ConfigObject) e.getValue()).toConfig();
+                        result.add(subCfg.withValue("id", ConfigValueFactory.fromAnyRef(e.getKey())));
+                    }
+                }
+            }
+            return result;
         }
 
         @Override

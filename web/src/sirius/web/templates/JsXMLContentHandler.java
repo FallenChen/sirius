@@ -82,4 +82,9 @@ public class JsXMLContentHandler implements ContentHandler {
             }
         }
     }
+
+    @Override
+    public int getPriority() {
+        return DEFAULT_PRIORITY;
+    }
 }

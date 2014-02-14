@@ -8,9 +8,12 @@
 
 package sirius.kernel.extensions;
 
+import com.typesafe.config.Config;
 import sirius.kernel.commons.Value;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Represents an extension loaded via the {@link Extensions} framework.
@@ -68,6 +71,42 @@ public interface Extension {
     Value get(String path);
 
     /**
+     * Returns the sub config available for the given key.
+     *
+     * @param key name of the sub config to retrieve
+     * @return the sub config for the given key or <tt>null</tt> if no such config exists.
+     */
+    @Nullable
+    Config getConfig(String key);
+
+    /**
+     * Returns all config objects underneath the given key.
+     * <p>
+     * Assume we have the following config:
+     * <pre>
+     * test {
+     *     sub {
+     *         a { ... }
+     *         b { ... }
+     *     }
+     * }
+     * </pre>
+     * </p>
+     * <p>
+     * Then getConfigs("sub") for the extension "test" would return a list containing a and b wrapped as config.
+     * </p>
+     * <p>
+     * The name of the config object is available as "id".
+     * </p>
+     *
+     * @param key the path to the config object containing a list of sub object.
+     * @return a list of config object underneath the given object.
+     *         Returns an empty list if no matching element was found.
+     */
+    @Nonnull
+    List<? extends Config> getConfigs(String key);
+
+    /**
      * Returns the duration in milliseconds defined for the given key.
      * <p>
      * If this extension doesn't provide a value for this key, but there is an extension with the name
@@ -118,4 +157,5 @@ public interface Extension {
      */
     @Nonnull
     Object make(String classProperty);
+
 }

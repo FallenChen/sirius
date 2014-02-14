@@ -13,7 +13,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.sun.mail.smtp.SMTPMessage;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigObject;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Context;
@@ -38,7 +37,7 @@ import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMultipart;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 @Register(classes = {MailService.class})
@@ -432,11 +431,7 @@ public class MailService {
                     }
                 }
 
-
-                Config attachmentsConfig = ex.get("attachments").get(Config.class, null);
-                if (attachmentsConfig != null) {
-                    for (Map.Entry<String, com.typesafe.config.ConfigValue> e : attachmentsConfig.entrySet()) {
-                        Config attachmentConfig = ((ConfigObject) e.getValue()).toConfig();
+                for (Config attachmentConfig : ex.getConfigs("attachments")) {
                         String template = attachmentConfig.getString("template");
                         try {
                             Content.Generator attachment = content.generator();
@@ -448,12 +443,17 @@ public class MailService {
                             ByteArrayOutputStream out = new ByteArrayOutputStream();
                             attachment.generateTo(out);
                             out.flush();
-                            String fileName = e.getKey();
+                            String fileName = attachmentConfig.getString("id");
                             if (attachmentConfig.hasPath("fileName")) {
                                 fileName = content.generator()
                                                   .direct(attachmentConfig.getString("fileName"))
                                                   .applyContext(context)
                                                   .generate();
+                            } else {
+                                int idx = fileName.lastIndexOf("-");
+                                if (idx >= 0) {
+                                    fileName = fileName.substring(0, idx)+"."+fileName.substring(idx + 1);
+                                }
                             }
 
                             String mimeType = MimeHelper.guessMimeType(fileName);
@@ -470,7 +470,6 @@ public class MailService {
                                               receiverEmail)
                                       .handle();
                         }
-                    }
                 }
             } catch (HandledException e) {
                 throw e;
@@ -594,11 +593,13 @@ public class MailService {
                     if (!success) {
                         MAIL.WARN("FAILED to send mail from: '%s' to '%s' with subject: '%s'",
                                   Strings.isEmpty(mail.senderEmail) ? technicalSender : mail.senderEmail,
-                                  mail.receiverEmail);
+                                  mail.receiverEmail,
+                                  mail.subject);
                     } else {
                         MAIL.FINE("Sent mail from: '%s' to '%s' with subject: '%s'",
                                   Strings.isEmpty(mail.senderEmail) ? technicalSender : mail.senderEmail,
-                                  mail.receiverEmail);
+                                  mail.receiverEmail,
+                                  mail.subject);
                     }
                 } else {
                     for (MailLog log : logs) {
