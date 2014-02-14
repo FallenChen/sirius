@@ -12,7 +12,7 @@ package sirius.web.mails;
  * Implementations of this interface can be registered in the component model and will be notified once a mail is tried to be sent.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 2014/01
+ * @since 2014/02
  */
 public interface MailLog {
 

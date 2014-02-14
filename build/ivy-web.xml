@@ -32,4 +32,5 @@
 
 <!-- Velocity and xhtml renderer are mainly used to generate mails and attachments -->
 <dependency org="org.apache.velocity" name="velocity" rev="1.7" conf="compile" />
+<dependency org="org.apache.velocity" name="velocity" rev="1.7" conf="compile" />
 <dependency org="org.xhtmlrenderer" name="flying-saucer-pdf" rev="9.0.4" />

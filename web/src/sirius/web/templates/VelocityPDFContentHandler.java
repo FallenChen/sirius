@@ -1,5 +1,6 @@
 package sirius.web.templates;
 
+import com.google.common.base.Charsets;
 import org.apache.velocity.app.Velocity;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 import sirius.kernel.commons.Strings;
@@ -9,15 +10,22 @@ import java.io.OutputStream;
 import java.io.StringWriter;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 12.02.14
- * Time: 13:27
- * To change this template use File | Settings | File Templates.
+ * Generates a PDF output by evaluating a given velocity template which must result in a valid XHTML dom.
+ * <p>
+ * This handler expects velocity as template language which must generate a valid XHTML output.
+ * This is post processed by flying saucer to generate a PDF file. The name of this handler is <b>pdf-vm</b>
+ * the expected file extension is <b>.pdf.vm</b>.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/02
  */
 @Register(name = VelocityPDFContentHandler.PDF_VM)
 public class VelocityPDFContentHandler implements ContentHandler {
 
+    /**
+     * Contains the name (type) of this handler
+     */
     public static final String PDF_VM = "pdf-vm";
 
     @Override
@@ -30,10 +38,10 @@ public class VelocityPDFContentHandler implements ContentHandler {
         generator.getContext().applyTo(ctx);
 
         StringWriter writer = new StringWriter();
-        if (Strings.isFilled(generator.getVelocityString())) {
-            Velocity.evaluate(ctx, writer, "velocity", generator.getVelocityString());
+        if (Strings.isFilled(generator.getTemplateCode())) {
+            Velocity.evaluate(ctx, writer, "velocity", generator.getTemplateCode());
         } else {
-            Velocity.mergeTemplate(generator.getTemplateName(), generator.getEncoding(), ctx, writer);
+            Velocity.mergeTemplate(generator.getTemplateName(), Charsets.UTF_8.name(), ctx, writer);
         }
 
         ITextRenderer renderer = new ITextRenderer();

@@ -25,7 +25,7 @@ import java.util.Collection;
  * <p>This class needs to be public so it can be instantiated by Velocity.</p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @since 2014/01
+ * @since 2014/02
  */
 public class VelocityResourceLoader extends ResourceLoader {
 

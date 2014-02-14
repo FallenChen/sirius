@@ -10,11 +10,10 @@ import sirius.kernel.nls.NLS;
 import java.util.Calendar;
 
 /**
- * Created with IntelliJ IDEA.
- * User: aha
- * Date: 12.02.14
- * Time: 13:47
- * To change this template use File | Settings | File Templates.
+ * Supplies the contexts of the {@link Content.Generator} with default variables.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/02
  */
 @Register
 public class DefaultContentContextExtender implements ContentContextExtender {
