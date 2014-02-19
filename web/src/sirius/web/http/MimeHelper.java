@@ -209,6 +209,7 @@ public class MimeHelper {
         mimeTable.put("mpeg", VIDEO_MPEG);
         mimeTable.put("mpg", VIDEO_MPEG);
         mimeTable.put("mpga", AUDIO_MPEG);
+        mimeTable.put("mkv", "video/x-matroska");
         mimeTable.put("ms", "application/x-troff-ms");
         mimeTable.put("msh", "model/mesh");
         mimeTable.put("mxu", "video/vnd.mpegurl");
