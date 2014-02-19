@@ -74,7 +74,7 @@ public class Content implements Lifecycle {
     /*
      * Logger used by the content generator framework
      */
-    protected static Log LOG = Log.get("content-generator");
+    public static Log LOG = Log.get("content-generator");
 
     /*
      * Contains all implementations of ContentHandler sorted by getPriority ascending

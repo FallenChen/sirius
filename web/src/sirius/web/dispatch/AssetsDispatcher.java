@@ -17,13 +17,17 @@ import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.std.ConfigValue;
+import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
+import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 import sirius.web.http.WebServer;
+import sirius.web.templates.Content;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
@@ -74,11 +78,20 @@ public class AssetsDispatcher implements WebDispatcher {
         if (url == null) {
             url = getClass().getResource("/assets/defaults" + uri.substring(7));
         }
-        if (url == null && uri.endsWith(".css")) {
-            String scssUri = uri.substring(0, uri.length() - 4) + ".scss";
-            url = getClass().getResource(scssUri);
+        if (url == null) {
+            // If the file is not found not is a .css file, check if we need to generate it via a .scss file
+            if (uri.endsWith(".css")) {
+                String scssUri = uri.substring(0, uri.length() - 4) + ".scss";
+                url = getClass().getResource(scssUri);
+                if (url != null) {
+                    handleSASS(ctx, uri, scssUri, url);
+                    return true;
+                }
+            }
+            // If the file is non existent, check if we can generate it by using a velocity template
+            url = getClass().getResource(uri + ".vm");
             if (url != null) {
-                handleSASS(ctx, uri, scssUri, url);
+                handleVM(ctx, uri, url);
                 return true;
             }
         }
@@ -94,6 +107,9 @@ public class AssetsDispatcher implements WebDispatcher {
 
     private static final Log SASS_LOG = Log.get("sass");
 
+    /*
+     * Subclass of generator which takes care of proper logging
+     */
     private static class SIRIUSGenerator extends Generator {
         @Override
         public void debug(String message) {
@@ -106,6 +122,37 @@ public class AssetsDispatcher implements WebDispatcher {
         }
     }
 
+    @Part
+    private Content content;
+
+    /*
+     * Uses Velocity (via the content generator) to generate the desired file
+     */
+    private void handleVM(WebContext ctx, String uri, URL url) throws IOException {
+        URLConnection connection = url.openConnection();
+        String cacheKey = uri.substring(1).replaceAll("[^a-zA-Z0-9\\-_\\.]", "_");
+        File file = new File(getCacheDirFile(), cacheKey);
+
+        if (!file.exists() || file.lastModified() < connection.getLastModified()) {
+            try {
+                if (Sirius.isDev()) {
+                    Content.LOG.INFO("Compiling: " + uri + ".vm");
+                }
+                FileOutputStream out = new FileOutputStream(file, false);
+                content.generator().useTemplate(uri + ".vm").generateTo(out);
+                out.close();
+            } catch (Throwable t) {
+                file.delete();
+                ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(Content.LOG, t));
+            }
+        }
+
+        ctx.respondWith().named(uri.substring(uri.lastIndexOf("/") + 1)).file(file);
+    }
+
+    /*
+     * Uses server-sass to compile a SASS file (.scss) into a .css file
+     */
     private void handleSASS(WebContext ctx, String cssUri, String scssUri, URL url) throws IOException {
         URLConnection connection = url.openConnection();
         String cacheKey = cssUri.substring(1).replaceAll("[^a-zA-Z0-9\\-_\\.]", "_");
@@ -115,19 +162,27 @@ public class AssetsDispatcher implements WebDispatcher {
             if (Sirius.isDev()) {
                 SASS_LOG.INFO("Compiling: " + scssUri);
             }
-            SIRIUSGenerator gen = new SIRIUSGenerator();
-            gen.importStylesheet(scssUri);
-            gen.compile();
-            FileWriter writer = new FileWriter(file, false);
-            // Let the content compressor take care of minifying the CSS
-            Output out = new Output(writer, false);
-            gen.generate(out);
-            writer.close();
+            try {
+                SIRIUSGenerator gen = new SIRIUSGenerator();
+                gen.importStylesheet(scssUri);
+                gen.compile();
+                FileWriter writer = new FileWriter(file, false);
+                // Let the content compressor take care of minifying the CSS
+                Output out = new Output(writer, false);
+                gen.generate(out);
+                writer.close();
+            } catch (Throwable t) {
+                file.delete();
+                ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(SASS_LOG, t));
+            }
         }
 
         ctx.respondWith().named(cssUri.substring(cssUri.lastIndexOf("/") + 1)).file(file);
     }
 
+    /*
+     * Resolves the directory used to cache the generated files
+     */
     private File getCacheDirFile() {
         if (cacheDirFile == null) {
             cacheDirFile = new File(cacheDir);
