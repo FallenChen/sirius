@@ -368,6 +368,17 @@ public class Response {
     }
 
     /**
+     * Forces the use of a given name. This is also used to derive the mime type.
+     *
+     * @param name the file name to use
+     * @return <tt>this</tt> to fluently create the response
+     */
+    public Response named(String name) {
+        this.name = name;
+        return this;
+    }
+
+    /**
      * Instructs the browser to treat the response as download with the given file name.
      *
      * @param name the file name to send to the browser

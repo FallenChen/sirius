@@ -38,7 +38,7 @@ public class SmartHttpContentCompressor extends HttpContentCompressor {
             HttpResponse res = (HttpResponse) msg;
             // by default compression is on (passThrough bypasses compression)
             passThrough = false;
-            // If an "Content-Enconding: Indentity" header was set, we do not compress
+            // If an "Content-Encoding: Identity" header was set, we do not compress
             if (res.headers().contains(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY, false)) {
                 passThrough = true;
                 // Remove header as one SHOULD NOT send Identity as content encoding.
