@@ -50,8 +50,8 @@ public class CallContext {
      * Name of the flow variable in the MDC.
      */
     public static final String MDC_FLOW = "flow";
-    private static ThreadLocal<CallContext> currentContext = new ThreadLocal<CallContext>();
-    private static String nodeName;
+    private static ThreadLocal<CallContext> currentContext = new ThreadLocal<>();
+    private static String nodeName = null;
     private static Counter interactionCounter = new Counter();
 
     /**
@@ -72,7 +72,9 @@ public class CallContext {
                 try {
                     nodeName = InetAddress.getLocalHost().getHostName();
                 } catch (UnknownHostException e) {
-                    Async.LOG.WARN(Strings.apply("Cannot determine hostname - consider setting 'sirius.nodeName' in the configuration."));
+                    Async.LOG
+                         .WARN(Strings.apply(
+                                 "Cannot determine hostname - consider setting 'sirius.nodeName' in the configuration."));
                     nodeName = "unknown";
                 }
             }
@@ -142,8 +144,8 @@ public class CallContext {
         currentContext.set(context);
     }
 
-    private Map<String, String> mdc = new LinkedHashMap<String, String>();
-    private Map<Class<?>, Object> subContext = new HashMap<Class<?>, Object>();
+    private Map<String, String> mdc = new LinkedHashMap<>();
+    private Map<Class<?>, Object> subContext = new HashMap<>();
     private Watch watch = Watch.start();
     private String lang = NLS.getDefaultLanguage();
 
@@ -206,6 +208,7 @@ public class CallContext {
      * @return an instance of the given type. If no instance was available, a new one is created
      */
     @Nonnull
+    @SuppressWarnings("unchecked")
     public <C> C get(Class<C> contextType) {
         try {
             Object result = subContext.get(contextType);
@@ -217,10 +220,10 @@ public class CallContext {
             return (C) result;
         } catch (Throwable e) {
             throw Exceptions.handle()
-                    .error(e)
-                    .withSystemErrorMessage("Cannot get instance of %s from current CallContext: %s (%s)",
-                            contextType.getName())
-                    .handle();
+                            .error(e)
+                            .withSystemErrorMessage("Cannot get instance of %s from current CallContext: %s (%s)",
+                                                    contextType.getName())
+                            .handle();
         }
     }
 
@@ -229,7 +232,7 @@ public class CallContext {
      * {@link sirius.kernel.health.Log}.
      */
     public void applyToLog4j() {
-        Hashtable<String, String> ctx = MDC.getContext();
+        @SuppressWarnings("unchecked") Hashtable<String, String> ctx = MDC.getContext();
         if (ctx == null) {
             for (Map.Entry<String, String> e : mdc.entrySet()) {
                 MDC.put(e.getKey(), e.getValue());

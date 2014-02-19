@@ -42,7 +42,7 @@ public class PriorityPartsAnnotationProcessor implements AnnotationProcessor {
                 throw new IllegalArgumentException(
                         "PriorityParts annotations may only be used with classes implementing 'Priorized'");
             }
-            List<Priorized> result = Lists.newArrayList((Collection<Priorized>) ctx.getParts(parts.value()));
+            List<Priorized> result = Lists.newArrayList(ctx.getParts(parts.value()));
             Collections.sort(result, new Comparator<Priorized>() {
                 @Override
                 public int compare(Priorized o1, Priorized o2) {

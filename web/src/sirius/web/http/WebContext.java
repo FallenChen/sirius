@@ -1192,6 +1192,7 @@ public class WebContext {
      *
      * @return the body of the HTTP request as JSON input
      */
+    @SuppressWarnings("unchecked")
     public Map<String, Object> getJSONContent() {
         try {
             if (content == null) {

@@ -21,10 +21,10 @@ import java.util.Vector;
  */
 class SortedProperties extends Properties {
 
-    @SuppressWarnings("unchecked")
     @Override
-    public synchronized Enumeration keys() {
-        Enumeration keysEnum = super.keys();
+    @SuppressWarnings({"raw","unchecked"})
+    public synchronized Enumeration<Object> keys() {
+        Enumeration<Object> keysEnum = super.keys();
         Vector keyList = new Vector();
         while (keysEnum.hasMoreElements()) {
             keyList.add(keysEnum.nextElement());

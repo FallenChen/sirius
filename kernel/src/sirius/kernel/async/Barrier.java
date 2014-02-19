@@ -68,6 +68,7 @@ public class Barrier {
      *
      * @param promise the promise to wait for
      */
+    @SuppressWarnings("unchecked")
     public void add(Promise<?> promise) {
         // Reset internal future...
         if (completionFuture.isCompleted()) {
@@ -75,6 +76,7 @@ public class Barrier {
         }
         promisesMade.incrementAndGet();
         promisesOpen.incrementAndGet();
+
         ((Promise<Object>) promise).onComplete(new CompletionHandler<Object>() {
             @Override
             public void onSuccess(Object value) throws Exception {

@@ -23,6 +23,7 @@ public class DirectValueReference<E, V> implements ValueReference<E, V> {
      * @return the given object as result
      */
     @Override
+    @SuppressWarnings("unchecked")
     public V getValue(E data) {
         return (V) data;
     }
