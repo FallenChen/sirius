@@ -15,10 +15,12 @@ import sirius.kernel.Sirius;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
+import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Log;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
+import sirius.web.http.WebServer;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -51,6 +53,10 @@ public class AssetsDispatcher implements WebDispatcher {
     public boolean preDispatch(WebContext ctx) throws Exception {
         return false;
     }
+
+    @ConfigValue("http.generated-directory")
+    private String cacheDir;
+    private File cacheDirFile;
 
     @Override
     public boolean dispatch(WebContext ctx) throws Exception {
@@ -102,7 +108,7 @@ public class AssetsDispatcher implements WebDispatcher {
     private void handleSASS(WebContext ctx, String cssUri, String scssUri, URL url) throws IOException {
         URLConnection connection = url.openConnection();
         String cacheKey = cssUri.substring(1).replaceAll("[^a-zA-Z0-9\\-_\\.]", "_");
-        File file = new File(new File("web-cache"), cacheKey);
+        File file = new File(getCacheDirFile(), cacheKey);
 
         if (!file.exists() || file.lastModified() < connection.getLastModified()) {
             if (Sirius.isDev()) {
@@ -117,5 +123,16 @@ public class AssetsDispatcher implements WebDispatcher {
         }
 
         ctx.respondWith().named(cssUri.substring(cssUri.lastIndexOf("/") + 1)).file(file);
+    }
+
+    private File getCacheDirFile() {
+        if (cacheDirFile == null) {
+            cacheDirFile = new File(cacheDir);
+            if (!cacheDirFile.exists()) {
+                WebServer.LOG.INFO("Cache directory for generated content does not exist! Creating: %s", cacheDir);
+                cacheDirFile.mkdirs();
+            }
+        }
+        return cacheDirFile;
     }
 }
