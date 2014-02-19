@@ -11,6 +11,7 @@ package sirius.web.dispatch;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.serversass.Generator;
+import org.serversass.Output;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.commons.Strings;
@@ -118,7 +119,9 @@ public class AssetsDispatcher implements WebDispatcher {
             gen.importStylesheet(scssUri);
             gen.compile();
             FileWriter writer = new FileWriter(file, false);
-            writer.write(gen.toString());
+            // Let the content compressor take care of minifying the CSS
+            Output out = new Output(writer, false);
+            gen.generate(out);
             writer.close();
         }
 
