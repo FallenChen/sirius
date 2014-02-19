@@ -41,13 +41,9 @@ public class ConsoleService implements StructuredService {
         out.beginResult();
         try {
             Watch w = Watch.start();
-// TODO auth!
-//            if (!Users.isSystemTenant() && !Model.isDebugEnvironment()) {
-//                throw new BusinessException("The System Console is only available for the System Tenant");
-//            }
             Map<String, Object> map = call.getContext().getJSONContent();
             String command = (String) map.get("method");
-            List<Object> params = (List<Object>) map.get("params");
+            @SuppressWarnings("unchecked") List<Object> params = (List<Object>) map.get("params");
             String[] strParams = new String[params.size()];
             int i = 0;
             for (Object val : params) {
