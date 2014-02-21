@@ -377,6 +377,6 @@ public class Content implements Lifecycle {
 
     @Override
     public String getName() {
-        return "content-generator";
+        return "content (Dynamic Content Generator)";
     }
 }
