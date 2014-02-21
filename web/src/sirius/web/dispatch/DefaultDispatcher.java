@@ -31,6 +31,7 @@ import sirius.web.http.WebDispatcher;
  */
 @Register
 public class DefaultDispatcher implements WebDispatcher {
+
     @Override
     public int getPriority() {
         return 999;
@@ -72,7 +73,7 @@ public class DefaultDispatcher implements WebDispatcher {
             } else {
                 ctx.respondWith()
                    .infinitelyCached()
-                   .setHeader(HttpHeaders.Names.CONTENT_TYPE, MimeHelper.TEXT_XML)
+                   .setHeader(HttpHeaders.Names.CONTENT_TYPE, MimeHelper.TEXT_PLAIN)
                    .direct(HttpResponseStatus.OK, "User-agent: *\n" + "Disallow:\n");
             }
         } else if ("/reset".equals(ctx.getRequestedURI())) {

@@ -9,6 +9,7 @@
 package sirius.kernel;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.log4j.*;
@@ -62,6 +63,7 @@ public class Sirius {
 
     private static final boolean dev;
     private static Config config;
+    private static Map<String, Boolean> frameworks = Maps.newHashMap();
     private static Classpath classpath;
     private static boolean started = false;
     private static boolean initialized = false;
@@ -121,6 +123,36 @@ public class Sirius {
             LOG.INFO("* Setting %s to: %s", entry.getKey(), logging.getString(entry.getKey()));
             setLevel(entry.getKey(), Level.toLevel(logging.getString(entry.getKey())));
         }
+    }
+
+    /*
+     * Scans the system config (sirius.frameworks) and determines which frameworks are enabled. This will affect
+     * which classes are loaded into the component model.
+     */
+    private static void setupFrameworks() {
+        Config frameworkConfig = config.getConfig("sirius.frameworks");
+        Map<String, Boolean> frameworkStatus = Maps.newHashMap();
+        int total = 0;
+        int numEnabled = 0;
+        LOG.DEBUG_INFO("Scanning framework status (sirius.frameworks):");
+        for (Map.Entry<String, com.typesafe.config.ConfigValue> entry : frameworkConfig.entrySet()) {
+            String framework = entry.getKey();
+            try {
+                boolean enabled = (boolean) entry.getValue().unwrapped();
+                frameworkStatus.put(framework, enabled);
+                total++;
+                numEnabled += enabled ? 1 : 0;
+                LOG.DEBUG_INFO(Strings.apply("  * %s: %b", framework, enabled));
+            } catch (Exception e) {
+                LOG.WARN("Cannot convert status '%s' of framework '%s' to a boolean! Framework will be disabled.",
+                         entry.getValue().render(),
+                         framework);
+                frameworkStatus.put(framework, false);
+            }
+        }
+        LOG.INFO("Enabled %d of %d frameworks...", numEnabled, total);
+
+        frameworks = frameworkStatus;
     }
 
     private static void setLevel(String logger, Level level) {
@@ -193,6 +225,9 @@ public class Sirius {
 
         // Setup log-system based on configuration
         setupLogLevels();
+
+        // Output enabled frameworks...
+        setupFrameworks();
 
         // Setup native language support
         NLS.init(classpath);
@@ -345,7 +380,10 @@ public class Sirius {
      * @return <tt>true</tt> if the framework is enabled, <tt>false</tt> otherwise
      */
     public static boolean isFrameworkEnabled(String framework) {
-        return config.hasPath("sirius.framework." + framework) && config.getBoolean("sirius.framework." + framework);
+        if (Sirius.isDev() && !frameworks.containsKey(framework)) {
+            LOG.WARN("Status of unknown framework '%s' requested. Will report as disabled framework.", framework);
+        }
+        return Boolean.TRUE.equals(frameworks.get(framework));
     }
 
     /**

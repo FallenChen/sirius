@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08
  */
-@Register
+@Register(framework = "http")
 public class WebServer implements Lifecycle, MetricProvider {
 
     /**

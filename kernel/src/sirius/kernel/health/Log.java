@@ -11,6 +11,7 @@ package sirius.kernel.health;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.PartCollection;
@@ -81,7 +82,7 @@ public class Log {
      *
      * @param msg the message to be logged
      */
-    public void INFO(Object msg) {
+    public void INFO(Object msg, Object... params) {
         if (logger.isInfoEnabled()) {
             fixMDC();
             if (msg instanceof Throwable) {
@@ -91,6 +92,20 @@ public class Log {
             }
         }
         tap(msg, logger.isInfoEnabled(), Level.INFO);
+    }
+
+    /**
+     * Used to log the given message <tt>msg</tt> at <b>INFO</b> level if debug mode is enabled
+     * ({@link sirius.kernel.Sirius#isDev()}). Otherwise the message will be logged as <b>FINE</b>.
+     *
+     * @param msg the message to log
+     */
+    public void DEBUG_INFO(Object msg) {
+        if (Sirius.isDev()) {
+            INFO(msg);
+        } else {
+            FINE(msg);
+        }
     }
 
     /*
@@ -109,7 +124,11 @@ public class Log {
             frozen.set(Boolean.TRUE);
             if (taps != null) {
                 for (LogTap tap : taps) {
-                    tap.handleLogMessage(new LogMessage(NLS.toUserString(msg), level, this, wouldLog, Thread.currentThread().getName()));
+                    tap.handleLogMessage(new LogMessage(NLS.toUserString(msg),
+                                                        level,
+                                                        this,
+                                                        wouldLog,
+                                                        Thread.currentThread().getName()));
                 }
             }
         } finally {
