@@ -334,6 +334,21 @@ public class Sirius {
     }
 
     /**
+     * Determines if the framework with the given name is enabled.
+     * <p>
+     * Frameworks can be enabled or disabled using the config path <dd>sirius.framework.[name]</dd>. This is
+     * intensively used by the app part, as it provides a lot of basic frameworks which can be turned off or
+     * on as required.
+     * </p>
+     *
+     * @param framework the framework to check
+     * @return <tt>true</tt> if the framework is enabled, <tt>false</tt> otherwise
+     */
+    public static boolean isFrameworkEnabled(String framework) {
+        return config.hasPath("sirius.framework." + framework) && config.getBoolean("sirius.framework." + framework);
+    }
+
+    /**
      * Waits until a connection to thee port specified in <tt>sirius.shutdownPort</tt> is made.
      */
     private static void waitForLethalConnection() {

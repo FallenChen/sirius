@@ -173,7 +173,7 @@ public class ResponseAdapter implements HttpServletResponse {
             return stream;
         }
         if (outputWritten) {
-            throw new IllegalStateException();
+            throw new IOException(new IllegalStateException("Response already completed!"));
         }
         stream = new ServletOutputStream() {
 

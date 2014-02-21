@@ -1305,11 +1305,11 @@ public class Response {
             ByteBuf buffer = null;
 
             private void ensureCapacity(int length) throws IOException {
+                if (buffer != null && buffer.writableBytes() < length) {
+                    flushBuffer(false);
+                }
                 if (buffer == null) {
                     buffer = ctx.alloc().buffer(BUFFER_SIZE);
-                }
-                if (buffer.writableBytes() < length) {
-                    flushBuffer(false);
                 }
             }
 
@@ -1317,6 +1317,7 @@ public class Response {
                 if ((buffer == null || buffer.readableBytes() == 0) && !last) {
                     if (buffer != null) {
                         buffer.release();
+                        buffer = null;
                     }
                     return;
                 }
@@ -1327,10 +1328,14 @@ public class Response {
                 if (wc.responseCommitted) {
                     if (last) {
                         if (responseChunked) {
-                            ctx.write(new DefaultHttpContent(buffer));
+                            if (buffer != null) {
+                                ctx.write(new DefaultHttpContent(buffer));
+                            }
                             complete(ctx.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT));
                         } else {
-                            ctx.write(buffer);
+                            if (buffer != null) {
+                                ctx.write(buffer);
+                            }
                             complete(ctx.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT));
                         }
                     } else {
@@ -1349,7 +1354,7 @@ public class Response {
                                 throw new IOException("Interrupted while waiting for a chunk to be written", e);
                             }
                         }
-                        buffer = ctx.alloc().buffer(BUFFER_SIZE);
+                        buffer = null;
                     }
                 } else {
                     if (Strings.isFilled(contentType)) {

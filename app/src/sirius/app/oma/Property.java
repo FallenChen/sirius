@@ -91,8 +91,8 @@ public class Property {
             if (length == null) {
                 OMA.LOG
                    .WARN("The string property %s of %s needs an @Length specification! Defaulting to 255",
-                         field.getDeclaringClass().getName(),
-                         field.getName());
+                         field.getName(),
+                         field.getDeclaringClass().getName());
                 length = 255;
             }
             return;
@@ -122,8 +122,8 @@ public class Property {
                           .to(OMA.LOG)
                           .withSystemErrorMessage(
                                   "The enum property %s of %s needs an @Length specification - or use @Ordinal to store the index value! Defaulting to 255",
-                                  field.getDeclaringClass().getName(),
-                                  field.getName())
+                                  field.getName(),
+                                  field.getDeclaringClass().getName())
                           .handle();
                 length = 255;
             }
@@ -143,8 +143,8 @@ public class Property {
         throw Exceptions.handle()
                         .to(OMA.LOG)
                         .withSystemErrorMessage("The property %s of %s has an unsupported field type: %s",
-                                                field.getDeclaringClass().getName(),
                                                 field.getName(),
+                                                field.getDeclaringClass().getName(),
                                                 field.getType().getName())
                         .handle();
 

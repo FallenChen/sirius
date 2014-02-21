@@ -8,6 +8,7 @@
 
 package sirius.kernel.di.std;
 
+import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.ClassLoadAction;
 import sirius.kernel.di.MutableGlobalContext;
@@ -33,6 +34,9 @@ public class AutoRegisterAction implements ClassLoadAction {
     public void handle(MutableGlobalContext ctx, Class<?> clazz) throws Exception {
         Object part = clazz.newInstance();
         Register r = clazz.getAnnotation(Register.class);
+        if (Strings.isFilled(r.framework()) && !Sirius.isFrameworkEnabled(r.framework())) {
+            return;
+        }
         Class<?>[] classes = r.classes();
         if (classes.length == 0) {
             classes = clazz.getInterfaces();

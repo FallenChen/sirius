@@ -23,4 +23,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Table {
+    /**
+     * Determines the framework this entity belongs to. If a non empty string is given, the part is only registered, if
+     * {@link sirius.kernel.Sirius#isFrameworkEnabled(String)} returns <tt>true</tt> for the given framework.
+     */
+    String framework() default "";
 }

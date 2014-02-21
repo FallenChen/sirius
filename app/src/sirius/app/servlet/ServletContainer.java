@@ -14,6 +14,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.Async;
 import sirius.kernel.commons.Callback;
+import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Register;
@@ -369,7 +370,7 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public int getPriority() {
-        return 100;
+        return PriorityCollector.DEFAULT_PRIORITY + 20;
     }
 
     @Override

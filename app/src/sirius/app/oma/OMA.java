@@ -19,9 +19,7 @@ import sirius.app.oma.schema.Table;
 import sirius.kernel.commons.Context;
 import sirius.kernel.commons.Monoflop;
 import sirius.kernel.di.GlobalContext;
-import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.ConfigValue;
-import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.web.jdbc.Database;
@@ -84,7 +82,7 @@ public class OMA {
         }
     }
 
-    public static <T extends Entity> Query<T> retrieve(Class<T> table) {
+    public static <T extends Entity> Query<T> select(Class<T> table) {
         return new Query(table);
     }
 
@@ -203,43 +201,6 @@ public class OMA {
         }
 
         return database;
-    }
-
-    @ConfigValue("jdbc.oma.syncSchemaOnStartup")
-    private static boolean syncSchemaOnStartup;
-
-    @Register
-    public static class CRUDLifecycle implements Lifecycle {
-
-        @Override
-        public void started() {
-            if (syncSchemaOnStartup) {
-                for (SchemaUpdateAction sua : migrateSchema(false)) {
-                    if (!sua.isDataLossPossible()) {
-                        LOG.INFO("Executing schema change: %s", sua.getReason());
-                        for (String qry : sua.getSql()) {
-                            try {
-                                getDatabase().createQuery(qry).executeUpdate();
-                            } catch (SQLException e) {
-                                LOG.WARN("Schema change failed: %s", e.getMessage());
-                            }
-                        }
-                    } else {
-                        LOG.WARN("Skipping schema change due to possible data loss: %s", sua.getReason());
-                    }
-                }
-            }
-        }
-
-        @Override
-        public void stopped() {
-
-        }
-
-        @Override
-        public String getName() {
-            return "oma";
-        }
     }
 
     public static List<SchemaUpdateAction> migrateSchema(boolean dropTables) {

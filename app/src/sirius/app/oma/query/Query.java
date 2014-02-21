@@ -287,18 +287,20 @@ public class Query<T extends Entity> implements QueryPathCompiler {
     private String compileWhere() {
         if (wherePart == null) {
             StringBuilder result = new StringBuilder();
-            int parameterId = 1;
-            parameters = Context.create();
-            for (Constraint c : constraints) {
-                if (c.addsConstraint()) {
-                    String condition = c.getSQL(this, PREFIX, String.valueOf(parameterId++), parameters);
-                    if (Strings.isFilled(condition)) {
-                        if (result.length() == 0) {
-                            result.append("WHERE ");
-                        } else {
-                            result.append("    AND ");
+            if (constraints != null) {
+                int parameterId = 1;
+                parameters = Context.create();
+                for (Constraint c : constraints) {
+                    if (c.addsConstraint()) {
+                        String condition = c.getSQL(this, PREFIX, String.valueOf(parameterId++), parameters);
+                        if (Strings.isFilled(condition)) {
+                            if (result.length() == 0) {
+                                result.append("WHERE ");
+                            } else {
+                                result.append("    AND ");
+                            }
+                            result.append(condition);
                         }
-                        result.append(condition);
                     }
                 }
             }

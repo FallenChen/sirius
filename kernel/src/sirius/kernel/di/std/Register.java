@@ -34,6 +34,12 @@ public @interface Register {
     String name() default "";
 
     /**
+     * Determines the framework this part belongs to. If a non empty string is given, the part is only registered, if
+     * {@link sirius.kernel.Sirius#isFrameworkEnabled(String)} returns <tt>true</tt> for the given framework.
+     */
+    String framework() default "";
+
+    /**
      * Classes for which the part is registered.
      */
     Class<?>[] classes() default {};

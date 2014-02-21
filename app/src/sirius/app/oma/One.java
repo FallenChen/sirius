@@ -51,13 +51,13 @@ public class One<E extends Entity> {
 
     public E getObject() {
         if (field != null) {
-            return OMA.retrieve(type).eq(field, owner.getId()).first();
+            return OMA.select(type).eq(field, owner.getId()).first();
         }
         if (key == null) {
             return null;
         }
         if (object == null) {
-            object = OMA.retrieve(type).eq(Entity.ID, owner.getId()).first();
+            object = OMA.select(type).eq(Entity.ID, owner.getId()).first();
         }
         return object;
     }

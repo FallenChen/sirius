@@ -95,7 +95,7 @@ public abstract class Entity<I> {
                 }
             }
             if (p.hasAnnotation(Unique.class)) {
-                Query<?> qry = OMA.retrieve(getClass()).eq(p.getName(), p.read(this));
+                Query<?> qry = OMA.select(getClass()).eq(p.getName(), p.read(this));
                 for (String field : p.getField().getAnnotation(Unique.class).within()) {
                     qry.eq(field, getDescriptor().findProperty(field).read(this));
                 }

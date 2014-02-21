@@ -29,7 +29,7 @@ public class Many<E extends Entity> {
     }
 
     public Query<E> query() {
-        return OMA.retrieve(type).eq(field, owner);
+        return OMA.select(type).eq(field, owner);
     }
 
 }

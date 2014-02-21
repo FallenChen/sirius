@@ -9,6 +9,8 @@
 package sirius.app.oma;
 
 import sirius.app.oma.annotations.Table;
+import sirius.kernel.Sirius;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.di.ClassLoadAction;
 import sirius.kernel.di.MutableGlobalContext;
 import sirius.kernel.health.Exceptions;
@@ -33,6 +35,10 @@ public class EntityRegisterAction implements ClassLoadAction {
 
     @Override
     public void handle(@Nonnull MutableGlobalContext ctx, @Nonnull Class<?> clazz) throws Exception {
+        Table t = clazz.getAnnotation(Table.class);
+        if (Strings.isFilled(t.framework()) && !Sirius.isFrameworkEnabled(t.framework())) {
+            return;
+        }
         try {
             ctx.registerPart(clazz.newInstance(), Entity.class);
         } catch (Throwable e) {
