@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
  * <code>
  * <pre>
  *         System.out.println(
- *              Formatter.crete("Hello ${programmer}")
+ *              Formatter.create("Hello ${programmer}")
  *                       .set("programmer, "Obi Wan")
  *                       .format());
  * </pre>
