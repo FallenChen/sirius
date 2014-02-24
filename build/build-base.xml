@@ -118,6 +118,9 @@
     <!-- Builds and bundles the complete application for distribution -->
     <!-- =========================================================================================================== -->
     <target name="make" depends="ivy,makeVersionA,makeVersionB" description="Builds and bundles the complete application for distribution ">
+        <!-- As the search module is more or less an add-on, it has to be enabled explicitly -->
+        <property name="no-search" value="true" />
+
         <!-- Create distribution directory -->
         <mkdir dir="${dist.dir}" />
         <delete>
@@ -150,6 +153,7 @@
         <antcall target="make-kernel" />
         <antcall target="make-web" />
         <antcall target="make-app" />
+        <antcall target="make-search" />
         <antcall target="make-main-app" />
 
         <!-- Replace version number and product name in config and html files -->
@@ -258,6 +262,28 @@
         </copy>
         <copy todir="${dist.dir}">
             <fileset dir="${sirius.dir}/app/dist" />
+        </copy>
+    </target>
+
+    <!-- =========================================================================================================== -->
+    <!-- Compiles the search module -->
+    <!-- =========================================================================================================== -->
+    <target name="make-search" unless="no-search">
+        <javac compiler="javac1.7"
+               includeantruntime="false"
+               classpathref="compile.path"
+               encoding="UTF-8"
+               debug="on"
+               destdir="${dist.dir}/app">
+            <src path="${sirius.dir}/search/src"/>
+            <compilerarg value="-Xlint:deprecation"/>
+        </javac>
+        <copy todir="${dist.dir}/app">
+            <fileset dir="${sirius.dir}/search/src" excludes="**/*.java"/>
+            <fileset dir="${sirius.dir}/search/resources" excludes="**/*.java"/>
+        </copy>
+        <copy todir="${dist.dir}">
+            <fileset dir="${sirius.dir}/search/dist" />
         </copy>
     </target>
 
