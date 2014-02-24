@@ -381,6 +381,34 @@ public class WebContext {
     }
 
     /**
+     * Determines if the parameter with the given name is contained in the request. Either as POST value or in the
+     * query string.
+     *
+     * @param key the parameter to check for
+     * @return <tt>true</tt> if the parameter is present (even if its value is <tt>null</tt>), <tt>false</tt> otherwise
+     */
+    public boolean hasParameter(String key) {
+        if (attribute != null && attribute.containsKey(key)) {
+            return true;
+        }
+        if (queryString.containsKey(key)) {
+            return true;
+        }
+        if (postDecoder != null) {
+            try {
+                InterfaceHttpData data = postDecoder.getBodyHttpData(key);
+                if (data != null && data instanceof Attribute) {
+                    return true;
+                }
+            } catch (Throwable e) {
+                Exceptions.handle(WebServer.LOG, e);
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Returns the posted part with the given key.
      *
      * @param key used to specify which part of the post request should be returned.
