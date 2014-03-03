@@ -9,12 +9,12 @@
 package sirius.search.properties;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import sirius.search.Entity;
-import sirius.search.Index;
-import sirius.search.annotations.NotNull;
 import sirius.kernel.commons.Value;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
+import sirius.search.Entity;
+import sirius.search.Index;
+import sirius.search.annotations.NotNull;
 import sirius.web.controller.UserContext;
 import sirius.web.http.WebContext;
 
@@ -62,6 +62,15 @@ public class Property {
      */
     public void init(Entity entity) throws Exception {
 
+    }
+
+    /**
+     * Some properties auto-create a value and therefore no setter for the given field should be defined.
+     *
+     * @return <tt>true</tt> if no setter for this property should be present, <tt>false</tt> otherwise
+     */
+    public boolean acceptsSetter() {
+        return true;
     }
 
     /**

@@ -92,7 +92,7 @@ public class ResultList<T> implements Iterable<T> {
      * @return the facet filters defined by the query
      */
     public List<Facet> getFacets() {
-        if (factesProcessed.firstCall()) {
+        if (factesProcessed.firstCall() && response != null) {
             for (Facet facet : termFacets) {
                 facet.loadFrom(response.getFacets().facet(TermsFacet.class, facet.getName()));
             }

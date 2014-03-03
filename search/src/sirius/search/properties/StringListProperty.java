@@ -80,4 +80,10 @@ public class StringListProperty extends Property {
     public void init(Entity entity) throws Exception {
         field.set(entity, new ArrayList<String>());
     }
+
+    @Override
+    public boolean acceptsSetter() {
+        return false;
+    }
+
 }

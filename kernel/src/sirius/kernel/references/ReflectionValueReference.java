@@ -163,7 +163,6 @@ public class ReflectionValueReference<T, V> implements ValueReference<T, V> {
         }
     }
 
-
     /**
      * Creates a new <tt>ReflectionValueReference</tt> for the given class and property.
      *

@@ -58,6 +58,7 @@ public class Query<E extends Entity> {
     private int pageSize = 25;
     private boolean primary = false;
     private String index;
+    private boolean forceFail = false;
 
     /**
      * Used to create a nwe query for entities of the given class
@@ -66,6 +67,21 @@ public class Query<E extends Entity> {
      */
     protected Query(Class<E> clazz) {
         this.clazz = clazz;
+    }
+
+    /**
+     * Marks this query as failed or invalid. Therefore, no matter on what constraints are set, this query will always
+     * return an empty result.
+     * <p>
+     * This method is intended for security checks which should not abort processing but just behave like the
+     * query didn't match any entities.
+     * </p>
+     *
+     * @return the query itself for fluent method calls
+     */
+    public Query<E> fail() {
+        forceFail = true;
+        return this;
     }
 
     /**
@@ -437,6 +453,9 @@ public class Query<E extends Entity> {
     @Nullable
     public E queryFirst() {
         try {
+            if (forceFail) {
+                return null;
+            }
             SearchRequestBuilder srb = buildSearch();
             if (Index.LOG.isFINE()) {
                 Index.LOG
@@ -511,6 +530,9 @@ public class Query<E extends Entity> {
     @Nonnull
     public ResultList<E> queryResultList() {
         try {
+            if (forceFail) {
+                return new ResultList<>(new ArrayList<Facet>(), null);
+            }
             SearchRequestBuilder srb = buildSearch();
             if (Index.LOG.isFINE()) {
                 Index.LOG
@@ -532,6 +554,9 @@ public class Query<E extends Entity> {
      */
     public long count() {
         try {
+            if (forceFail) {
+                return 0;
+            }
             CountRequestBuilder crb = Index.getClient()
                                            .prepareCount(index != null ? index : Index.getIndex(clazz))
                                            .setTypes(Index.getDescriptor(clazz).getType());
@@ -707,10 +732,12 @@ public class Query<E extends Entity> {
         int originalLimit = limit;
         limit++;
         ResultList<E> result = new ResultList<>(termFacets, null);
-        try {
-            result = queryResultList();
-        } catch (Exception e) {
-            UserContext.handle(e);
+        if (!forceFail) {
+            try {
+                result = queryResultList();
+            } catch (Exception e) {
+                UserContext.handle(e);
+            }
         }
         boolean hasMore = false;
         if (result.size() > originalLimit) {
@@ -730,6 +757,9 @@ public class Query<E extends Entity> {
      */
     public void iterate(ResultHandler<E> handler) {
         try {
+            if (forceFail) {
+                return;
+            }
             SearchRequestBuilder srb = buildSearch();
             srb.setSearchType(SearchType.SCAN);
             srb.setSize(10); // 10 per shard!
@@ -835,6 +865,9 @@ public class Query<E extends Entity> {
      */
     public void delete() {
         try {
+            if (forceFail) {
+                return;
+            }
             Watch w = Watch.start();
             DeleteByQueryRequestBuilder builder = Index.getClient()
                                                        .prepareDeleteByQuery(index != null ? index : Index.getIndex(

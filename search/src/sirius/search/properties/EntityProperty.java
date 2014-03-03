@@ -9,12 +9,12 @@
 package sirius.search.properties;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import sirius.kernel.di.std.Register;
+import sirius.kernel.health.Exceptions;
 import sirius.search.Entity;
 import sirius.search.EntityRef;
 import sirius.search.Index;
 import sirius.search.annotations.RefType;
-import sirius.kernel.di.std.Register;
-import sirius.kernel.health.Exceptions;
 import sirius.web.http.WebContext;
 
 import java.io.IOException;
@@ -54,9 +54,14 @@ public class EntityProperty extends Property {
     }
 
     @Override
-    @SuppressWarnings ("unchecked")
+    @SuppressWarnings("unchecked")
     public void init(Entity entity) throws Exception {
         field.set(entity, new EntityRef<>((Class<Entity>) field.getAnnotation(RefType.class).type()));
+    }
+
+    @Override
+    public boolean acceptsSetter() {
+        return false;
     }
 
     @Override

@@ -12,6 +12,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import sirius.kernel.references.ReflectionValueReference;
 import sirius.search.annotations.Indexed;
 import sirius.search.annotations.RefField;
 import sirius.search.annotations.RefType;
@@ -90,6 +91,12 @@ public class EntityDescriptor {
                     if (f.accepts(field)) {
                         p = f.create(field);
                         props.add(p);
+                        if (!p.acceptsSetter() && hasSetter(field)) {
+                            Index.LOG
+                                 .WARN("Property %s in type %s does not accept a setter method to be present",
+                                       field.getName(),
+                                       clazz.getSimpleName());
+                        }
                         break;
                     }
                 }
@@ -115,6 +122,19 @@ public class EntityDescriptor {
         }
         if (clazz.getSuperclass() != null && !Object.class.equals(clazz.getSuperclass())) {
             addProperties(clazz.getSuperclass(), props, keys);
+        }
+    }
+
+    /*
+     * Determines if there is a setter method (setXXX) for the given field.
+     */
+    private boolean hasSetter(Field field) {
+        try {
+            field.getDeclaringClass()
+                 .getMethod("set" + ReflectionValueReference.toFirstUpper(field.getName()), field.getType());
+            return true;
+        } catch (NoSuchMethodException e) {
+            return false;
         }
     }
 
@@ -186,7 +206,10 @@ public class EntityDescriptor {
      * @throws IOException in case of an IO error during the JSON encoding
      */
     public XContentBuilder createMapping() throws IOException {
-        XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject(getType()).startObject("properties");
+        XContentBuilder builder = XContentFactory.jsonBuilder()
+                                                 .startObject()
+                                                 .startObject(getType())
+                                                 .startObject("properties");
         for (Property p : getProperties()) {
             p.createMapping(builder);
         }

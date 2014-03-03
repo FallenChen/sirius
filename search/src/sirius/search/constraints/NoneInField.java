@@ -13,57 +13,43 @@ import org.elasticsearch.index.query.*;
 import java.util.Collection;
 
 /**
- * Represents a constraint which verifies that the given field contains one of the given values.
+ * Represents a constraint which verifies that the given field contains none of the given values.
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/12
  */
-public class OneInField implements Constraint {
+public class NoneInField implements Constraint {
 
     private final Collection<?> values;
     private final String field;
-    private boolean orEmpty = false;
     private boolean isFilter;
 
     /*
      * Use the #on(List, String) factory method
      */
-    private OneInField(Collection<?> values, String field) {
+    private NoneInField(Collection<?> values, String field) {
         this.values = values;
         this.field = field;
     }
 
     /**
-     * Creates a new constraint which verifies that the given field contains one of the given values.
+     * Creates a new constraint which verifies that the given field contains none of the given values.
      *
      * @param values the values to check for
      * @param field  the field to check
      * @return the newly created constraint
      */
-    public static OneInField on(Collection<?> values, String field) {
-        return new OneInField(values, field);
+    public static NoneInField on(Collection<?> values, String field) {
+        return new NoneInField(values, field);
     }
 
-    /**
-     * Signals that this constraint is also fulfilled if the target field is empty.
-     * <p>
-     * This will convert this constraint into a filter.
-     * </p>
-     *
-     * @return the constraint itself for fluent method calls
-     */
-    public OneInField orEmpty() {
-        asFilter();
-        orEmpty = true;
-        return this;
-    }
 
     /**
      * Forces this constraint to be applied as filter not as query.
      *
      * @return the constraint itself for fluent method calls
      */
-    public OneInField asFilter() {
+    public NoneInField asFilter() {
         isFilter = true;
         return this;
     }
@@ -76,7 +62,7 @@ public class OneInField implements Constraint {
             }
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             for (Object value : values) {
-                boolQueryBuilder.should(QueryBuilders.termQuery(field, value));
+                boolQueryBuilder.mustNot(QueryBuilders.termQuery(field, value));
             }
             return boolQueryBuilder;
         }
@@ -91,10 +77,7 @@ public class OneInField implements Constraint {
             }
             BoolFilterBuilder boolFilterBuilder = FilterBuilders.boolFilter();
             for (Object value : values) {
-                boolFilterBuilder.should(FilterBuilders.termFilter(field, value));
-            }
-            if (orEmpty) {
-                boolFilterBuilder.should(FilterBuilders.missingFilter(field));
+                boolFilterBuilder.mustNot(FilterBuilders.termFilter(field, value));
             }
 
             return boolFilterBuilder;
@@ -107,7 +90,7 @@ public class OneInField implements Constraint {
         if (values == null || values.isEmpty()) {
             return "<skipped>";
         }
-        return "'" + (skipConstraintValues ? "?" : values) + "' IN " + field;
+        return "'" + (skipConstraintValues ? "?" : values) + "' NOT IN " + field;
     }
 
     @Override

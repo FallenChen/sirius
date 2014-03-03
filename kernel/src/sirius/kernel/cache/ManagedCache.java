@@ -191,8 +191,11 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
     }
 
     @Override
-    public V get(final K key, final ValueComputer<K, V> computer) {
+    public V get(final K key,final ValueComputer<K, V> computer) {
         try {
+            if (key == null) {
+                return null;
+            }
             if (data == null) {
                 init();
             }
@@ -219,9 +222,9 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
                 if (computer != null) {
                     V value = computer.compute(key);
                     entry = new CacheEntry<K, V>(key,
-                                                value,
-                                                timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
-                                                verificationInterval + System.currentTimeMillis());
+                                                 value,
+                                                 timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
+                                                 verificationInterval + System.currentTimeMillis());
                 }
             }
             if (verifier != null && entry != null && verificationInterval > 0 && entry.getNextVerification() < now) {
@@ -246,6 +249,9 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
 
     @Override
     public void put(K key, V value) {
+        if (key == null) {
+            throw new IllegalArgumentException("key must not be null");
+        }
         if (data == null) {
             init();
         }
@@ -300,8 +306,7 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
     public void onRemoval(RemovalNotification<Object, Object> notification) {
         if (removeListener != null) {
             try {
-                @SuppressWarnings("unchecked")
-                CacheEntry<K, V> entry = (CacheEntry<K, V>) notification.getValue();
+                @SuppressWarnings("unchecked") CacheEntry<K, V> entry = (CacheEntry<K, V>) notification.getValue();
                 removeListener.invoke(Tuple.create(entry.getKey(), entry.getValue()));
             } catch (Throwable e) {
                 Exceptions.handle(e);
