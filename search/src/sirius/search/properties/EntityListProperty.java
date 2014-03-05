@@ -70,6 +70,7 @@ public class EntityListProperty extends Property {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void readFromRequest(Entity entity, WebContext ctx) {
         try {
             ((EntityRefList<?>) field.get(entity)).setIds((List<String>) transformFromRequest(getName(), ctx));
@@ -84,6 +85,7 @@ public class EntityListProperty extends Property {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void readFromSource(Entity entity, Object value) {
         try {
             ((EntityRefList<?>) field.get(entity)).setIds((List<String>) value);
