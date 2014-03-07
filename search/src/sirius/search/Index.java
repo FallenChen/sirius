@@ -44,6 +44,7 @@ import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricState;
 import sirius.web.health.MetricsCollector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -113,7 +114,7 @@ public class Index {
     /**
      * Can be used to cache frequently used entities.
      */
-    private static Cache<String, Object> loaderCache = CacheManager.createCache("entity-cache");
+    private static Cache<String, Object> globalCache = CacheManager.createCache("entity-cache");
 
     /*
      * Average query duration for statistical measures
@@ -135,50 +136,99 @@ public class Index {
     /**
      * Fetches the entity of given type with the given id.
      * <p>
-     * May use a local lookup cache to load the entity.
+     * May use a given cache to load the entity.
      * </p>
      *
-     * @param type the type of the desired entity
-     * @param id   the id of the desired entity
+     * @param type  the type of the desired entity
+     * @param id    the id of the desired entity
+     * @param cache the cache to resolve the entity.
      * @return a tuple containing the resolved entity (or <tt>null</tt> if not found) and a flag which indicates if the
-     *         value was loaded from cache (<tt>true</tt>) or not.
+     * value was loaded from cache (<tt>true</tt>) or not.
      */
-    public static <E extends Entity> Tuple<E, Boolean> fetch(Class<E> type, String id) {
-        @SuppressWarnings ("unchecked")
-        E value = (E) loaderCache.get(getDescriptor(type).getType() + "-" + id);
+    @Nonnull
+    public static <E extends Entity> Tuple<E, Boolean> fetch(@Nonnull Class<E> type,
+                                                             @Nullable String id,
+                                                             @Nonnull com.google.common.cache.Cache<String, Object> cache) {
+        if (Strings.isEmpty(id)) {
+            return Tuple.create(null, false);
+        }
+
+        @SuppressWarnings("unchecked") E value = (E) cache.getIfPresent(getDescriptor(type).getType() + "-" + id);
         if (value != null) {
             return Tuple.create(value, true);
         }
         value = find(type, id);
-        loaderCache.put(Index.getDescriptor(type).getType() + "-" + id, value);
+        cache.put(Index.getDescriptor(type).getType() + "-" + id, value);
         return Tuple.create(value, false);
     }
 
     /**
      * Fetches the entity of given type with the given id.
      * <p>
-     * May use a local lookup cache to load the entity.
+     * May use a given cache to load the entity.
+     * </p>
+     *
+     * @param type  the type of the desired entity
+     * @param id    the id of the desired entity
+     * @param cache the cache to resolve the entity.
+     * @return the resolved entity (or <tt>null</tt> if not found)
+     */
+    @Nullable
+    public static <E extends Entity> E fetchFromCache(@Nonnull Class<E> type,
+                                                      @Nullable String id,
+                                                      @Nonnull com.google.common.cache.Cache<String, Object> cache) {
+        return fetch(type, id, cache).getFirst();
+    }
+
+    /**
+     * Fetches the entity of given type with the given id.
+     * <p>
+     * May use a global cache to load the entity.
+     * </p>
+     *
+     * @param type the type of the desired entity
+     * @param id   the id of the desired entity
+     * @return a tuple containing the resolved entity (or <tt>null</tt> if not found) and a flag which indicates if the
+     * value was loaded from cache (<tt>true</tt>) or not.
+     */
+    @Nonnull
+    public static <E extends Entity> Tuple<E, Boolean> fetch(@Nonnull Class<E> type, @Nullable String id) {
+        if (Strings.isEmpty(id)) {
+            return Tuple.create(null, false);
+        }
+
+        @SuppressWarnings("unchecked") E value = (E) globalCache.get(getDescriptor(type).getType() + "-" + id);
+        if (value != null) {
+            return Tuple.create(value, true);
+        }
+        value = find(type, id);
+        globalCache.put(Index.getDescriptor(type).getType() + "-" + id, value);
+        return Tuple.create(value, false);
+    }
+
+    /**
+     * Fetches the entity of given type with the given id.
+     * <p>
+     * May use a global cache to load the entity.
      * </p>
      *
      * @param type the type of the desired entity
      * @param id   the id of the desired entity
      * @return the resolved entity (or <tt>null</tt> if not found)
      */
-    public static <E extends Entity> E fetchFromCache(Class<E> type, String id) {
-        @SuppressWarnings ("unchecked")
-        E value = (E) loaderCache.get(getDescriptor(type).getType() + "-" + id);
-        if (value != null) {
-            return value;
-        }
-        value = find(type, id);
-        loaderCache.put(Index.getDescriptor(type).getType() + "-" + id, value);
-        return value;
+    @Nullable
+    public static <E extends Entity> E fetchFromCache(@Nonnull Class<E> type, @Nullable String id) {
+        return fetch(type, id).getFirst();
     }
 
+    /**
+     * Provides access to the expected schema / mappings.
+     *
+     * @return the expected schema of the object model
+     */
     public static Schema getSchema() {
         return schema;
     }
-
 
     /**
      * Used to delay an action for at least one second
@@ -641,8 +691,8 @@ public class Index {
             IndexRequestBuilder irb = getClient().prepareIndex(getIndex(entity),
                                                                getDescriptor(entity.getClass()).getType(),
                                                                NEW.equals(entity.getId()) ? null : entity.getId())
-                    .setCreate(forceCreate)
-                    .setSource(source);
+                                                 .setCreate(forceCreate)
+                                                 .setSource(source);
             if (!entity.isNew() && performVersionCheck) {
                 irb.setVersion(entity.getVersion());
             }
@@ -730,9 +780,9 @@ public class Index {
             Watch w = Watch.start();
             try {
                 GetResponse res = getClient().prepareGet(index, getDescriptor(clazz).getType(), id)
-                        .setPreference("_primary")
-                        .execute()
-                        .actionGet();
+                                             .setPreference("_primary")
+                                             .execute()
+                                             .actionGet();
                 if (!res.isExists()) {
                     if (LOG.isFINE()) {
                         LOG.FINE("FIND: %s.%s: NOT FOUND", index, getDescriptor(clazz).getType());

@@ -458,11 +458,10 @@ public class Query<E extends Entity> {
             }
             SearchRequestBuilder srb = buildSearch();
             if (Index.LOG.isFINE()) {
-                Index.LOG
-                     .FINE("SEARCH-FIRST: %s.%s: %s",
-                           Index.getIndex(clazz),
-                           Index.getDescriptor(clazz).getType(),
-                           buildQuery());
+                Index.LOG.FINE("SEARCH-FIRST: %s.%s: %s",
+                               Index.getIndex(clazz),
+                               Index.getDescriptor(clazz).getType(),
+                               buildQuery());
             }
             return transformFirst(srb);
         } catch (Throwable e) {
@@ -535,11 +534,10 @@ public class Query<E extends Entity> {
             }
             SearchRequestBuilder srb = buildSearch();
             if (Index.LOG.isFINE()) {
-                Index.LOG
-                     .FINE("SEARCH: %s.%s: %s",
-                           Index.getIndex(clazz),
-                           Index.getDescriptor(clazz).getType(),
-                           buildQuery());
+                Index.LOG.FINE("SEARCH: %s.%s: %s",
+                               Index.getIndex(clazz),
+                               Index.getDescriptor(clazz).getType(),
+                               buildQuery());
             }
             return transform(srb);
         } catch (Throwable e) {
@@ -569,11 +567,10 @@ public class Query<E extends Entity> {
                 crb.setQuery(QueryBuilders.filteredQuery(qb, sb));
             }
             if (Index.LOG.isFINE()) {
-                Index.LOG
-                     .FINE("COUNT: %s.%s: %s",
-                           Index.getIndex(clazz),
-                           Index.getDescriptor(clazz).getType(),
-                           buildQuery());
+                Index.LOG.FINE("COUNT: %s.%s: %s",
+                               Index.getIndex(clazz),
+                               Index.getDescriptor(clazz).getType(),
+                               buildQuery());
             }
             return transformCount(crb);
         } catch (Throwable t) {
@@ -653,12 +650,11 @@ public class Query<E extends Entity> {
             result.getResults().add(entity);
         }
         if (Index.LOG.isFINE()) {
-            Index.LOG
-                 .FINE("SEARCH: %s.%s: SUCCESS: %d - %d ms",
-                       Index.getIndex(clazz),
-                       Index.getDescriptor(clazz).getType(),
-                       searchResponse.getHits().totalHits(),
-                       searchResponse.getTookInMillis());
+            Index.LOG.FINE("SEARCH: %s.%s: SUCCESS: %d - %d ms",
+                           Index.getIndex(clazz),
+                           Index.getDescriptor(clazz).getType(),
+                           searchResponse.getHits().totalHits(),
+                           searchResponse.getTookInMillis());
         }
         if (Microtiming.isEnabled()) {
             w.submitMicroTiming("LIST: " + toString(true));
@@ -686,12 +682,11 @@ public class Query<E extends Entity> {
             Index.getDescriptor(clazz).readSource(result, hit.getSource());
         }
         if (Index.LOG.isFINE()) {
-            Index.LOG
-                 .FINE("SEARCH-FIRST: %s.%s: SUCCESS: %d - %d ms",
-                       Index.getIndex(clazz),
-                       Index.getDescriptor(clazz).getType(),
-                       searchResponse.getHits().totalHits(),
-                       searchResponse.getTookInMillis());
+            Index.LOG.FINE("SEARCH-FIRST: %s.%s: SUCCESS: %d - %d ms",
+                           Index.getIndex(clazz),
+                           Index.getDescriptor(clazz).getType(),
+                           searchResponse.getHits().totalHits(),
+                           searchResponse.getTookInMillis());
         }
         if (Microtiming.isEnabled()) {
             w.submitMicroTiming("FIRST: " + toString(true));
@@ -710,11 +705,10 @@ public class Query<E extends Entity> {
         Watch w = Watch.start();
         CountResponse res = builder.execute().actionGet();
         if (Index.LOG.isFINE()) {
-            Index.LOG
-                 .FINE("COUNT: %s.%s: SUCCESS: %d",
-                       Index.getIndex(clazz),
-                       Index.getDescriptor(clazz).getType(),
-                       res.getCount());
+            Index.LOG.FINE("COUNT: %s.%s: SUCCESS: %d",
+                           Index.getIndex(clazz),
+                           Index.getDescriptor(clazz).getType(),
+                           res.getCount());
         }
         if (Microtiming.isEnabled()) {
             w.submitMicroTiming("COUNT: " + toString(true));
@@ -770,48 +764,60 @@ public class Query<E extends Entity> {
             }
 
             SearchResponse searchResponse = srb.execute().actionGet();
+            try {
+                while (true) {
+                    Watch w = Watch.start();
+                    searchResponse = Index.getClient()
+                                          .prepareSearchScroll(searchResponse.getScrollId())
+                                          .setScroll(org.elasticsearch.common.unit.TimeValue.timeValueSeconds(60))
+                                          .execute()
+                                          .actionGet();
 
-            while (true) {
-                Watch w = Watch.start();
-                searchResponse = Index.getClient()
-                                      .prepareSearchScroll(searchResponse.getScrollId())
-                                      .setScroll(org.elasticsearch.common.unit.TimeValue.timeValueSeconds(60))
-                                      .execute()
-                                      .actionGet();
-
-                if (Index.LOG.isFINE()) {
-                    Index.LOG
-                         .FINE("SEARCH-SCROLL: %s.%s: SUCCESS: %d - %d ms",
-                               Index.getIndex(clazz),
-                               entityDescriptor.getType(),
-                               searchResponse.getHits().totalHits(),
-                               searchResponse.getTookInMillis());
-                }
-                if (Microtiming.isEnabled()) {
-                    w.submitMicroTiming("SCROLL: " + toString(true));
-                }
-
-                for (SearchHit hit : searchResponse.getHits()) {
-                    E entity = clazz.newInstance();
-                    entity.setId(hit.getId());
-                    entity.initSourceTracing();
-                    entity.setVersion(hit.getVersion());
-                    entityDescriptor.readSource(entity, hit.getSource());
-
-                    try {
-                        if (!handler.handleRow(entity)) {
-                            return;
-                        }
-                    } catch (Exception e) {
-                        Exceptions.createHandled().to(Index.LOG).error(e).handle();
+                    if (Index.LOG.isFINE()) {
+                        Index.LOG.FINE("SEARCH-SCROLL: %s.%s: SUCCESS: %d - %d ms",
+                                       Index.getIndex(clazz),
+                                       entityDescriptor.getType(),
+                                       searchResponse.getHits().totalHits(),
+                                       searchResponse.getTookInMillis());
+                    }
+                    if (Microtiming.isEnabled()) {
+                        w.submitMicroTiming("SCROLL: " + toString(true));
                     }
 
+                    for (SearchHit hit : searchResponse.getHits()) {
+                        E entity = clazz.newInstance();
+                        entity.setId(hit.getId());
+                        entity.initSourceTracing();
+                        entity.setVersion(hit.getVersion());
+                        entityDescriptor.readSource(entity, hit.getSource());
+
+                        try {
+                            if (!handler.handleRow(entity)) {
+                                return;
+                            }
+                        } catch (Exception e) {
+                            Exceptions.createHandled().to(Index.LOG).error(e).handle();
+                        }
+
+                    }
+                    //Break condition: No hits are returned
+                    if (searchResponse.getHits().hits().length == 0) {
+                        break;
+                    }
                 }
-                //Break condition: No hits are returned
-                if (searchResponse.getHits().hits().length == 0) {
-                    break;
+            } finally {
+                try {
+                    Index.getClient()
+                         .prepareClearScroll()
+                         .addScrollId(searchResponse.getScrollId())
+                         .execute()
+                         .actionGet();
+                } catch (Throwable e) {
+                    Exceptions.handle(Index.LOG, e);
                 }
             }
+
+
         } catch (Throwable t) {
             throw Exceptions.handle(Index.LOG, t);
         }
@@ -878,11 +884,10 @@ public class Query<E extends Entity> {
                 builder.setQuery(qb);
             }
             if (Index.LOG.isFINE()) {
-                Index.LOG
-                     .FINE("DELETE: %s.%s: %s",
-                           Index.getIndex(clazz),
-                           Index.getDescriptor(clazz).getType(),
-                           buildQuery());
+                Index.LOG.FINE("DELETE: %s.%s: %s",
+                               Index.getIndex(clazz),
+                               Index.getDescriptor(clazz).getType(),
+                               buildQuery());
             }
             builder.execute().actionGet();
             if (Microtiming.isEnabled()) {

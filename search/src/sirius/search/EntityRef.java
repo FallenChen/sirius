@@ -8,6 +8,7 @@
 
 package sirius.search;
 
+import com.google.common.cache.Cache;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 
@@ -66,7 +67,27 @@ public class EntityRef<E extends Entity> {
     /**
      * Returns the entity value represented by this reference.
      * <p>
-     * The framework is permitted to load the value from a local cache.
+     * The framework is permitted to load the value from the given local cache.
+     * </p>
+     *
+     * @param localCache the cache to used when looking up values
+     * @return the value represented by this reference
+     */
+    public E getCachedValue(Cache<String, Object> localCache) {
+        if (isValueLoaded()) {
+            return value;
+        }
+
+        Tuple<E, Boolean> tuple = Index.fetch(clazz, id, localCache);
+        value = tuple.getFirst();
+        valueFromCache = tuple.getSecond();
+        return value;
+    }
+
+    /**
+     * Returns the entity value represented by this reference.
+     * <p>
+     * The framework is permitted to load the value from the global cache.
      * </p>
      *
      * @return the value represented by this reference
