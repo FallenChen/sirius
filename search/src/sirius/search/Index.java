@@ -514,6 +514,8 @@ public class Index {
                                     .to(LOG)
                                     .withSystemErrorMessage("Cannot create index: %s", getIndexName(name))
                                     .handle();
+                } else {
+                    Index.blockThreadForUpdate();
                 }
             }
         } catch (Throwable e) {

@@ -796,7 +796,7 @@ public class Query<E extends Entity> {
                                 return;
                             }
                         } catch (Exception e) {
-                            Exceptions.createHandled().to(Index.LOG).error(e).handle();
+                            Exceptions.handle().to(Index.LOG).error(e).handle();
                         }
 
                     }

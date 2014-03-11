@@ -13,6 +13,7 @@ import com.google.common.collect.Lists;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -71,6 +72,9 @@ public class EntityRefList<E extends Entity> {
             values = result;
             valueFromCache = false;
         }
+        if (values == null) {
+            return Collections.emptyList();
+        }
         return values;
     }
 
@@ -85,21 +89,22 @@ public class EntityRefList<E extends Entity> {
      */
     public List<E> getCachedValue(Cache<String, Object> localCache) {
         if (isValueLoaded()) {
+            if (values == null) {
+                return Collections.emptyList();
+            }
             return values;
         }
 
-        if (!isValueLoaded() || valueFromCache) {
-            List<E> result = Lists.newArrayList();
-            valueFromCache = false;
-            for (String id : ids) {
-                Tuple<E, Boolean> tuple = Index.fetch(clazz, id, localCache);
-                if (tuple.getFirst() != null) {
-                    result.add(tuple.getFirst());
-                    valueFromCache |= tuple.getSecond();
-                }
+        List<E> result = Lists.newArrayList();
+        valueFromCache = false;
+        for (String id : ids) {
+            Tuple<E, Boolean> tuple = Index.fetch(clazz, id, localCache);
+            if (tuple.getFirst() != null) {
+                result.add(tuple.getFirst());
+                valueFromCache |= tuple.getSecond();
             }
-            values = result;
         }
+        values = result;
         return values;
     }
 
@@ -113,21 +118,22 @@ public class EntityRefList<E extends Entity> {
      */
     public List<E> getCachedValue() {
         if (isValueLoaded()) {
+            if (values == null) {
+                return Collections.emptyList();
+            }
             return values;
         }
 
-        if (!isValueLoaded() || valueFromCache) {
-            List<E> result = Lists.newArrayList();
-            valueFromCache = false;
-            for (String id : ids) {
-                Tuple<E, Boolean> tuple = Index.fetch(clazz, id);
-                if (tuple.getFirst() != null) {
-                    result.add(tuple.getFirst());
-                    valueFromCache |= tuple.getSecond();
-                }
+        List<E> result = Lists.newArrayList();
+        valueFromCache = false;
+        for (String id : ids) {
+            Tuple<E, Boolean> tuple = Index.fetch(clazz, id);
+            if (tuple.getFirst() != null) {
+                result.add(tuple.getFirst());
+                valueFromCache |= tuple.getSecond();
             }
-            values = result;
         }
+        values = result;
         return values;
     }
 
@@ -163,25 +169,21 @@ public class EntityRefList<E extends Entity> {
     }
 
     /**
-     * Returns the ID of the represented value.
+     * Returns the IDs of the represented values.
      * <p>
      * This can always be fetched without a DB lookup.
      * </p>
      *
-     * @return the ID of the represented value
+     * @return the IDs of the represented values
      */
     public List<String> getIds() {
         return ids;
     }
 
     /**
-     * Sets the ID of the represented value.
-     * <p>
-     * If the object is available, consider using {@link #setValues(sirius.search.Entity)} as it also stores the value in a
-     * temporary buffer which improves calls to {@link #getValues()} (which might happen in onSave handlers).
-     * </p>
+     * Sets the IDs of the represented values.
      *
-     * @param ids the id of the represented value
+     * @param ids the ids of the represented values
      */
     public void setIds(List<String> ids) {
         this.ids.clear();
