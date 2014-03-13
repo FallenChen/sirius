@@ -690,11 +690,17 @@ public class Index {
                          Strings.join(source));
             }
 
+            String id = entity.getId();
+            if (NEW.equals(id)) {
+                id = null;
+            }
+            if (id == null || "".equals(id)) {
+                id = entity.computePossibleId();
+            }
+
             IndexRequestBuilder irb = getClient().prepareIndex(getIndex(entity),
                                                                getDescriptor(entity.getClass()).getType(),
-                                                               NEW.equals(entity.getId()) ? null : entity.getId())
-                                                 .setCreate(forceCreate)
-                                                 .setSource(source);
+                                                               id).setCreate(forceCreate).setSource(source);
             if (!entity.isNew() && performVersionCheck) {
                 irb.setVersion(entity.getVersion());
             }

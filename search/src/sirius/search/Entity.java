@@ -11,19 +11,22 @@ package sirius.search;
 import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.BaseEncoding;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Tuple;
+import sirius.kernel.di.std.Part;
+import sirius.kernel.health.Exceptions;
+import sirius.kernel.health.HandledException;
+import sirius.kernel.nls.NLS;
 import sirius.search.annotations.RefField;
 import sirius.search.annotations.RefType;
 import sirius.search.annotations.Transient;
 import sirius.search.annotations.Unique;
 import sirius.search.properties.Property;
-import sirius.kernel.commons.Strings;
-import sirius.kernel.commons.Tuple;
-import sirius.kernel.health.Exceptions;
-import sirius.kernel.health.HandledException;
-import sirius.kernel.nls.NLS;
 import sirius.web.controller.UserContext;
 import sirius.web.http.WebContext;
 
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -415,7 +418,7 @@ public abstract class Entity {
      * @param field the field to check
      * @param value the current value which is to be compared
      * @return <tt>true</tt> if the value loaded from the database is not equal to the given value, <tt>false</tt>
-     *         otherwise.
+     * otherwise.
      */
     protected boolean isChanged(String field, Object value) {
         return source != null && !Objects.equal(value, source.get(field));
@@ -425,10 +428,64 @@ public abstract class Entity {
      * Returns the name of the index which is used to store the entities.
      *
      * @return the name of the ElasticSearch index used to store the entities. Returns <tt>null</tt> to indicate that
-     *         the default index (given by the {@link sirius.search.annotations.Indexed} annotation should be used).
+     * the default index (given by the {@link sirius.search.annotations.Indexed} annotation should be used).
      */
     public String getIndex() {
         return null;
     }
 
+    /**
+     * Generates an unique ID used to store new objects of this type. By default three types of IDs are supported:
+     * <p>
+     * <ul>
+     * <li><b>ELASTICSEARCH</b>: Let elasticsearch generate the IDs.
+     * Works 100% but contains characters like '-' or '_'</li>
+     * <li><b>SEQUENCE</b>: Use a sequential generator to compute a new number.
+     * Note that this implies a certain overhead to increment a cluster wide sequence.</li>
+     * <li><b>BASE32HEX</b>: Use the internal generate (16 byte random data) represented as BASE32HEX
+     * encoded string. This is the default setting.</li>
+     * </ul>
+     * </p>
+     * <p>
+     * Note that the type of generation can be controlled by overriding {@link #getIdGeneratorType()}.
+     * </p>
+     *
+     * @return a unique ID used for new objects or <tt>null</tt> to let elasticsearch create one.
+     */
+    public String computePossibleId() {
+        switch (getIdGeneratorType()) {
+            case SEQUENCE:
+                return String.valueOf(sequenceGenerator.getNextId(getClass().getSimpleName().toLowerCase()));
+            case BASE32HEX:
+                byte[] rndBytes = new byte[16];
+                idGenerator.nextBytes(rndBytes);
+                return BaseEncoding.base32Hex().encode(rndBytes).replace("=","");
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Default types of id generators supported. {@link #computePossibleId()}.
+     */
+    public static enum IdGeneratorType {
+        ELASTICSEARCH, SEQUENCE, BASE32HEX;
+    }
+
+    @Part
+    private static IdGenerator sequenceGenerator;
+
+    /*
+     * Random generator used to compute IDs
+     */
+    private static SecureRandom idGenerator = new SecureRandom();
+
+    /**
+     * Used by the default implementation of {@link #computePossibleId()} to determine which kind of ID to generate.
+     *
+     * @return the preferred way of generating IDs.
+     */
+    protected IdGeneratorType getIdGeneratorType() {
+        return IdGeneratorType.BASE32HEX;
+    }
 }
