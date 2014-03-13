@@ -118,8 +118,6 @@
     <!-- Builds and bundles the complete application for distribution -->
     <!-- =========================================================================================================== -->
     <target name="make" depends="ivy,makeVersionA,makeVersionB" description="Builds and bundles the complete application for distribution ">
-        <!-- As the search module is more or less an add-on, it has to be enabled explicitly -->
-        <property name="no-search" value="true" />
 
         <!-- Create distribution directory -->
         <mkdir dir="${dist.dir}" />
