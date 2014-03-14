@@ -11,11 +11,11 @@ package sirius.search;
 import com.google.common.base.Objects;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.index.engine.DocumentMissingException;
-import sirius.search.annotations.RefType;
-import sirius.search.properties.Property;
 import sirius.kernel.async.Async;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
+import sirius.search.annotations.RefType;
+import sirius.search.properties.Property;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -96,11 +96,10 @@ public class ForeignKey {
                     }
                 }
                 if (remoteProperty == null) {
-                    Index.LOG
-                         .WARN("Unknown foreign key reference %s from %s in type %s",
-                               remoteField,
-                               localProperty.getName(),
-                               field.getDeclaringClass().getSimpleName());
+                    Index.LOG.WARN("Unknown foreign key reference %s from %s in type %s",
+                                   remoteField,
+                                   localProperty.getName(),
+                                   field.getDeclaringClass().getSimpleName());
                 }
             }
             return remoteProperty;
@@ -150,7 +149,7 @@ public class ForeignKey {
      *
      * @return the class of the entity where the foreign key was declared
      */
-    @SuppressWarnings ("unchecked")
+    @SuppressWarnings("unchecked")
     public Class<? extends Entity> getLocalClass() {
         return (Class<? extends Entity>) field.getDeclaringClass();
     }
@@ -175,13 +174,15 @@ public class ForeignKey {
      *
      * @param entity the entity (which must be of type {@link #getReferencedClass()}) which is going to be deleted
      */
-    @SuppressWarnings ("unchecked")
+    @SuppressWarnings("unchecked")
     public void onDelete(final Entity entity) {
         if (refType.cascade() == Cascade.IGNORE) {
             return;
         } else if (refType.cascade() == Cascade.REJECT) {
-            if (Index.select(getLocalClass()).exists()) {
-                throw Exceptions.createHandled().withNLSKey(refType.onDeleteErrorMsg()).handle();
+            if (Index.select(getLocalClass()).eq(getName(), entity.getId()).exists()) {
+                throw Exceptions.createHandled()
+                                .withNLSKey(Strings.isFilled(refType.onDeleteErrorMsg()) ? refType.onDeleteErrorMsg() : "ForeignKey.restricted")
+                                .handle();
             }
         } else if (refType.cascade() == Cascade.SET_NULL) {
             Async.executor(Index.ASYNC_CATEGORY_INDEX_INTEGRITY).fork(new Runnable() {
@@ -233,7 +234,7 @@ public class ForeignKey {
      *
      * @param entity the entity (which must be of type {@link #getReferencedClass()}) which is going to be saved
      */
-    @SuppressWarnings ("unchecked")
+    @SuppressWarnings("unchecked")
     public void onSave(final Entity entity) {
         if (references.isEmpty()) {
             return;
@@ -241,7 +242,8 @@ public class ForeignKey {
         boolean referenceChanged = false;
         for (Reference ref : references) {
             try {
-                if (entity.isChanged(ref.getRemoteProperty().getName(), ref.getRemoteProperty().writeToSource(entity))) {
+                if (entity.isChanged(ref.getRemoteProperty().getName(),
+                                     ref.getRemoteProperty().writeToSource(entity))) {
                     referenceChanged = true;
                     break;
                 }
@@ -300,11 +302,10 @@ public class ForeignKey {
             Exceptions.ignore(t);
         } catch (Throwable t) {
             if (Index.LOG.isFINE()) {
-                Index.LOG
-                     .FINE("UPDATE: %s.%s: FAILED: %s",
-                           Index.getIndex(getLocalClass()),
-                           getLocalType(),
-                           t.getMessage());
+                Index.LOG.FINE("UPDATE: %s.%s: FAILED: %s",
+                               Index.getIndex(getLocalClass()),
+                               getLocalType(),
+                               t.getMessage());
             }
             throw Exceptions.handle(Index.LOG, t);
         }
