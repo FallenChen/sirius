@@ -76,7 +76,7 @@ public interface GlobalContext {
      *         an empty collection is returned
      */
     @Nonnull
-    <P> Collection<P> getParts(@Nonnull Class<P> partInterface);
+    <P> Collection<P> getParts(@Nonnull Class<? extends P> partInterface);
 
     /**
      * Returns all parts which are currently registered for the given lookup class and have a name attached.

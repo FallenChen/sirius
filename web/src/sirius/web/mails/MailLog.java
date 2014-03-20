@@ -29,13 +29,13 @@ public interface MailLog {
      * @param text         text part of the mail
      * @param html         html part of the mail
      */
-    void log(boolean success,
-             String messageId,
-             String sender,
-             String senderName,
-             String receiver,
-             String receiverName,
-             String subject,
-             String text,
-             String html);
+    void logSentMail(boolean success,
+                     String messageId,
+                     String sender,
+                     String senderName,
+                     String receiver,
+                     String receiverName,
+                     String subject,
+                     String text,
+                     String html);
 }

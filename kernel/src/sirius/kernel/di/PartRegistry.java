@@ -72,14 +72,14 @@ class PartRegistry implements MutableGlobalContext {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <P> Collection<P> getParts(Class<P> partInterface) {
+    public <P> Collection<P> getParts(Class<? extends P> partInterface) {
         return (Collection<P>) parts.get(partInterface);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <P> Collection<Tuple<String, P>> getNamedParts(@Nonnull Class<P> partInterface) {
-        return (Collection<Tuple<String, P>>) (Object)Tuple.fromMap(namedParts.get(partInterface));
+        return (Collection<Tuple<String, P>>) (Object) Tuple.fromMap(namedParts.get(partInterface));
     }
 
     @Override
@@ -116,13 +116,12 @@ class PartRegistry implements MutableGlobalContext {
                         try {
                             proc.handle(this, object, field);
                         } catch (Throwable e) {
-                            Injector.LOG
-                                    .WARN("Cannot process annotation %s on %s.%s: %s (%s)",
-                                          proc.getTrigger().getName(),
-                                          field.getDeclaringClass().getName(),
-                                          field.getName(),
-                                          e.getMessage(),
-                                          e.getClass().getName());
+                            Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
+                                              proc.getTrigger().getName(),
+                                              field.getDeclaringClass().getName(),
+                                              field.getName(),
+                                              e.getMessage(),
+                                              e.getClass().getName());
                         }
                     }
                 }

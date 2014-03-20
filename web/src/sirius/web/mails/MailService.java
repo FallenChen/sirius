@@ -604,15 +604,15 @@ public class MailService {
                 } else {
                     for (MailLog log : logs) {
                         try {
-                            log.log(success,
-                                    messageId,
-                                    Strings.isEmpty(mail.senderEmail) ? technicalSender : mail.senderEmail,
-                                    Strings.isEmpty(mail.senderEmail) ? technicalSenderName : mail.senderName,
-                                    mail.receiverEmail,
-                                    mail.receiverName,
-                                    mail.subject,
-                                    mail.text,
-                                    mail.html);
+                            log.logSentMail(success,
+                                            messageId,
+                                            Strings.isEmpty(mail.senderEmail) ? technicalSender : mail.senderEmail,
+                                            Strings.isEmpty(mail.senderEmail) ? technicalSenderName : mail.senderName,
+                                            mail.receiverEmail,
+                                            mail.receiverName,
+                                            mail.subject,
+                                            mail.text,
+                                            mail.html);
                         } catch (Exception e) {
                             Exceptions.handle(MAIL, e);
                         }
