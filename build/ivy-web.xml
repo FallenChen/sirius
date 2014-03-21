@@ -4,7 +4,7 @@
 <dependency org="com.scireum" name="server-sass" rev="1.1" conf="compile" />
 
 <!-- Rythm is the template engine used to create dynamic web pages -->
-<dependency org="org.rythmengine" name="rythm-engine" rev="1.0-b9" conf="compile" />
+<dependency org="org.rythmengine" name="rythm-engine" rev="1.0" conf="compile" />
 
 <!-- DBCP is the connection pool used to access JDBC data sources -->
 <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="compile" />

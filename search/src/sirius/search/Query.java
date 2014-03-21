@@ -53,7 +53,7 @@ public class Query<E extends Entity> {
     private List<Facet> termFacets = Lists.newArrayList();
     private boolean randomize;
     private int start;
-    private int limit;
+    private int limit = 999;
     private String query;
     private int pageSize = 25;
     private boolean primary = false;

@@ -10,16 +10,11 @@ package sirius.web.templates;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.Files;
 import org.rythmengine.Rythm;
-import org.rythmengine.RythmEngine;
 import org.rythmengine.conf.RythmConfigurationKey;
 import org.rythmengine.extension.II18nMessageResolver;
 import org.rythmengine.extension.ISourceCodeEnhancer;
-import org.rythmengine.extension.ITemplateResourceLoader;
-import org.rythmengine.internal.compiler.TemplateClass;
-import org.rythmengine.resource.ITemplateResource;
-import org.rythmengine.resource.TemplateResourceManager;
+import org.rythmengine.resource.ClasspathResourceLoader;
 import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
@@ -28,7 +23,6 @@ import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
-import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
 import sirius.web.controller.UserContext;
@@ -96,51 +90,8 @@ public class RythmConfig implements Lifecycle {
         }
         config.put("rythm.home.tmp.dir", tmpDir.getAbsolutePath());
         config.put("rythm.i18n.message.resolver.impl", I18nResourceResolver.class.getName());
-        config.put(RythmConfigurationKey.RESOURCE_LOADER_IMPL.getKey(), new ITemplateResourceLoader() {
-
-            @Override
-            public ITemplateResource load(String path) {
-                return new RythmTemplate(path, null);
-            }
-
-            @Override
-            public TemplateClass tryLoadTemplate(String tmplName,
-                                                 RythmEngine engine,
-                                                 TemplateClass callerTemplateClass) {
-                if (!tmplName.startsWith("view") && !tmplName.startsWith("help")) {
-                    return null;
-                }
-                String ext = Files.getFileExtension(tmplName);
-                String file = tmplName.substring(0, tmplName.length() - ext.length() - 1);
-                ITemplateResource tr = load(file.replace(".", "/") + "." + ext);
-                if (!tr.isValid()) {
-                    return null;
-                }
-                TemplateClass tc = engine.classes().getByTemplate(tr.getKey());
-                if (tc != null && engine.getRegisteredTemplateClass(tc.getFullName()) == null) {
-                    tc = null;
-                }
-                if (tc == null) {
-                    tc = new TemplateClass(tr, engine);
-                    try {
-                        tc.asTemplate(engine);
-                    } catch (Exception e) {
-                        throw Exceptions.handle(e);
-                    }
-                }
-                return tc;
-            }
-
-            @Override
-            public String getFullName(TemplateClass tc, RythmEngine engine) {
-                return String.valueOf(tc.getKey()).replace("/", ".");
-            }
-
-            @Override
-            public void scan(String root, TemplateResourceManager manager) {
-            }
-
-        });
+        ClasspathResourceLoader resourceLoader = new ClasspathResourceLoader();
+        config.put(RythmConfigurationKey.RESOURCE_LOADER_IMPLS.getKey(), resourceLoader);
         config.put(RythmConfigurationKey.CODEGEN_SOURCE_CODE_ENHANCER.getKey(), new ISourceCodeEnhancer() {
             @Override
             public List<String> imports() {
@@ -180,7 +131,7 @@ public class RythmConfig implements Lifecycle {
             @Override
             public void setRenderArgs(final ITemplate template) {
                 CallContext ctx = CallContext.getCurrent();
-                ctx.addToMDC("template", template.__getTemplateClass(true).getFullName());
+                ctx.addToMDC("template", template.__getTemplateClass(true).getKey());
                 WebContext wc = ctx.get(WebContext.class);
 
                 template.__setRenderArg("ctx", ctx);
@@ -201,7 +152,7 @@ public class RythmConfig implements Lifecycle {
             }
         });
         Rythm.init(config);
-
+        resourceLoader.setEngine(Rythm.engine());
     }
 
     @Override
