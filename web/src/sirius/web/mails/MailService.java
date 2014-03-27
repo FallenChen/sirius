@@ -432,44 +432,44 @@ public class MailService {
                 }
 
                 for (Config attachmentConfig : ex.getConfigs("attachments")) {
-                        String template = attachmentConfig.getString("template");
-                        try {
-                            Content.Generator attachment = content.generator();
-                            if (attachmentConfig.hasPath("encoding")) {
-                                attachment.encoding(attachmentConfig.getString("encoding"));
-                            }
-                            attachment.useTemplate(template);
-                            attachment.applyContext(context);
-                            ByteArrayOutputStream out = new ByteArrayOutputStream();
-                            attachment.generateTo(out);
-                            out.flush();
-                            String fileName = attachmentConfig.getString("id");
-                            if (attachmentConfig.hasPath("fileName")) {
-                                fileName = content.generator()
-                                                  .direct(attachmentConfig.getString("fileName"))
-                                                  .applyContext(context)
-                                                  .generate();
-                            } else {
-                                int idx = fileName.lastIndexOf("-");
-                                if (idx >= 0) {
-                                    fileName = fileName.substring(0, idx)+"."+fileName.substring(idx + 1);
-                                }
-                            }
-
-                            String mimeType = MimeHelper.guessMimeType(fileName);
-                            addAttachment(new Attachment(fileName, mimeType, out.toByteArray()));
-                        } catch (Throwable t) {
-                            Exceptions.handle()
-                                      .to(MAIL)
-                                      .error(t)
-                                      .withSystemErrorMessage(
-                                              "Cannot generate attachment using template %s (%s) when sending a mail from '%s' to '%s': %s (%s)",
-                                              mailExtension,
-                                              template,
-                                              senderEmail,
-                                              receiverEmail)
-                                      .handle();
+                    String template = attachmentConfig.getString("template");
+                    try {
+                        Content.Generator attachment = content.generator();
+                        if (attachmentConfig.hasPath("encoding")) {
+                            attachment.encoding(attachmentConfig.getString("encoding"));
                         }
+                        attachment.useTemplate(template);
+                        attachment.applyContext(context);
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        attachment.generateTo(out);
+                        out.flush();
+                        String fileName = attachmentConfig.getString("id");
+                        if (attachmentConfig.hasPath("fileName")) {
+                            fileName = content.generator()
+                                              .direct(attachmentConfig.getString("fileName"))
+                                              .applyContext(context)
+                                              .generate();
+                        } else {
+                            int idx = fileName.lastIndexOf("-");
+                            if (idx >= 0) {
+                                fileName = fileName.substring(0, idx) + "." + fileName.substring(idx + 1);
+                            }
+                        }
+
+                        String mimeType = MimeHelper.guessMimeType(fileName);
+                        addAttachment(new Attachment(fileName, mimeType, out.toByteArray()));
+                    } catch (Throwable t) {
+                        Exceptions.handle()
+                                  .to(MAIL)
+                                  .error(t)
+                                  .withSystemErrorMessage(
+                                          "Cannot generate attachment using template %s (%s) when sending a mail from '%s' to '%s': %s (%s)",
+                                          mailExtension,
+                                          template,
+                                          senderEmail,
+                                          receiverEmail)
+                                  .handle();
+                    }
                 }
             } catch (HandledException e) {
                 throw e;
@@ -530,7 +530,8 @@ public class MailService {
                             msg.setSubject(mail.subject);
                             msg.setRecipients(Message.RecipientType.TO,
                                               new InternetAddress[]{new InternetAddress(mail.receiverEmail,
-                                                                                        mail.receiverName)});
+                                                                                        mail.receiverName)}
+                            );
                             if (Strings.isFilled(mail.senderEmail)) {
                                 if (config.isUseSenderAndEnvelopeFrom()) {
                                     msg.setSender(new InternetAddress(technicalSender, technicalSenderName));
@@ -544,7 +545,11 @@ public class MailService {
                                 msg.setContent(content);
                                 msg.setHeader(CONTENT_TYPE, content.getContentType());
                             } else {
-                                msg.setText(mail.text);
+                                if (mail.text != null) {
+                                    msg.setText(mail.text);
+                                } else {
+                                    msg.setText("");
+                                }
                             }
                             if (config.isUseSenderAndEnvelopeFrom()) {
                                 msg.setEnvelopeFrom(Strings.isFilled(config.getMailSender()) ? config.getMailSender() : DEFAULT_CONFIG
@@ -576,17 +581,16 @@ public class MailService {
                 } catch (HandledException e) {
                     throw e;
                 } catch (Throwable e) {
-                    throw Exceptions.handle()
-                                    .withSystemErrorMessage(
-                                            "Invalid mail configuration: %s (Host: %s, Port: %s, User: %s, Password used: %s)",
-                                            e.getMessage(),
-                                            config.getMailHost(),
-                                            config.getMailPort(),
-                                            config.getMailUser(),
-                                            Strings.isFilled(config.getMailPassword()))
-                                    .to(MAIL)
-                                    .error(e)
-                                    .handle();
+                    // If we have no host to use as sender - don't complain too much...
+                    Exceptions.ErrorHandler handler = Strings.isFilled(config.getMailHost()) ? Exceptions.handle() : Exceptions
+                            .createHandled();
+                    throw handler.withSystemErrorMessage(
+                            "Invalid mail configuration: %s (Host: %s, Port: %s, User: %s, Password used: %s)",
+                            e.getMessage(),
+                            config.getMailHost(),
+                            config.getMailPort(),
+                            config.getMailUser(),
+                            Strings.isFilled(config.getMailPassword())).to(MAIL).error(e).handle();
                 }
             } finally {
                 if (logs.isEmpty()) {
