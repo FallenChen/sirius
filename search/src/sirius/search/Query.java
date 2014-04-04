@@ -800,6 +800,7 @@ public class Query<E extends Entity> {
                         }
 
                     }
+                    
                     //Break condition: No hits are returned
                     if (searchResponse.getHits().hits().length == 0) {
                         break;
