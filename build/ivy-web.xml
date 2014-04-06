@@ -9,6 +9,9 @@
 <!-- DBCP is the connection pool used to access JDBC data sources -->
 <dependency org="commons-dbcp" name="commons-dbcp" rev="1.4" conf="compile" />
 
+<!-- Used to parse incoming JSON data -->
+<dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="1.9.13" />
+
 <!-- Async http client used to tunnel http data from a backend server -->
 <dependency org="com.ning" name="async-http-client" rev="1.7.19" conf="compile">
 <!--
@@ -33,6 +36,5 @@
 <dependency org="javax.mail" name="mail" rev="1.4.7" conf="compile" />
 
 <!-- Velocity and xhtml renderer are mainly used to generate mails and attachments -->
-<dependency org="org.apache.velocity" name="velocity" rev="1.7" conf="compile" />
 <dependency org="org.apache.velocity" name="velocity" rev="1.7" conf="compile" />
 <dependency org="org.xhtmlrenderer" name="flying-saucer-pdf" rev="9.0.4" />
