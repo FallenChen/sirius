@@ -168,6 +168,19 @@ public class Cluster implements EveryMinute {
             if (m.getState().ordinal() > newNodeState.ordinal()) {
                 newNodeState = m.getState();
             }
+            if (m.getState().ordinal() > MetricState.GREEN.ordinal()) {
+                HipChat.sendMessage("metric",
+                                    Strings.apply("%s (%s) on %s: %s is %s (%s)",
+                                                  Sirius.getProductName(),
+                                                  Sirius.getProductVersion(),
+                                                  CallContext.getNodeName(),
+                                                  m.getName(),
+                                                  m.getValueAsString(),
+                                                  m.getState()),
+                                    m.getState() == MetricState.YELLOW ? HipChat.Color.YELLOW : HipChat.Color.RED,
+                                    false
+                );
+            }
         }
         this.nodeState = newNodeState;
 
@@ -231,30 +244,38 @@ public class Cluster implements EveryMinute {
         // Check cluster state
         if (clusterState == MetricState.RED && newClusterState == MetricState.RED) {
             LOG.FINE("Cluster was RED and remained RED - ensuring alert...");
-            ensureAlertClusterFailure();
+            if (inCharge()) {
+                LOG.FINE("This node is in charge of action at the bell....fire alert!");
+                alertClusterFailure();
+                HipChat.sendMessage("cluster", "Cluster is RED", HipChat.Color.RED, true);
+            }
+        } else if (clusterState == MetricState.RED && newClusterState != MetricState.RED) {
+            if (inCharge()) {
+                LOG.FINE("Cluster recovered");
+                HipChat.sendMessage("cluster", "Cluster is now in state: " + newClusterState, HipChat.Color.GREEN, true);
+            }
         }
         LOG.FINE("Cluster check complete. Status was %s and is now %s", clusterState, newClusterState);
         clusterState = newClusterState;
     }
 
     /*
-     * Ensures that an alram is triggered in case of a critical cluster state
+     * Determines if this node is in charge of sending alerts
      */
-    private void ensureAlertClusterFailure() {
-        if (!isBestAvailableNode()) {
-            // Check if a node with a better priority also detected the cluster failure and considers itself GREEN
-            for (NodeInfo info : getNodeInfos()) {
-                if (info.getPriority() < getNodePriority() &&
-                        info.getClusterState() == MetricState.RED &&
-                        info.getNodeState() == MetricState.GREEN) {
-                    // Another node took care of it...
-                    LOG.FINE("Node %s is in charge of sending an alert", info.getName());
-                    return;
-                }
+    private boolean inCharge() {
+        if (isBestAvailableNode()) {
+            return true;
+        }
+        for (NodeInfo info : getNodeInfos()) {
+            if (info.getPriority() < getNodePriority() &&
+                    info.getClusterState() == MetricState.RED &&
+                    info.getNodeState() == MetricState.GREEN) {
+                // Another node took care of it...
+                LOG.FINE("Node %s is in charge of sending an alert", info.getName());
+                return false;
             }
         }
-        LOG.FINE("This node is in charge of action at the bell....fire alert!");
-        alertClusterFailure();
+        return true;
     }
 
     @Part
