@@ -474,6 +474,9 @@ public class NLS {
         if (data instanceof LocalDate) {
             return ((LocalDate) data).toString("yyyy-MM-dd", Locale.ENGLISH);
         }
+        if (data instanceof DateMidnight) {
+            return ((DateMidnight) data).toString("yyyy-MM-dd", Locale.ENGLISH);
+        }
         if (data instanceof DateTime) {
             return ((DateTime) data).toString("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
         }
@@ -582,6 +585,13 @@ public class NLS {
                 return getDateTimeFormat(lang).format((Date) data);
             } else {
                 return getDateFormat(lang).format((Date) data);
+            }
+        }
+        if (data instanceof DateMidnight) {
+            if (fullDateConversion) {
+                return getDateTimeFormat(lang).format(((DateMidnight) data).toDate());
+            } else {
+                return getDateFormat(lang).format(((DateMidnight) data).toDate());
             }
         }
         if (data instanceof DateTime) {
@@ -776,6 +786,16 @@ public class NLS {
                                                            .format(), e);
             }
         }
+        if (DateMidnight.class.equals(clazz)) {
+            try {
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+                return (V) new DateMidnight(format.parse(value));
+            } catch (ParseException e) {
+                throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
+                                                           .set("format", "yyyy-MM-dd HH:mm:ss")
+                                                           .format(), e);
+            }
+        }
         if (LocalTime.class.equals(clazz)) {
             try {
                 SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
@@ -919,6 +939,14 @@ public class NLS {
             try {
                 AdvancedDateParser parser = new AdvancedDateParser(lang);
                 return (V) new LocalDate(parser.parse(value).getCalendar());
+            } catch (ParseException e) {
+                throw new IllegalArgumentException(e.getMessage(), e);
+            }
+        }
+        if (DateMidnight.class.equals(clazz)) {
+            try {
+                AdvancedDateParser parser = new AdvancedDateParser(lang);
+                return (V) new DateMidnight(parser.parse(value).getCalendar());
             } catch (ParseException e) {
                 throw new IllegalArgumentException(e.getMessage(), e);
             }

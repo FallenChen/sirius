@@ -10,7 +10,12 @@ package sirius.search.properties;
 
 import org.joda.time.DateMidnight;
 import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Register;
+import sirius.kernel.health.Exceptions;
+import sirius.kernel.nls.NLS;
+import sirius.web.controller.UserContext;
+import sirius.web.http.WebContext;
 
 import java.lang.reflect.Field;
 
@@ -29,7 +34,6 @@ public class DateProperty extends Property {
     @Register
     public static class Factory implements PropertyFactory {
 
-
         @Override
         public boolean accepts(Field field) {
             return DateMidnight.class.equals(field.getType());
@@ -39,11 +43,31 @@ public class DateProperty extends Property {
         public Property create(Field field) {
             return new DateProperty(field);
         }
+
     }
 
     @Override
     protected String getMappingType() {
         return "date";
+    }
+
+    @Override
+    protected Object transformFromRequest(String name, WebContext ctx) {
+        Value value = ctx.get(name);
+        if (value.isEmptyString()) {
+            return null;
+        }
+        Object result = NLS.parseUserString(DateMidnight.class, value.getString());
+        if (result == null) {
+            UserContext.setFieldError(name, value.get());
+            throw Exceptions.createHandled()
+                            .withNLSKey("Property.invalidInput")
+                            .set("field", NLS.get(field.getDeclaringClass().getSimpleName() + "." + name))
+                            .set("value", value.asString())
+                            .handle();
+        }
+
+        return result;
     }
 
     @Override
