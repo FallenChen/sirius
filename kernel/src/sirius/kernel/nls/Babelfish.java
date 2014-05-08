@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -76,11 +77,17 @@ public class Babelfish {
      */
     public void getTranslations(String filter, Collector<Translation> collector) {
         String effectiveFilter = Strings.isEmpty(filter) ? null : filter.toLowerCase();
-        for (Map.Entry<String, Translation> entry : translationMap.entrySet()) {
-            if (entry.getValue().containsText(effectiveFilter)) {
-                collector.add(entry.getValue());
-            }
-        }
+        translationMap.values().stream().filter(e -> e.containsText(effectiveFilter)).forEach(collector);
+    }
+
+    /**
+     * Enumerates all translations which key starts with the given prefix
+     *
+     * @param key       the prefix with which the key must start
+     * @param collector the collector which is supplied with all matching translations
+     */
+    public void getEntriesStartingWith(String key, Consumer<Translation> collector) {
+        translationMap.values().stream().filter(e -> e.getKey().startsWith(key)).forEach(collector);
     }
 
     /**
@@ -225,7 +232,7 @@ public class Babelfish {
      * @param fallback a fallback key, if no translation is found. May be <tt>null</tt>.
      * @param create   determines if a new <tt>Translation</tt> is created if non-existent
      * @return a <tt>Translation</tt> for the given property or fallback.
-     *         Returns <tt>null</tt> if no translation was found and <tt>create</tt> is false.
+     * Returns <tt>null</tt> if no translation was found and <tt>create</tt> is false.
      */
     protected Translation get(String property, String fallback, boolean create) {
         Translation entry = translationMap.get(property);

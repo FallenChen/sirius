@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Provides a pull pattern for asking methods to compute or fill a <tt>List</tt>.
@@ -44,7 +45,7 @@ import java.util.List;
  * @see PriorityCollector
  * @since 2013/08
  */
-public class Collector<T> {
+public class Collector<T> implements Consumer<T> {
 
     /**
      * Creates a new <tt>Collector</tt>.
@@ -98,4 +99,8 @@ public class Collector<T> {
         return data.toString();
     }
 
+    @Override
+    public void accept(T t) {
+        add(t);
+    }
 }
