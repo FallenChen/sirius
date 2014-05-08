@@ -34,7 +34,7 @@ public class Or implements Constraint {
      * @param constraints the constraints to group together
      * @return the newly created constraint
      */
-    public static Constraint on(Constraint[] constraints) {
+    public static Constraint on(Constraint... constraints) {
         return new Or(constraints);
     }
 
