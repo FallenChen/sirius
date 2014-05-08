@@ -163,4 +163,15 @@ public class EntityRef<E extends Entity> {
     public boolean containsId(String id) {
         return Strings.areEqual(this.id, id);
     }
+
+    /**
+     * Determines if the id of the referenced entity is not equals to the given id.
+     *
+     * @param id the id to check
+     * @return <tt>true</tt> if the id of the referenced entity is not equal the given id, <tt>false</tt> otherwise
+     */
+    public boolean isNotThisId(String id) {
+        return !containsId(id);
+    }
+
 }

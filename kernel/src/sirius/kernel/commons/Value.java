@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 /**
@@ -48,7 +49,8 @@ public class Value {
     /**
      * Creates a new wrapper for the given data.
      */
-    public static Value of(Object data) {
+    @Nonnull
+    public static Value of(@Nullable Object data) {
         Value val = new Value();
         val.data = data;
         return val;
@@ -78,7 +80,7 @@ public class Value {
      *
      * @param needle the substring to search
      * @return <tt>true</tt> if the given substring <tt>needle</tt> was found in the wrapped objects string
-     *         representation, <tt>false</tt> otherwise
+     * representation, <tt>false</tt> otherwise
      */
     public boolean contains(String needle) {
         return asString("").contains(needle);
@@ -97,8 +99,9 @@ public class Value {
      * Returns a new {@link Value} which will be empty its value equals one of the given ignored values.
      *
      * @return a <tt>Value</tt> which is empty if the currently wrapped value equals to one of the given values.
-     *         Otherwise the current value is returned.
+     * Otherwise the current value is returned.
      */
+    @Nonnull
     public Value ignore(String... ignoredValues) {
         if (isEmptyString()) {
             return this;
@@ -117,12 +120,26 @@ public class Value {
      *
      * @return a new Value wrapping the given value or the current value if this is not empty.
      */
-    public Value replaceEmptyWith(Object value) {
+    @Nonnull
+    public Value replaceEmptyWith(@Nullable Object value) {
         if (isFilled()) {
             return this;
         }
-        data = value;
-        return this;
+        return Value.of(value);
+    }
+
+    /**
+     * Returns a new <tt>Value</tt> which will wrap the value produced by the given supplier, if the current
+     * value is empty. Otherwise, the current value will be returned.
+     *
+     * @return a new Value wrapping the produced value of the given supplier or the current value if this is not empty.
+     */
+    @Nonnull
+    public Value replaceIfEmpty(@Nonnull Supplier<?> supplier) {
+        if (isFilled()) {
+            return this;
+        }
+        return Value.of(supplier.get());
     }
 
     /**
@@ -135,9 +152,10 @@ public class Value {
      * @param separator the separator to be put in between the two. If the given value is <tt>null</tt>, "" is assumed
      * @param value     the value to be appended to the current value.
      * @return a <tt>Value</tt> representing the current value appended with the given value and separated
-     *         with the given separator
+     * with the given separator
      */
-    public Value append(String separator, Object value) {
+    @Nonnull
+    public Value append(@Nullable String separator, @Nullable Object value) {
         if (Strings.isEmpty(value)) {
             return this;
         }
@@ -160,9 +178,10 @@ public class Value {
      * @param separator the separator to be put in between the two. If the given value is <tt>null</tt>, "" is assumed
      * @param value     the value to be appended to the current value.
      * @return a <tt>Value</tt> representing the given value appended with the current value and separated
-     *         with the given separator
+     * with the given separator
      */
-    public Value prepend(String separator, Object value) {
+    @Nonnull
+    public Value prepend(@Nullable String separator, @Nullable Object value) {
         if (Strings.isEmpty(value)) {
             return this;
         }
@@ -200,8 +219,9 @@ public class Value {
      *
      * @param maxNumberOfCharacters the max length of the string to cut from the wrapped value
      * @return the first maxNumberOfCharacters of the wrapped values string representation, or less if it is shorter.
-     *         Returns "" if the wrapped value is empty.
+     * Returns "" if the wrapped value is empty.
      */
+    @Nonnull
     public String eat(int maxNumberOfCharacters) {
         if (isEmptyString()) {
             return "";
@@ -221,7 +241,7 @@ public class Value {
      * Checks if the current value is numeric (integer or double).
      *
      * @return <tt>true</tt> if the wrapped value is either a {@link Number} or an {@link Amount} or
-     *         if it is a string which can be converted to a long or double
+     * if it is a string which can be converted to a long or double
      */
     public boolean isNumeric() {
         return data != null && (data instanceof Number ||
@@ -358,7 +378,7 @@ public class Value {
      * @param clazz        the desired class of the return type
      * @param defaultValue the value which is returned if the wrapped value is not assignable to the given class.
      * @return the wrapped value if the given <tt>clazz</tt> is assignable from wrapped values class
-     *         or the <tt>defaultValue</tt> otherwise
+     * or the <tt>defaultValue</tt> otherwise
      */
     @SuppressWarnings("unchecked")
     public <V> V get(Class<V> clazz, V defaultValue) {
@@ -389,7 +409,7 @@ public class Value {
      * </p>
      *
      * @return a string representation of the wrapped object
-     *         or <tt>defaultValue</tt> if the wrapped value is <tt>null</tt>
+     * or <tt>defaultValue</tt> if the wrapped value is <tt>null</tt>
      */
     @Nonnull
     public String asString(@Nonnull String defaultValue) {
@@ -424,7 +444,7 @@ public class Value {
      * </p>
      *
      * @return a string representation of the wrapped object as generated by <tt>asString</tt>
-     *         except for <tt>Double</tt> or <tt>BigDecimal</tt> values, which are "smart rounded".
+     * except for <tt>Double</tt> or <tt>BigDecimal</tt> values, which are "smart rounded".
      * @see NLS#smartRound(double)
      */
     @Nonnull
@@ -452,8 +472,8 @@ public class Value {
      *
      * @param defaultValue the value to be used if the wrapped value cannot be converted to a boolean.
      * @return <tt>true</tt> if the wrapped value is <tt>true</tt>
-     *         or if the string representation of it is <code>"true"</code>. Returns <tt>false</tt> otherwise,
-     *         especially if the wrapped value is <tt>null</tt>
+     * or if the string representation of it is <code>"true"</code>. Returns <tt>false</tt> otherwise,
+     * especially if the wrapped value is <tt>null</tt>
      */
     public boolean asBoolean(boolean defaultValue) {
         if (isNull()) {
@@ -469,8 +489,8 @@ public class Value {
      * Boilerplate method for <code>asBoolean(false)</code>
      *
      * @return <tt>true</tt> if the wrapped value is <tt>true</tt>
-     *         or if the string representation of it is <code>"true"</code>. Returns <tt>false</tt> otherwise,
-     *         especially if the wrapped value is <tt>null</tt>
+     * or if the string representation of it is <code>"true"</code>. Returns <tt>false</tt> otherwise,
+     * especially if the wrapped value is <tt>null</tt>
      */
     public boolean asBoolean() {
         return asBoolean(false);
@@ -490,7 +510,7 @@ public class Value {
      *
      * @param defaultValue the value to be used, if no conversion to <tt>int</tt> is possible.
      * @return the wrapped value casted or converted to <tt>int</tt> or <tt>defaultValue</tt>
-     *         if no conversion is possible.
+     * if no conversion is possible.
      */
     public int asInt(int defaultValue) {
         try {
@@ -523,7 +543,7 @@ public class Value {
      * </p>
      *
      * @return the wrapped value casted or converted to <tt>Integer</tt> or <tt>null</tt>
-     *         if no conversion is possible.
+     * if no conversion is possible.
      */
     @Nullable
     public Integer getInteger() {
@@ -557,7 +577,7 @@ public class Value {
      *
      * @param defaultValue the value to be used, if no conversion to <tt>long</tt> is possible.
      * @return the wrapped value casted or converted to <tt>long</tt> or <tt>defaultValue</tt>
-     *         if no conversion is possible.
+     * if no conversion is possible.
      */
     public long asLong(long defaultValue) {
         try {
@@ -592,7 +612,7 @@ public class Value {
      * </p>
      *
      * @return the wrapped value casted or converted to <tt>Long</tt> or <tt>null</tt>
-     *         if no conversion is possible.
+     * if no conversion is possible.
      */
     @Nullable
     public Long getLong() {
@@ -623,7 +643,7 @@ public class Value {
      *
      * @param defaultValue the value to be used, if no conversion to <tt>double</tt> is possible.
      * @return the wrapped value casted or converted to <tt>double</tt> or <tt>defaultValue</tt>
-     *         if no conversion is possible.
+     * if no conversion is possible.
      */
     public double asDouble(double defaultValue) {
         try {
@@ -663,7 +683,7 @@ public class Value {
      *
      * @param defaultValue the value to be used, if no conversion to <tt>BigDecimal</tt> is possible.
      * @return the wrapped value casted or converted to <tt>BigDecimal</tt> or <tt>defaultValue</tt>
-     *         if no conversion is possible.
+     * if no conversion is possible.
      */
     @Nonnull
     public BigDecimal getBigDecimal(@Nonnull BigDecimal defaultValue) {
@@ -697,7 +717,7 @@ public class Value {
      * </p>
      *
      * @return the wrapped value converted to <tt>Amount</tt>. The result might be an empty amount, if the wrapped
-     *         value is <tt>null</tt> or if no conversion was possible.
+     * value is <tt>null</tt> or if no conversion was possible.
      * @see #getBigDecimal(java.math.BigDecimal)
      */
     public Amount getAmount() {
@@ -709,7 +729,7 @@ public class Value {
      *
      * @param clazz the type of the enum to use
      * @return an enum constant of the given <tt>clazz</tt> with the same name as the wrapped value
-     *         or <tt>null</tt> if no matching constant was found
+     * or <tt>null</tt> if no matching constant was found
      */
     @SuppressWarnings("unchecked")
     public <E extends Enum<E>> E asEnum(Class<E> clazz) {
@@ -731,9 +751,9 @@ public class Value {
      *
      * @param value the substring with which the string representation must start
      * @return <tt>true</tt> if the string representation starts with <tt>value</tt>, <tt>false</tt> otherwise.
-     *         If the current value is empty, it is treated as ""
+     * If the current value is empty, it is treated as ""
      */
-    public boolean startsWith(String value) {
+    public boolean startsWith(@Nonnull String value) {
         return asString().startsWith(value);
     }
 
@@ -742,9 +762,9 @@ public class Value {
      *
      * @param value the substring with which the string representation must end
      * @return <tt>true</tt> if the string representation ends with <tt>value</tt>, <tt>false</tt> otherwise.
-     *         If the current value is empty, it is treated as ""
+     * If the current value is empty, it is treated as ""
      */
-    public boolean endsWith(String value) {
+    public boolean endsWith(@Nonnull String value) {
         return asString().endsWith(value);
     }
 
@@ -774,8 +794,8 @@ public class Value {
      *
      * @param length the number of characters to return or to omit (if <tt>length</tt> is negative)
      * @return the first N characters (or less if the string representation of the wrapped value is shorter)
-     *         or the string representation without the first N characters (or "" if the representation is too short)
-     *         if <tt>length is negative</tt>. Returns <code>""</code> if the wrapped value is <tt>null</tt>
+     * or the string representation without the first N characters (or "" if the representation is too short)
+     * if <tt>length is negative</tt>. Returns <code>""</code> if the wrapped value is <tt>null</tt>
      */
     @Nonnull
     public String left(int length) {
@@ -810,8 +830,8 @@ public class Value {
      *
      * @param length the number of characters to return or to omit (if <tt>length</tt> is negative)
      * @return the last N characters (or less if the string representation of the wrapped value is shorter)
-     *         or the string representation without the last N characters (or "" if the representation is too short)
-     *         if <tt>length is negative</tt>. Returns <code>""</code> if the wrapped value is <tt>null</tt>
+     * or the string representation without the last N characters (or "" if the representation is too short)
+     * if <tt>length is negative</tt>. Returns <code>""</code> if the wrapped value is <tt>null</tt>
      */
     @Nonnull
     public String right(int length) {
@@ -831,6 +851,110 @@ public class Value {
             }
             return value.substring(value.length() - length);
         }
+    }
+
+    /**
+     * Returns the substring of the internal value starting right after the last occurrence of the given separator.
+     * <p>
+     * If the separator is not found in the string, or if the internal value is empty, "" is returned.
+     * </p>
+     * <p>
+     * An example would be:
+     * <pre>
+     *         <code>Value.of("test.tmp.pdf").afterLast("."); // returns "pdf"</code>
+     * </pre>
+     * </p>
+     *
+     * @param separator the separator string to search for
+     * @return the substring right after the last occurrence of the given separator. This will not include the separator itself.
+     */
+    @Nonnull
+    public String afterLast(@Nonnull String separator) {
+        if (!isEmptyString()) {
+            int idx = asString().lastIndexOf(separator);
+            if (idx > -1) {
+                return left(idx * -1 - 1);
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Returns the substring of the internal value containing everything up to the last occurrence of the given separator.
+     * <p>
+     * If the separator is not found in the string, or if the internal value is empty, "" is returned.
+     * </p>
+     * <p>
+     * An example would be:
+     * <pre>
+     *         <code>Value.of("test.tmp.pdf").beforeLast("."); // returns "test.tmp"</code>
+     * </pre>
+     * </p>
+     *
+     * @param separator the separator string to search for
+     * @return the substring up to the last occurrence of the given separator. This will not include the separator itself.
+     */
+    @Nonnull
+    public String beforeLast(@Nonnull String separator) {
+        if (!isEmptyString()) {
+            int idx = asString().lastIndexOf(separator);
+            if (idx > -1) {
+                return left(idx);
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Returns the substring of the internal value starting right after the first occurrence of the given separator.
+     * <p>
+     * If the separator is not found in the string, or if the internal value is empty, "" is returned.
+     * </p>
+     * <p>
+     * An example would be:
+     * <pre>
+     *         <code>Value.of("test.tmp.pdf").afterFirst("."); // returns "tmp.pdf"</code>
+     * </pre>
+     * </p>
+     *
+     * @param separator the separator string to search for
+     * @return the substring right after the first occurrence of the given separator. This will not include the separator itself.
+     */
+    @Nonnull
+    public String afterFirst(@Nonnull String separator) {
+        if (!isEmptyString()) {
+            int idx = asString().indexOf(separator);
+            if (idx > -1) {
+                return left(idx * -1 - 1);
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Returns the substring of the internal value containing everything up to the first occurrence of the given separator.
+     * <p>
+     * If the separator is not found in the string, or if the internal value is empty, "" is returned.
+     * </p>
+     * <p>
+     * An example would be:
+     * <pre>
+     *         <code>Value.of("test.tmp.pdf").beforeFirst("."); // returns "test"</code>
+     * </pre>
+     * </p>
+     *
+     * @param separator the separator string to search for
+     * @return the substring up to the first occurrence of the given separator. This will not include the separator itself.
+     */
+    @Nonnull
+    public String beforeFirst(@Nonnull String separator) {
+        if (!isEmptyString()) {
+            int idx = asString().indexOf(separator);
+            if (idx > -1) {
+                return left(idx);
+            }
+        }
+        return "";
     }
 
     /**
@@ -872,7 +996,7 @@ public class Value {
      * Returns an uppercase version of the string representation of the wrapped value.
      *
      * @return an uppercase version of the string representation of the wrapped value or <code>""</code> if the
-     *         wrapped value is <tt>null</tt>
+     * wrapped value is <tt>null</tt>
      */
     @Nonnull
     public String toUpperCase() {
@@ -886,7 +1010,7 @@ public class Value {
      * Returns an lowercase version of the string representation of the wrapped value.
      *
      * @return an lowercase version of the string representation of the wrapped value or <code>""</code> if the
-     *         wrapped value is <tt>null</tt>
+     * wrapped value is <tt>null</tt>
      */
     @Nonnull
     public String toLowerCase() {
@@ -913,8 +1037,8 @@ public class Value {
      * @param pattern     the pattern to replace
      * @param replacement the replacement to be used for <tt>pattern</tt>
      * @return a <tt>Value</tt> where all occurrences of pattern in the string <tt>representation</tt> of the
-     *         wrapped value are replaced by <tt>replacement</tt>. If the wrapped value is null, <tt>this</tt>
-     *         is returned.
+     * wrapped value are replaced by <tt>replacement</tt>. If the wrapped value is null, <tt>this</tt>
+     * is returned.
      */
     @Nonnull
     public Value replace(String pattern, String replacement) {
@@ -931,8 +1055,8 @@ public class Value {
      * @param pattern     the regular expression to replace
      * @param replacement the replacement to be used for <tt>pattern</tt>
      * @return a <tt>Value</tt> where all occurences of pattern in the string <tt>representation</tt> of the
-     *         wrapped value are replaced by <tt>replacement</tt>. If the wrapped value is null, <tt>this</tt>
-     *         is returned.
+     * wrapped value are replaced by <tt>replacement</tt>. If the wrapped value is null, <tt>this</tt>
+     * is returned.
      */
     @Nonnull
     public Value regExReplace(String pattern, String replacement) {
@@ -963,8 +1087,8 @@ public class Value {
      * of the wrapped value as key.
      *
      * @return a <tt>Value</tt> containing a translated value by calling {@link NLS#get(String)}
-     *         if the string representation of the wrapped value starts with <code>$</code>.
-     *         The dollar sign is skipped when passing the key to <tt>NLS</tt>. Otherwise <tt>this</tt> is returned.
+     * if the string representation of the wrapped value starts with <code>$</code>.
+     * The dollar sign is skipped when passing the key to <tt>NLS</tt>. Otherwise <tt>this</tt> is returned.
      * @see NLS#get(String)
      */
     @Nonnull

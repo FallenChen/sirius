@@ -2,8 +2,9 @@ package sirius.kernel.commons;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.ArrayList;
+
+import static org.junit.Assert.*;
 
 /**
  * Test for {@link Value}
@@ -17,5 +18,19 @@ public class TestValue {
         assertTrue(Value.of(" ").isFilled());
         assertFalse(Value.of("").isFilled());
         assertFalse(Value.of(null).isFilled());
+    }
+
+    @Test
+    public void strings() {
+        assertEquals("pdf", Value.of("test.x.pdf").afterLast("."));
+        assertEquals("test.x", Value.of("test.x.pdf").beforeLast("."));
+        assertEquals("x.pdf", Value.of("test.x.pdf").afterFirst("."));
+        assertEquals("test", Value.of("test.x.pdf").beforeFirst("."));
+
+        assertEquals("testA", Value.of("testA.testB").left(5));
+        assertEquals(".testB", Value.of("testA.testB").left(-5));
+        assertEquals("testB", Value.of("testA.testB").right(5));
+        assertEquals("testA.", Value.of("testA.testB").right(-5));
+        assertEquals("", Value.of(null).right(-5));
     }
 }

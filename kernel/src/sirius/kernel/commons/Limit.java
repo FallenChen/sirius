@@ -1,5 +1,7 @@
 package sirius.kernel.commons;
 
+import java.util.function.Predicate;
+
 /**
  * Helper class to handle result windowing (start+limit) of arbitrary data sets.
  * <p>
@@ -16,11 +18,11 @@ package sirius.kernel.commons;
  *         List result = new ArrayList();
  *         for(Object o : someList) {
  *             limit.nextRow();
- *             if (shouldOutput()) {
+ *             if (limit.shouldOutput()) {
  *                 result.add(o);
  *             }
  *             // If we already fetched enough items, we can also stop processing further.
- *             if (!shouldContinue()) {
+ *             if (!limit.shouldContinue()) {
  *                 return;
  *             }
  *         }
@@ -77,4 +79,23 @@ public class Limit {
     public boolean shouldContinue() {
         return itemsToOutput == null || itemsToOutput > 0;
     }
+
+    /**
+     * Converts the limit into a predicate.
+     * <p>
+     * Note that the limit is stateful and therefore asPredicate should only be called once.
+     * </p>
+     *
+     * @return a predicate implementing the limit
+     */
+    public Predicate<?> asPredicate() {
+        return object -> {
+            if (shouldOutput()) {
+                nextRow();
+                return true;
+            }
+            return false;
+        };
+    }
+
 }
