@@ -17,16 +17,20 @@ import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.SearchHit;
-import sirius.search.properties.PropertyFactory;
+import sirius.kernel.Sirius;
 import sirius.kernel.async.Async;
 import sirius.kernel.commons.Watch;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.PartCollection;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.health.Exceptions;
+import sirius.search.properties.PropertyFactory;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -75,10 +79,9 @@ public class Schema {
             for (ForeignKey fk : e.getForeignKeys()) {
                 EntityDescriptor other = getDescriptor(fk.getReferencedClass());
                 if (other == null) {
-                    Index.LOG
-                         .WARN("Cannot reference non-entity class %s from %s",
-                               fk.getReferencedClass().getSimpleName(),
-                               e.getType());
+                    Index.LOG.WARN("Cannot reference non-entity class %s from %s",
+                                   fk.getReferencedClass().getSimpleName(),
+                                   e.getType());
                 } else {
                     other.remoteForeignKeys.add(fk);
                 }
@@ -124,6 +127,7 @@ public class Schema {
                                                               .admin()
                                                               .indices()
                                                               .prepareCreate(index)
+                                                              .setSettings(createIndexSettings(ed))
                                                               .execute()
                                                               .get(10, TimeUnit.SECONDS);
                     if (createResponse.isAcknowledged()) {
@@ -162,6 +166,23 @@ public class Schema {
         }
 
         return changes;
+    }
+
+    private XContentBuilder createIndexSettings(EntityDescriptor ed) throws IOException {
+        XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("index");
+        builder.field("number_of_shards",
+                      Sirius.getConfig()
+                            .hasPath("index.settings." + ed.getIndex() + ".numberOfShards") ? Sirius.getConfig()
+                                                                                                    .getInt("index.settings." + ed
+                                                                                                            .getIndex() + ".numberOfShards") : "index.settings.default.numberOfShards"
+        );
+        builder.field("number_of_replicas",
+                      Sirius.getConfig()
+                            .hasPath("index.settings." + ed.getIndex() + ".numberOfReplicas") ? Sirius.getConfig()
+                                                                                                      .getInt("index.settings." + ed
+                                                                                                              .getIndex() + ".numberOfReplicas") : "index.settings.default.numberOfReplicas"
+        );
+        return builder.endObject().endObject();
     }
 
     /**
@@ -228,11 +249,8 @@ public class Schema {
                                 Watch w = Watch.start();
                                 searchResponse = Index.getClient()
                                                       .prepareSearchScroll(searchResponse.getScrollId())
-                                                      .setScroll(org.elasticsearch
-                                                                         .common
-                                                                         .unit
-                                                                         .TimeValue
-                                                                         .timeValueSeconds(60))
+                                                      .setScroll(org.elasticsearch.common.unit.TimeValue.timeValueSeconds(
+                                                              60))
                                                       .execute()
                                                       .actionGet();
                                 for (SearchHit hit : searchResponse.getHits()) {
@@ -248,8 +266,7 @@ public class Schema {
                                         if (res.hasFailures()) {
                                             for (BulkItemResponse itemRes : res.getItems()) {
                                                 if (itemRes.isFailed()) {
-                                                    Index.LOG
-                                                         .SEVERE("Re-Indexing failed: " + itemRes.getFailureMessage());
+                                                    Index.LOG.SEVERE("Re-Indexing failed: " + itemRes.getFailureMessage());
                                                 }
                                             }
                                         }

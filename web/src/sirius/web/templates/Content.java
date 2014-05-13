@@ -17,7 +17,7 @@ import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Context;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
-import sirius.kernel.di.Lifecycle;
+import sirius.kernel.di.Initializable;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.di.std.Register;
@@ -59,8 +59,8 @@ import java.util.Map;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2014/02
  */
-@Register(classes = {Content.class, Lifecycle.class})
-public class Content implements Lifecycle {
+@Register(classes = {Content.class, Initializable.class})
+public class Content implements Initializable {
 
     /**
      * If a specific output encoding is required (other than the system encoding - most definitely UTF-8) a variable
@@ -281,7 +281,7 @@ public class Content implements Lifecycle {
          *
          * @param extension the expected file extension
          * @return <tt>true</tt> if the given template ends with the given extensions, <tt>false</tt> otherwise.
-         *         If the templateName is <tt>null</tt>, this method always returns <tt>false</tt>.
+         * If the templateName is <tt>null</tt>, this method always returns <tt>false</tt>.
          */
         public boolean isTemplateEndsWith(String extension) {
             return Strings.isFilled(templateName) && templateName.endsWith(extension);
@@ -309,7 +309,7 @@ public class Content implements Lifecycle {
          * always generate its output.
          *
          * @return the handlerType previously set using {@link #handler(String)} or <tt>null</tt> if no handler type
-         *         was set.
+         * was set.
          */
         public String getHandlerType() {
             return handlerType;
@@ -340,7 +340,7 @@ public class Content implements Lifecycle {
     }
 
     @Override
-    public void started() {
+    public void initialize() throws Exception {
         // We wait with starting and configuring Velocity up until now as we need the
         // system config to be ready and populated...
         try {
@@ -365,18 +365,4 @@ public class Content implements Lifecycle {
         }
     }
 
-    @Override
-    public void stopped() {
-        // Not used
-    }
-
-    @Override
-    public void awaitTermination() {
-        // Not necessary
-    }
-
-    @Override
-    public String getName() {
-        return "content (Dynamic Content Generator)";
-    }
 }

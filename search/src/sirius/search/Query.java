@@ -59,6 +59,7 @@ public class Query<E extends Entity> {
     private boolean primary = false;
     private String index;
     private boolean forceFail = false;
+    private String routing;
 
     /**
      * Used to create a nwe query for entities of the given class
@@ -280,6 +281,23 @@ public class Query<E extends Entity> {
         return this;
     }
 
+
+    /**
+     * Sets the value used to perform custom routing.
+     * <p>
+     * This must match the value of the field as specified in <dd>routing</dd> in
+     * {@link sirius.search.annotations.Indexed}.
+     * </p>
+     *
+     * @param value the value used for custom routing
+     * @return the query itself for fluent method calls
+     */
+    public Query<E> routing(String value) {
+        this.routing = value;
+
+        return this;
+    }
+
     /**
      * Adds an order by clause for the given field in ascending order.
      *
@@ -394,7 +412,7 @@ public class Query<E extends Entity> {
      * @return the query itself for fluent method calls
      */
     public Query<E> start(int start) {
-        this.start = start;
+        this.start = Math.max(start, 0);
         return this;
     }
 
@@ -405,7 +423,7 @@ public class Query<E extends Entity> {
      * @return the query itself for fluent method calls
      */
     public Query<E> limit(int limit) {
-        this.limit = limit;
+        this.limit = Math.max(0, limit);
         return this;
     }
 
@@ -417,6 +435,23 @@ public class Query<E extends Entity> {
      * @return the query itself for fluent method calls
      */
     public Query<E> limit(int start, int limit) {
+        return start(start).limit(limit);
+    }
+
+    /**
+     * Sets the start and limit just like {@link #limit(int, int)} but performs additional checks (like limit
+     * must always be less or equal to maxLimit.
+     *
+     * @param start    the zero based index of the first requested item from within the result
+     * @param limit    the max. number of items to return. If the value is 0 or larger than maxLimit, it is
+     *                 forced to maxLimit
+     * @param maxLimit the maximal value allowed for limit
+     * @return the query itself for fluent method calls
+     */
+    public Query<E> userLimit(int start, int limit, int maxLimit) {
+        if (limit < 1 || limit > maxLimit) {
+            limit = maxLimit;
+        }
         return start(start).limit(limit);
     }
 
@@ -473,6 +508,9 @@ public class Query<E extends Entity> {
         SearchRequestBuilder srb = Index.getClient()
                                         .prepareSearch(index != null ? index : Index.getIndex(clazz))
                                         .setTypes(Index.getDescriptor(clazz).getType());
+        if (Strings.isFilled(routing)) {
+            srb.setRouting(routing);
+        }
         if (primary) {
             srb.setPreference("_primary");
         }
@@ -800,7 +838,7 @@ public class Query<E extends Entity> {
                         }
 
                     }
-                    
+
                     //Break condition: No hits are returned
                     if (searchResponse.getHits().hits().length == 0) {
                         break;

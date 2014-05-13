@@ -12,6 +12,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.references.ReflectionValueReference;
 import sirius.search.annotations.Indexed;
 import sirius.search.annotations.RefField;
@@ -41,6 +42,7 @@ public class EntityDescriptor {
 
     private final String indexName;
     private String typeName;
+    private String routing;
     private final Class<?> clazz;
     protected List<Property> properties;
     protected List<ForeignKey> foreignKeys;
@@ -58,6 +60,7 @@ public class EntityDescriptor {
         }
         this.indexName = clazz.getAnnotation(Indexed.class).index();
         this.typeName = clazz.getAnnotation(Indexed.class).type();
+        this.routing = clazz.getAnnotation(Indexed.class).routing();
         if ("".equals(typeName)) {
             typeName = clazz.getSimpleName();
         }
@@ -92,10 +95,9 @@ public class EntityDescriptor {
                         p = f.create(field);
                         props.add(p);
                         if (!p.acceptsSetter() && hasSetter(field)) {
-                            Index.LOG
-                                 .WARN("Property %s in type %s does not accept a setter method to be present",
-                                       field.getName(),
-                                       clazz.getSimpleName());
+                            Index.LOG.WARN("Property %s in type %s does not accept a setter method to be present",
+                                           field.getName(),
+                                           clazz.getSimpleName());
                         }
                         break;
                     }
@@ -109,10 +111,9 @@ public class EntityDescriptor {
                     if (field.isAnnotationPresent(RefField.class)) {
                         ForeignKey key = findForeignKey(keys, field.getAnnotation(RefField.class).localRef());
                         if (key == null) {
-                            Index.LOG
-                                 .WARN("No foreign key %s found for field reference %s    ",
-                                       field.getAnnotation(RefField.class).localRef(),
-                                       field.getName());
+                            Index.LOG.WARN("No foreign key %s found for field reference %s    ",
+                                           field.getAnnotation(RefField.class).localRef(),
+                                           field.getName());
                         } else {
                             key.addReference(p, field.getAnnotation(RefField.class).remoteField());
                         }
@@ -206,14 +207,19 @@ public class EntityDescriptor {
      * @throws IOException in case of an IO error during the JSON encoding
      */
     public XContentBuilder createMapping() throws IOException {
-        XContentBuilder builder = XContentFactory.jsonBuilder()
-                                                 .startObject()
-                                                 .startObject(getType())
-                                                 .startObject("properties");
+        XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject(getType());
+        builder.startObject("properties");
         for (Property p : getProperties()) {
             p.createMapping(builder);
         }
-        return builder.endObject().endObject().endObject();
+        builder.endObject();
+        if (Strings.isFilled(routing)) {
+            builder.startObject("_routing");
+            builder.field("path", routing);
+            builder.endObject();
+        }
+
+        return builder.endObject().endObject();
     }
 
     /**

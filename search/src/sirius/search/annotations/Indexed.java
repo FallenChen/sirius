@@ -34,7 +34,15 @@ public @interface Indexed {
      * The type name used for the entities of the class.
      *
      * @return the type name used for entities of the given class. If left empty (default), the simple name of the
-     *         class is used
+     * class is used
      */
     String type() default "";
+
+    /**
+     * Determines the field used for custom routing.
+     *
+     * @return the field name used for custom routing (Note that routing values for search requests need to be
+     * specified manually).
+     */
+    String routing() default "";
 }

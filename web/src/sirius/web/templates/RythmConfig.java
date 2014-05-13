@@ -20,7 +20,7 @@ import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.BasicCollector;
 import sirius.kernel.commons.Tuple;
-import sirius.kernel.di.Lifecycle;
+import sirius.kernel.di.Initializable;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Log;
@@ -57,7 +57,7 @@ import java.util.Map;
  * @since 2013/11
  */
 @Register
-public class RythmConfig implements Lifecycle {
+public class RythmConfig implements Initializable {
 
     public static final Log LOG = Log.get("rythm");
 
@@ -76,7 +76,7 @@ public class RythmConfig implements Lifecycle {
     private Collection<RythmExtension> extensions;
 
     @Override
-    public void started() {
+    public void initialize() throws Exception {
         Map<String, Object> config = Maps.newTreeMap();
         config.put("rythm.engine.mode", Sirius.isDev() ? "dev" : "prod");
         File tmpDir = new File(System.getProperty("java.io.tmpdir"), CallContext.getCurrent().getNodeName() + "_rythm");
@@ -155,17 +155,4 @@ public class RythmConfig implements Lifecycle {
         resourceLoader.setEngine(Rythm.engine());
     }
 
-    @Override
-    public void stopped() {
-    }
-
-    @Override
-    public void awaitTermination() {
-        // Not necessary
-    }
-
-    @Override
-    public String getName() {
-        return "templates (Rythm)";
-    }
 }
