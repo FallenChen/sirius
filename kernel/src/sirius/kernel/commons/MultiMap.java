@@ -33,7 +33,18 @@ public class MultiMap<K, V> {
      * @return a new instance of <tt>MultiMap</tt> which is not thread safe.
      */
     public static <K, V> MultiMap<K, V> create() {
-        return new MultiMap<K, V>(new HashMap<K, Collection<V>>());
+        return new MultiMap<>(new HashMap<>());
+    }
+
+    /**
+     * Creates a new <tt>MultiMap</tt> for the specified types which is not thread safe but keeps its insertion order.
+     *
+     * @param <K> the type of the keys used in the map
+     * @param <V> the type of the values used withing the value lists of the map
+     * @return a new instance of <tt>MultiMap</tt> which is not thread safe.
+     */
+    public static <K, V> MultiMap<K, V> createOrdered() {
+        return new MultiMap<>(new LinkedHashMap<>());
     }
 
 
@@ -45,7 +56,7 @@ public class MultiMap<K, V> {
      * @return a new instance of <tt>MultiMap</tt> which is thread safe.
      */
     public static <K, V> MultiMap<K, V> createSynchronized() {
-        return new MultiMap<K, V>(Collections.synchronizedMap(new HashMap<K, Collection<V>>())) {
+        return new MultiMap<K, V>(Collections.synchronizedMap(new HashMap<>())) {
             @Override
             public synchronized void put(K key, V value) {
                 super.put(key, value);
@@ -53,7 +64,7 @@ public class MultiMap<K, V> {
 
             @Override
             protected List<V> createValueList() {
-                return new CopyOnWriteArrayList<V>();
+                return new CopyOnWriteArrayList<>();
             }
         };
     }
