@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a query against the database which are created via {@link Index#select(Class)}.
@@ -502,6 +503,16 @@ public class Query<E extends Entity> {
         } catch (Throwable e) {
             throw Exceptions.handle(Index.LOG, e);
         }
+    }
+
+    /**
+     * Executes the query and returns the first matching entity just like {@link #queryFirst()}.
+     *
+     * @return the result wrapped in an {@link Optional} for easier handling of <tt>null</tt> values.
+     */
+    @Nonnull
+    public Optional<E> first() {
+        return Optional.of(queryFirst());
     }
 
     private SearchRequestBuilder buildSearch() {
