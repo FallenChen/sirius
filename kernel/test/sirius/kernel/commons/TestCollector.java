@@ -7,14 +7,14 @@ import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test for {@link Collector}
+ * Test for {@link DataCollector}
  *
  * @author Andreas Haufler (aha@scireum.de)
  */
 public class TestCollector {
     @Test
     public void test() {
-        Collector<String> c = Collector.create();
+        DataCollector<String> c = DataCollector.create();
         c.add("A");
         c.add("B");
         c.add("C");

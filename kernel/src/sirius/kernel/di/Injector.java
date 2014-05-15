@@ -9,7 +9,6 @@
 package sirius.kernel.di;
 
 import sirius.kernel.Classpath;
-import sirius.kernel.commons.BasicCollector;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
@@ -18,7 +17,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -77,40 +75,37 @@ public class Injector {
         LOG.INFO("Initializing the MicroKernel....");
 
         LOG.INFO("Stage 1: Scanning .class files...");
-        classpath.find(Pattern.compile(".*?.class"), new BasicCollector<Matcher>() {
-            @Override
-            public void add(Matcher matcher) {
-                String relativePath = matcher.group();
-                String className = relativePath.substring(0, relativePath.length() - 6).replace("/", ".");
-                try {
-                    LOG.FINE("Found class: " + className);
-                    Class<?> clazz = Class.forName(className, true, classpath.getLoader());
-                    if (ClassLoadAction.class.isAssignableFrom(clazz) && !clazz.isInterface()) {
-                        try {
-                            actions.add((ClassLoadAction) clazz.newInstance());
-                        } catch (Throwable e) {
-                            Exceptions.handle()
-                                      .error(e)
-                                      .to(LOG)
-                                      .withSystemErrorMessage("Failed to instantiate ClassLoadAction: %s - %s (%s)",
-                                                              className)
-                                      .handle();
-                        }
+        classpath.find(Pattern.compile(".*?.class")).forEach(matcher -> {
+            String relativePath = matcher.group();
+            String className = relativePath.substring(0, relativePath.length() - 6).replace("/", ".");
+            try {
+                LOG.FINE("Found class: " + className);
+                Class<?> clazz = Class.forName(className, true, classpath.getLoader());
+                if (ClassLoadAction.class.isAssignableFrom(clazz) && !clazz.isInterface()) {
+                    try {
+                        actions.add((ClassLoadAction) clazz.newInstance());
+                    } catch (Throwable e) {
+                        Exceptions.handle()
+                                  .error(e)
+                                  .to(LOG)
+                                  .withSystemErrorMessage("Failed to instantiate ClassLoadAction: %s - %s (%s)",
+                                                          className)
+                                  .handle();
                     }
-                    classes.add(clazz);
-                } catch (NoClassDefFoundError e) {
-                    Exceptions.handle()
-                              .error(e)
-                              .to(LOG)
-                              .withSystemErrorMessage("Failed to load dependent class: %s", className)
-                              .handle();
-                } catch (Throwable e) {
-                    Exceptions.handle()
-                              .error(e)
-                              .to(LOG)
-                              .withSystemErrorMessage("Failed to load class %s: %s (%s)", className)
-                              .handle();
                 }
+                classes.add(clazz);
+            } catch (NoClassDefFoundError e) {
+                Exceptions.handle()
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Failed to load dependent class: %s", className)
+                          .handle();
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Failed to load class %s: %s (%s)", className)
+                          .handle();
             }
         });
 

@@ -8,8 +8,10 @@
 
 package sirius.web.templates;
 
-import sirius.kernel.commons.Collector;
+import sirius.kernel.commons.DataCollector;
 import sirius.kernel.commons.Tuple;
+
+import java.util.function.Consumer;
 
 /**
  * Defines an extension which provides auto-declared variables to Rythm templates.
@@ -27,7 +29,7 @@ public interface RythmExtension {
      *
      * @param names a collector which can be used to supply variables along with their type.
      */
-    void collectExtensionNames(Collector<Tuple<String, Class<?>>> names);
+    void collectExtensionNames(Consumer<Tuple<String, Class<?>>> names);
 
     /**
      * Enumerates all variables paired with their according value.
@@ -37,6 +39,6 @@ public interface RythmExtension {
      *
      * @param values a collector which can be used to supply variables along with their value.
      */
-    void collectExtensionValues(Collector<Tuple<String, Object>> values);
+    void collectExtensionValues(Consumer<Tuple<String, Object>> values);
 
 }

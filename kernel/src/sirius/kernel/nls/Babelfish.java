@@ -11,7 +11,9 @@ package sirius.kernel.nls;
 import com.google.common.collect.Maps;
 import sirius.kernel.Classpath;
 import sirius.kernel.Sirius;
-import sirius.kernel.commons.*;
+import sirius.kernel.commons.MultiMap;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.ValueHolder;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 
@@ -23,6 +25,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Internal translation engine used by {@link NLS}.
@@ -71,23 +74,23 @@ public class Babelfish {
     /**
      * Enumerates all translations matching the given filter.
      *
-     * @param filter    the filter to apply when enumerating translations. The given filter must occur in either the key
-     *                  or in one of the translations.
-     * @param collector the collector which is supplied with all matching translations
+     * @param filter the filter to apply when enumerating translations. The given filter must occur in either the key
+     *               or in one of the translations.
+     * @return a stream of all translations matching the given filter
      */
-    public void getTranslations(String filter, Collector<Translation> collector) {
+    public Stream<Translation> getTranslations(String filter) {
         String effectiveFilter = Strings.isEmpty(filter) ? null : filter.toLowerCase();
-        translationMap.values().stream().filter(e -> e.containsText(effectiveFilter)).forEach(collector);
+        return translationMap.values().stream().filter(e -> e.containsText(effectiveFilter));
     }
 
     /**
      * Enumerates all translations which key starts with the given prefix
      *
-     * @param key       the prefix with which the key must start
-     * @param collector the collector which is supplied with all matching translations
+     * @param key the prefix with which the key must start
+     * @return a stream of all translations matching the given filter
      */
-    public void getEntriesStartingWith(String key, Consumer<Translation> collector) {
-        translationMap.values().stream().filter(e -> e.getKey().startsWith(key)).forEach(collector);
+    public Stream<Translation> getEntriesStartingWith(String key) {
+        return translationMap.values().stream().filter(e -> e.getKey().startsWith(key));
     }
 
     /**
@@ -100,15 +103,11 @@ public class Babelfish {
         LOG.INFO("Writing properties back to source files...");
         final MultiMap<String, Translation> mm = MultiMap.create();
         final ValueHolder<Integer> propertiesWithoutFile = ValueHolder.of(0);
-        getTranslations(null, new BasicCollector<Translation>() {
-
-            @Override
-            public void add(Translation entity) {
-                if (entity.getFile() == null) {
-                    propertiesWithoutFile.set(propertiesWithoutFile.get() + 1);
-                } else {
-                    mm.put(entity.getFile(), entity);
-                }
+        getTranslations(null).forEach(entity -> {
+            if (entity.getFile() == null) {
+                propertiesWithoutFile.set(propertiesWithoutFile.get() + 1);
+            } else {
+                mm.put(entity.getFile(), entity);
             }
         });
         if (propertiesWithoutFile.get() > 0) {
@@ -270,14 +269,11 @@ public class Babelfish {
      * @param classpath the classpath used to discover all relevant properties files
      */
     protected void init(final Classpath classpath) {
-        classpath.find(PROPERTIES_FILE, new BasicCollector<Matcher>() {
-            @Override
-            public void add(Matcher value) {
-                LOG.FINE("Loading: %s", value.group());
-                String baseName = value.group(1);
-                String lang = value.group(2);
-                importProperties(value.group(), baseName, lang, getLastModified(classpath, value.group()));
-            }
+        classpath.find(PROPERTIES_FILE).forEach(value -> {
+            LOG.FINE("Loading: %s", value.group());
+            String baseName = value.group(1);
+            String lang = value.group(2);
+            importProperties(value.group(), baseName, lang, getLastModified(classpath, value.group()));
         });
 
         if (Sirius.isDev()) {

@@ -11,7 +11,7 @@ package sirius.web.health;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import sirius.kernel.Sirius;
-import sirius.kernel.commons.Collector;
+import sirius.kernel.commons.DataCollector;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.timer.EveryMinute;
@@ -73,7 +73,7 @@ public class Metrics implements EveryMinute {
     @Override
     public void runTimer() throws Exception {
         synchronized (this) {
-            final Collector<Metric> collector = Collector.create();
+            final DataCollector<Metric> collector = DataCollector.create();
             for (MetricProvider provider : providers) {
                 provider.gather(new MetricsCollector() {
 

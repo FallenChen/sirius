@@ -21,14 +21,14 @@ import java.util.function.Consumer;
  * <tt>Collector</tt> instead of having each method creating its own list and joining them afterwards.
  * </p>
  * <p>
- * By subclassing <tt>Collector</tt> one can also directly process the given values instead of just storing them
+ * By subclassing <tt>DataCollector</tt> one can also directly process the given values instead of just storing them
  * in a list.
  * </p>
  * <p>
  * A typical use-case is:
  * <code>
  * <pre>
- *             Collector&lt;String&gt; collector = new Collector&lt;String&gt;();
+ *             DataCollector&lt;String&gt; collector = new DataCollector&lt;String&gt;();
  *             computeStrings1(collector);
  *             computeStrings2(collector);
  *
@@ -45,18 +45,18 @@ import java.util.function.Consumer;
  * @see PriorityCollector
  * @since 2013/08
  */
-public class Collector<T> implements Consumer<T> {
+public class DataCollector<T> implements Consumer<T> {
 
     /**
-     * Creates a new <tt>Collector</tt>.
+     * Creates a new <tt>DataCollector</tt>.
      * <p>
      * Boilerplate method, so one doesn't need to re-type the type parameters.
      * </p>
      *
-     * @return a new <tt>Collector</tt>
+     * @return a new <tt>DataCollector</tt>
      */
-    public static <T> Collector<T> create() {
-        return new Collector<T>();
+    public static <T> DataCollector<T> create() {
+        return new DataCollector<T>();
     }
 
     private List<T> data = new ArrayList<T>();

@@ -9,8 +9,6 @@
 package sirius.kernel;
 
 import com.google.common.base.Objects;
-import sirius.kernel.commons.BasicCollector;
-import sirius.kernel.commons.Collector;
 import sirius.kernel.health.Log;
 
 import java.io.File;
@@ -25,6 +23,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * Retrieves a filtered list of resources in the classpath.
@@ -93,58 +92,44 @@ public class Classpath {
      * Scans the classpath for files which relative path match the given patter
      *
      * @param pattern   the pattern for the relative path used to filter files
-     * @param collector will be provided with all files in the classpath matching the given pattern
      */
-    public void find(final Pattern pattern, final Collector<Matcher> collector) {
-        for (URL url : getComponentRoots()) {
-            scan(url, new BasicCollector<String>() {
-
-                @Override
-                public void add(String relativePath) {
-                    Matcher matcher = pattern.matcher(relativePath);
-                    if (matcher.matches()) {
-                        try {
-                            collector.add(matcher);
-                        } catch (Throwable e) {
-                            LOG.SEVERE(e);
-                        }
-                    }
-                }
-            });
-        }
+    public Stream<Matcher> find(final Pattern pattern) {
+        return getComponentRoots().stream()
+                                  .flatMap(url -> scan(url))
+                                  .map(path -> pattern.matcher(path))
+                                  .filter(Matcher::matches);
     }
 
     /*
-     * Scans all files below the given root URL supplying files to the given collector. This
-     * can handle file:// and jar:// URLs
+     * Scans all files below the given root URL. This can handle file:// and jar:// URLs
      */
-    private void scan(URL url, Collector<String> collector) {
-        List<String> result = new ArrayList<String>();
+    private Stream<String> scan(URL url) {
+        List<String> result = new ArrayList<>();
         if ("file".equals(url.getProtocol())) {
             File file = new File(url.getPath());
             if (!file.isDirectory()) {
                 file = file.getParentFile();
             }
-            addFiles(file, collector, file);
+            addFiles(file, result, file);
         } else if ("jar".equals(url.getProtocol())) {
             try {
                 JarFile jar = ((JarURLConnection) url.openConnection()).getJarFile();
                 Enumeration<JarEntry> e = jar.entries();
                 while (e.hasMoreElements()) {
                     JarEntry entry = e.nextElement();
-                    collector.add(entry.getName());
                     result.add(entry.getName());
                 }
             } catch (IOException e) {
                 LOG.SEVERE(e);
             }
         }
+        return result.stream();
     }
 
     /*
      * DFS searcher for file / directory based classpath elements
      */
-    private void addFiles(File file, Collector<String> collector, File reference) {
+    private void addFiles(File file, List<String> collector, File reference) {
         if (!file.exists() || !file.isDirectory()) {
             return;
         }

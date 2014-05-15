@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Provides a pull pattern just like {@link Collector} with an externally supplied order.
+ * Provides a pull pattern just like {@link DataCollector} with an externally supplied order.
  * <p>
  * When asking methods to create or populate a {@link List} it's easier to create and pass along a
  * <tt>PriorityCollector</tt> instead of having each method creating its own list and joining them afterwards.
@@ -25,11 +25,11 @@ import java.util.List;
  * Therefore if <code>a.priority &lt; b.priority</code> then <tt>a</tt> will occur before <tt>b</tt> in the list.
  * </p>
  * <p>
- * If the order of the provided elements does not matter, a {@link Collector} can be used.
+ * If the order of the provided elements does not matter, a {@link DataCollector} can be used.
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @see Collector
+ * @see DataCollector
  * @since 2013/08
  */
 public class PriorityCollector<T> {

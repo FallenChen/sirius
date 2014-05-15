@@ -18,8 +18,6 @@ import org.rythmengine.resource.ClasspathResourceLoader;
 import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
-import sirius.kernel.commons.BasicCollector;
-import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.Initializable;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
@@ -118,12 +116,7 @@ public class RythmConfig implements Initializable {
                 map.put("isDev", Boolean.class);
                 map.put("call", WebContext.class);
                 for (RythmExtension ext : extensions) {
-                    ext.collectExtensionNames(new BasicCollector<Tuple<String, Class<?>>>() {
-                        @Override
-                        public void add(Tuple<String, Class<?>> entity) {
-                            map.put(entity.getFirst(), entity.getSecond());
-                        }
-                    });
+                    ext.collectExtensionNames(entity -> map.put(entity.getFirst(), entity.getSecond()));
                 }
                 return map;
             }
@@ -142,12 +135,8 @@ public class RythmConfig implements Initializable {
                 template.__setRenderArg("isDev", Sirius.isDev());
                 template.__setRenderArg("call", wc);
                 for (RythmExtension ext : extensions) {
-                    ext.collectExtensionValues(new BasicCollector<Tuple<String, Object>>() {
-                        @Override
-                        public void add(Tuple<String, Object> entity) {
-                            template.__setRenderArg(entity.getFirst(), entity.getSecond());
-                        }
-                    });
+                    ext.collectExtensionValues(entity -> template.__setRenderArg(entity.getFirst(),
+                                                                                 entity.getSecond()));
                 }
             }
         });

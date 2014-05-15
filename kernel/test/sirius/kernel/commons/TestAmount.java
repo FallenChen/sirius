@@ -62,6 +62,7 @@ public class TestAmount extends Sirius {
     @Test
     public void misc() {
         assertEquals(Amount.TEN, Amount.NOTHING.fill(Amount.TEN));
+        assertEquals(Amount.TEN, Amount.NOTHING.computeIfNull(() -> Amount.TEN));
         assertEquals(Amount.TEN, Amount.TEN.fill(Amount.ONE));
         assertEquals(Amount.TEN, Amount.TEN.percentageOf(Amount.ONE_HUNDRED));
         assertEquals(Amount.ONE_HUNDRED, Amount.TEN.percentageDifferenceOf(Amount.of(5)));

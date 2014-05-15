@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.util.function.Supplier;
 
 /**
  * Provides a wrapper around <tt>BigDecimal</tt> to perform "exact" computations on numeric values.
@@ -242,6 +243,20 @@ public class Amount implements Comparable<Amount> {
         } else {
             return this;
         }
+    }
+
+    /**
+     * If this actual number if empty, the given supplier is used to compute one. Otherwise this will be returned.
+     *
+     * @param supplier the supplier which is used to compute a value if there is no internal value
+     * @return <tt>this</tt> if there is an internal value, the computed value of <tt>supplier</tt> otherwise
+     */
+    @Nonnull
+    public Amount computeIfNull(Supplier<Amount> supplier) {
+        if (isEmpty()) {
+            return supplier.get();
+        }
+        return this;
     }
 
     /**

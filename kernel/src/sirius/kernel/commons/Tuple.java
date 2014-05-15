@@ -12,6 +12,11 @@ import com.google.common.base.Objects;
 
 import javax.annotation.Nonnull;
 import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Stream;
 
 /**
  * Represents a tuple of two values with two arbitrary types.
@@ -166,7 +171,7 @@ public class Tuple<F, S> {
      * @param <K> the key type of the map and therefore the type of the first component of the tuples
      * @param <V> the value type of the map and therefore the type of the second component of the tuples
      * @return a list of tuples, containing one tuple per map entry where the first component is the key,
-     *         and the second component is the value of the map entry.
+     * and the second component is the value of the map entry.
      */
     public static <K, V> List<Tuple<K, V>> fromMap(@Nonnull Map<K, V> map) {
         List<Tuple<K, V>> result = new ArrayList<Tuple<K, V>>(map.size());
@@ -183,8 +188,8 @@ public class Tuple<F, S> {
      * @param <K>    the key type of the map and therefore the type of the first component of the tuples
      * @param <V>    the value type of the map and therefore the type of the second component of the tuples
      * @return a map containing an entry for each tuple in the collection, where the key is the first component of the
-     *         tuple and the value is the second component of the tuple. If two tuples have equal values as first
-     *         component, the specific map entry will be overridden in the order defined in the given collection.
+     * tuple and the value is the second component of the tuple. If two tuples have equal values as first
+     * component, the specific map entry will be overridden in the order defined in the given collection.
      */
     public static <K, V> Map<K, V> toMap(@Nonnull Collection<Tuple<K, V>> values) {
         Map<K, V> result = new HashMap<K, V>();
@@ -192,6 +197,99 @@ public class Tuple<F, S> {
             result.put(e.getFirst(), e.getSecond());
         }
         return result;
+    }
+
+    /**
+     * Provides a {@link Collector} which can be used to collect a {@link Stream} of tuples into a {@link Map}.
+     * <p>
+     * As an example: <code>aStream.collect(Tuple.toMap(HashMap::new, (a, b) -> b))</code> will transform the
+     * stream of tuples into a map where a later key value pair will overwrite earlier ones.
+     * </p>
+     *
+     * @param supplier factory for generating the result map
+     * @param merger   used to decide which value to keep on a key collision
+     * @param <K>      key type of the tuples being processed
+     * @param <V>      value type of the tuples being processed
+     * @return a <tt>Collector</tt> which transforms a stream of tuples into a map
+     * @see #toMap(java.util.function.Supplier)
+     */
+    public static <K, V> Collector<Tuple<K, V>, Map<K, V>, Map<K, V>> toMap(Supplier<Map<K, V>> supplier,
+                                                                            BinaryOperator<V> merger) {
+        return Collector.of(supplier, (map, tuple) -> map.put(tuple.getFirst(), tuple.getSecond()), (a, b) -> {
+                                b.entrySet()
+                                 .forEach(entryInB -> a.compute(entryInB.getKey(),
+                                                                (key, valueOfA) -> merger.apply(valueOfA,
+                                                                                                entryInB.getValue())
+                                 ));
+                                return a;
+                            }, Function.identity(), Collector.Characteristics.IDENTITY_FINISH
+        );
+    }
+
+    /**
+     * Provides a {@link Collector} which can be used to collect a {@link Stream} of tuples into a {@link Map}.
+     * <p>
+     * Key collisions are automatically handled by choosing the later entry (updating the map).
+     * </p>
+     *
+     * @param supplier factory for generating the result map
+     * @param <K>      key type of the tuples being processed
+     * @param <V>      value type of the tuples being processed
+     * @return a <tt>Collector</tt> which transforms a stream of tuples into a map
+     */
+    public static <K, V> Collector<Tuple<K, V>, Map<K, V>, Map<K, V>> toMap(Supplier<Map<K, V>> supplier) {
+        return toMap(supplier, (a, b) -> b);
+    }
+
+    /**
+     * Provides a {@link Collector} which can be used to collect a {@link Stream} of tuples into a {@link MultiMap}.
+     * <p>
+     * The type of <tt>MultiMap</tt> used can be determined by the <tt>supplier</tt>. So for example
+     * <code>MultiMap::createOrdered</code> will create a map with ordered keys.
+     * </p>
+     *
+     * @param supplier factory for generating the result map
+     * @param <K>      key type of the tuples being processed
+     * @param <V>      value type of the tuples being processed
+     * @return a <tt>Collector</tt> which transforms a stream of tuples into a multi map
+     */
+    public static <K, V> Collector<Tuple<K, V>, MultiMap<K, V>, MultiMap<K, V>> toMultiMap(Supplier<MultiMap<K, V>> supplier) {
+        return Collector.of(supplier,
+                            (map, tuple) -> map.put(tuple.getFirst(), tuple.getSecond()),
+                            (a, b) -> a.merge(b),
+                            Function.identity(),
+                            Collector.Characteristics.IDENTITY_FINISH);
+    }
+
+    /**
+     * Maps an entry which contains a collection as value into a {@link java.util.stream.Stream} of tuples, containing
+     * the key of the entry along with a value of the collection.
+     * <p>
+     * This method is designed to be used with {@link Stream#flatMap(java.util.function.Function)}:
+     * <code>
+     * <pre>
+     *      map.entrySet().flatMap(e -> Tuple.flatten(e)).forEach(t -> System.out.println(t));
+     * </pre>
+     * </code>
+     * </p>
+     *
+     * @param entry the entry to transform
+     * @param <K>   the key type of the entry
+     * @param <V>   the value type of the entry
+     * @return a <tt>Stream</tt> of tuples representing the original entry
+     */
+    public static <K, V> Stream<Tuple<K, V>> flatten(Map.Entry<K, Collection<V>> entry) {
+        return entry.getValue().stream().map(v -> Tuple.create(entry.getKey(), v));
+    }
+
+    /**
+     * Converts a {@link java.util.Map.Entry} into a tuple.
+     *
+     * @param entry the entry to convert
+     * @return a tuple containing the key as first and the value as second parameter
+     */
+    public static <K, V> Tuple<K, V> valueOf(Map.Entry<K, V> entry) {
+        return Tuple.create(entry.getKey(), entry.getValue());
     }
 
 }

@@ -12,6 +12,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Stream;
 
 /**
  * Represents a map which contains a collection of elements per key.
@@ -33,7 +37,7 @@ public class MultiMap<K, V> {
      * @return a new instance of <tt>MultiMap</tt> which is not thread safe.
      */
     public static <K, V> MultiMap<K, V> create() {
-        return new MultiMap<>(new HashMap<>());
+        return new MultiMap<>(new HashMap<K, Collection<V>>());
     }
 
     /**
@@ -44,9 +48,8 @@ public class MultiMap<K, V> {
      * @return a new instance of <tt>MultiMap</tt> which is not thread safe.
      */
     public static <K, V> MultiMap<K, V> createOrdered() {
-        return new MultiMap<>(new LinkedHashMap<>());
+        return new MultiMap<>(new LinkedHashMap<K, Collection<V>>());
     }
-
 
     /**
      * Creates a new <tt>MultiMap</tt> for the specified types which is thread safe.
@@ -116,7 +119,6 @@ public class MultiMap<K, V> {
         }
         list.add(value);
     }
-
 
     /**
      * Can be overridden to specify the subclass of <tt>List</tt> used to store value lists.
@@ -216,4 +218,81 @@ public class MultiMap<K, V> {
     public String toString() {
         return base.toString();
     }
+
+    /**
+     * Merges the given multi map into this one.
+     * <p>
+     * If both maps contain values for the same key, to lists will be joined together.
+     * </p>
+     * <p>
+     * <b>Note</b>: This will modify the callee instead of creating a new result map
+     * </p>
+     *
+     * @param other the other map to merge into this one
+     * @return the callee itself for further processing
+     */
+    public MultiMap<K, V> merge(MultiMap<K, V> other) {
+        if (other != null) {
+            other.base.entrySet()
+                      .stream()
+                      .flatMap(e -> Tuple.flatten(e))
+                      .forEach(t -> put(t.getFirst(), t.getSecond()));
+        }
+        return this;
+    }
+
+    /**
+     * Creates a {@link Collector} which can be used to group a stream into a multi map.
+     *
+     * @param supplier   the factory for creating the result map
+     * @param classifier the method used to extract the key from the elements
+     * @param <K>        the extracted key type of the map
+     * @param <V>        the value type of the incoming stream and outgoing map
+     * @return a <tt>Collector</tt> to be used with {@link Stream#collect(java.util.stream.Collector)}
+     */
+    public static <K, V> Collector<V, MultiMap<K, V>, MultiMap<K, V>> groupingBy(Supplier<MultiMap<K, V>> supplier,
+                                                                                 Function<V, K> classifier) {
+        return Collector.of(supplier,
+                            (map, value) -> map.put(classifier.apply(value), value),
+                            (a, b) -> a.merge(b),
+                            Function.identity(),
+                            Collector.Characteristics.IDENTITY_FINISH);
+    }
+
+    /**
+     * Creates a {@link Collector} which can be used to group a stream into a multi map.
+     * <p>
+     * This method permits the classifier function to return multiple keys for a single element. The element will
+     * be added for all returned keys.
+     * </p>
+     *
+     * @param supplier   the factory for creating the result map
+     * @param classifier the method used to extract the keys from the elements
+     * @param <K>        the extracted key type of the map
+     * @param <V>        the value type of the incoming stream and outgoing map
+     * @return a <tt>Collector</tt> to be used with {@link Stream#collect(java.util.stream.Collector)}
+     */
+    public static <K, V> Collector<V, MultiMap<K, V>, MultiMap<K, V>> groupingByMultiple(Supplier<MultiMap<K, V>> supplier,
+                                                                                         Function<V, Collection<K>> classifier) {
+        return Collector.of(supplier,
+                            (map, value) -> classifier.apply(value).stream().forEach(key -> map.put(key, value)),
+                            (a, b) -> a.merge(b),
+                            Function.identity(),
+                            Collector.Characteristics.IDENTITY_FINISH);
+    }
+
+    /**
+     * Boilerplate method to access all entries of this map as {@link Stream}.
+     * <p>
+     * <b>Note</b>: Calling {@link sirius.kernel.commons.Tuple#flatten(java.util.Map.Entry)} via
+     * {@link Stream#flatMap(java.util.function.Function)} will transform the resulting stream into a stream of
+     * all pairs represented by this map.
+     * </p>
+     *
+     * @return a <tt>Stream</tt> containing all entries of this map
+     */
+    public Stream<Map.Entry<K, Collection<V>>> stream() {
+        return getUnderlyingMap().entrySet().stream();
+    }
+
 }

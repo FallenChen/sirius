@@ -19,7 +19,10 @@ import org.apache.log4j.spi.LoggerRepository;
 import org.junit.BeforeClass;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.Barrier;
-import sirius.kernel.commons.*;
+import sirius.kernel.commons.Callback;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Value;
+import sirius.kernel.commons.Watch;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.MutableGlobalContext;
@@ -39,7 +42,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 import java.util.logging.LogManager;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -205,23 +207,19 @@ public class Sirius {
 
         if (startedAsTest) {
             // Load test configurations (will override component configs)
-            classpath.find(Pattern.compile("component-test\\.conf"), new BasicCollector<Matcher>() {
-                @Override
-                public void add(Matcher value) {
-                    config = config.withFallback(ConfigFactory.load(loader, value.group()));
-                }
-            });
+            classpath.find(Pattern.compile("component-test\\.conf"))
+                     .forEach(value -> config = config.withFallback(ConfigFactory.load(loader, value.group())));
         }
 
         // Load component configurations
-        classpath.find(Pattern.compile("component-(.*?)\\.conf"), new BasicCollector<Matcher>() {
-            @Override
-            public void add(Matcher value) {
-                if (!"test".equals(value.group(1))) {
-                    config = config.withFallback(ConfigFactory.load(loader, value.group()));
-                }
-            }
-        });
+        classpath.find(Pattern.compile("component-(.*?)\\.conf")).forEach(value -> {
+                                                                              if (!"test".equals(value.group(1))) {
+                                                                                  config = config.withFallback(
+                                                                                          ConfigFactory.load(loader,
+                                                                                                             value.group()));
+                                                                              }
+                                                                          }
+        );
 
         // Setup log-system based on configuration
         setupLogLevels();
