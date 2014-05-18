@@ -77,15 +77,48 @@ public class NLS {
 
     /**
      * Returns the two-letter code of the default language. Provided via the config in <code>nls.defaultLanguage</code>
+     * <p>
+     * If this is set to "auto" the default language will be the system language.
+     * </p>
      *
      * @return the language code of the default language
      */
     public static String getDefaultLanguage() {
         if (defaultLanguage == null && Sirius.getConfig() != null) {
             defaultLanguage = Sirius.getConfig().getString("nls.defaultLanguage");
+            if ("auto".equals(defaultLanguage)) {
+                defaultLanguage = getSystemLanguage();
+            }
         }
         // Returns the default language or (for very early access we default to en)
         return defaultLanguage == null ? "en" : defaultLanguage;
+    }
+
+    /**
+     * Overrides the default language as defined in the configuration (<code>nls.defaultLanguage</code>).
+     * <p>
+     * This can be used to enforce the system language. However, setting nls.defaultLanguage to 'auto' is
+     * the recommended approach.
+     * </p>
+     *
+     * @param lang the two letter language code to use as default language.
+     * @see #getSystemLanguage()
+     */
+    public static void setDefaultLanguage(String lang) {
+        defaultLanguage = lang;
+    }
+
+    /**
+     * Returns the two-letter code of the system language.
+     * <p>
+     * By default, SIRIUS initializes with the language set in <code>nls.defaultLanguage</code> so a switchover
+     * to the system language has to be performed manually.
+     * </p>
+     *
+     * @return the language code of the underlying operating system
+     */
+    public static String getSystemLanguage() {
+        return Locale.getDefault().getLanguage().toLowerCase();
     }
 
     /**
