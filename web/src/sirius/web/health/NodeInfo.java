@@ -98,7 +98,7 @@ public class NodeInfo {
     }
 
     /**
-     * Resets the ping failure counter and sets the lastPing value to <dd>now</dd>
+     * Resets the ping failure counter and sets the lastPing value to <tt>now</tt>
      */
     protected void pingSucceeded() {
         this.lastPing = new DateTime();

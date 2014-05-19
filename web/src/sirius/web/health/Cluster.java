@@ -46,8 +46,8 @@ import java.util.List;
  * </p>
  * <p>
  * Cluster members are defined via the configuration by listing all HTTP-Endpoints under
- * <dd>health.cluster.nodes</dd> in the form of <dd>http://hostname:port</dd>. Each node always defines a priority
- * (<dd>health.cluster.priority</dd>). The node with the lowest number (which is still functional) is in charge
+ * <tt>health.cluster.nodes</tt> in the form of <tt>http://hostname:port</tt>. Each node always defines a priority
+ * (<tt>health.cluster.priority</tt>). The node with the lowest number (which is still functional) is in charge
  * of triggering an alert in case of faulting or unreachable members.
  * </p>
  *

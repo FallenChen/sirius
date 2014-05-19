@@ -476,9 +476,8 @@ public class WebContext {
         if (Strings.isFilled(encodedSession)) {
             Tuple<String, String> sessionInfo = Strings.split(encodedSession, ":");
             if (Strings.areEqual(sessionInfo.getFirst(),
-                                 Hashing.sha512()
-                                        .hashString(sessionInfo.getSecond() + getSessionSecret())
-                                        .toString())) {
+                                 Hashing.sha512().hashString(sessionInfo.getSecond() + getSessionSecret()).toString()
+            )) {
                 QueryStringDecoder qsd = new QueryStringDecoder(encodedSession);
                 for (Map.Entry<String, List<String>> entry : qsd.parameters().entrySet()) {
                     session.put(entry.getKey(), Iterables.getFirst(entry.getValue(), null));
@@ -551,7 +550,7 @@ public class WebContext {
      *
      * @param create determines if a new session should be created if no active session was found
      * @return the session associated with the client (based on session id parameter or cookie) or <tt>null</tt> if
-     *         neither an active session was found nor a new one was created.
+     * neither an active session was found nor a new one was created.
      */
     public ServerSession getServerSession(boolean create) {
         if (serverSession != null) {
@@ -648,9 +647,8 @@ public class WebContext {
                         try {
                             remoteIp = InetAddress.getByName(forwardedFor);
                         } catch (Throwable e) {
-                            WebServer.LOG
-                                     .WARN(Strings.apply("Cannot parse X-Forwarded-For address: %s - %s (%s)",
-                                                         forwardedFor));
+                            WebServer.LOG.WARN(Strings.apply("Cannot parse X-Forwarded-For address: %s - %s (%s)",
+                                                             forwardedFor));
                         }
                     }
                 }
@@ -663,7 +661,7 @@ public class WebContext {
      * Determines if the request is from a trusted IP.
      *
      * @return <tt>true</tt> if the request is from a trusted ip (see {@link WebServer#trustedIPs}), <tt>false</tt>
-     *         otherwise
+     * otherwise
      */
     public boolean isTrusted() {
         if (trusted == null) {
@@ -866,7 +864,7 @@ public class WebContext {
      * Returns the accepted language of the client as two-letter language code.
      *
      * @return the two-letter code of the accepted language of the user agent. Returns the current language, if no
-     *         supported language was submitted.
+     * supported language was submitted.
      */
     public String getLang() {
         if (lang == null) {
@@ -1055,7 +1053,7 @@ public class WebContext {
     }
 
     /**
-     * Provides to body of the request as stream.
+     * Provides the body of the request as stream.
      *
      * @return an input stream reading from the body of the request.
      */
@@ -1249,6 +1247,52 @@ public class WebContext {
                             .to(WebServer.LOG)
                             .error(e)
                             .withSystemErrorMessage("Expected a valid JSON map as body of this request: %s (%s).")
+                            .handle();
+        }
+    }
+
+    /**
+     * Determines if a content is available for this request.
+     *
+     * @return <tt>true</tt> if content is available, <tt>false</tt> otherwise
+     */
+    public boolean hasContent() {
+        return content != null;
+    }
+
+    /**
+     * Determines if the content body might contain XML (rather than JSON).
+     * <p>
+     * The detection is kind of crude as we only check if the first non whitespace character is a &lt;
+     * </p>
+     *
+     * @return <tt>true</tt> if the content is believed to be XML, <tt>false</tt> otherwise
+     */
+    public boolean isContentProbablyXML() {
+        if (!hasContent()) {
+            return false;
+        }
+        try {
+            Reader r = new InputStreamReader(getContent());
+            try {
+                // Trim whitespace and detect if the first readable character is a <
+                int c;
+                while ((c = r.read()) != -1) {
+                    if (!Character.isWhitespace(c)) {
+                        return c == '<';
+                    }
+                }
+                return false;
+            } finally {
+                r.close();
+            }
+        } catch (HandledException e) {
+            throw e;
+        } catch (Throwable e) {
+            throw Exceptions.handle()
+                            .to(WebServer.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Error parsing request content: %s (%s).")
                             .handle();
         }
     }

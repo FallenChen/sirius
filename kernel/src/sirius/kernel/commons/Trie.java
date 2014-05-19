@@ -137,8 +137,8 @@ public class Trie<V> {
          * Restarts the iterator at  the beginning and tries to perform the next transition using the given character.
          *
          * @param c the character to try to use after resetting the iterator
-         * @return <tt>true</tt> if the transition using <dd>c</dd> was possible, <tt>false</tt> otherwise. In this
-         *         case the iterator remains in the "reset" state and can be used as if <dd>reset()</dd> was called.
+         * @return <tt>true</tt> if the transition using <tt>c</tt> was possible, <tt>false</tt> otherwise. In this
+         *         case the iterator remains in the "reset" state and can be used as if <tt>reset()</tt> was called.
          */
         boolean resetWith(char c);
 

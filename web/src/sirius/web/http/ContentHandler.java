@@ -12,7 +12,7 @@ import java.io.IOException;
  * {@link WebContext#get(String)}.
  * </p>
  * <p>
- * If however, the content needs to be processed manually, a <dd>pre-dispatchable</dd> dispatcher
+ * If however, the content needs to be processed manually, a <tt>pre-dispatchable</tt> dispatcher
  * ({@link WebDispatcher#preDispatch(WebContext)}) can handle the request before the content is processed
  * completely. While being pre-dispatched {@link WebContext#setContentHandler(ContentHandler)} can be used to
  * install a content handler which takes care of the request payload. Note that

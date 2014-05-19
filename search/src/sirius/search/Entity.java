@@ -442,7 +442,7 @@ public abstract class Entity {
      * Works 100% but contains characters like '-' or '_'</li>
      * <li><b>SEQUENCE</b>: Use a sequential generator to compute a new number.
      * Note that this implies a certain overhead to increment a cluster wide sequence.</li>
-     * <li><b>BASE32HEX</b>: Use the internal generate (16 byte random data) represented as BASE32HEX
+     * <li><b>BASE32HEX</b>: Use the internal generator (16 byte random data) represented as BASE32HEX
      * encoded string. This is the default setting.</li>
      * </ul>
      * </p>

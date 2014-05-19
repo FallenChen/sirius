@@ -36,7 +36,7 @@ public class FieldOperator implements Constraint {
     }
 
     /**
-     * Creates a new constraint representing <dd>field &lt; value</dd>
+     * Creates a new constraint representing <tt>field &lt; value</tt>
      *
      * @param field the field to check
      * @param value the value to compare to
@@ -50,7 +50,7 @@ public class FieldOperator implements Constraint {
     }
 
     /**
-     * Creates a new constraint representing <dd>field &gt; value</dd>
+     * Creates a new constraint representing <tt>field &gt; value</tt>
      *
      * @param field the field to check
      * @param value the value to compare to

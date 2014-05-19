@@ -24,6 +24,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,14 +73,17 @@ class Route {
                 if (m.matches()) {
                     String key = m.group(1).intern();
                     if (key == ":") {
-                        result.expressions.add(new Tuple<String, Object>(key, Integer.parseInt(m.group(2))));
+                        result.expressions.add(Tuple.create(key, Integer.parseInt(m.group(2))));
                         params++;
                     } else {
-                        result.expressions.add(new Tuple<String, Object>(key, m.group(2)));
+                        result.expressions.add(Tuple.create(key, m.group(2)));
                     }
                     finalPattern.append("([^/]+)");
                 } else if ("*".equals(element)) {
                     finalPattern.append("[^/]+");
+                } else if ("**".equals(element)) {
+                    finalPattern.append("(.*)");
+                    result.expressions.add(Tuple.create("**".intern(), m.group(2)));
                 } else {
                     finalPattern.append(Pattern.quote(element));
                 }
@@ -147,6 +151,8 @@ class Route {
                             }
                             result.set(idx - 1, Value.of(value).coerce(parameterTypes[idx - 1], null));
                         }
+                    } else if (expr.getFirst() == "**") {
+                        result.add(Arrays.asList(value.split("/")));
                     }
                 }
                 CallContext.getCurrent().addToMDC("route", format);

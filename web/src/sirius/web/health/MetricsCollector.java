@@ -20,10 +20,10 @@ import javax.annotation.Nullable;
 public interface MetricsCollector {
 
     /**
-     * Provides a metric which state is interpreted using the config values a defined by <dd>limitType</dd>.
+     * Provides a metric which state is interpreted using the config values a defined by <tt>limitType</tt>.
      * <p>
-     * Therefore if the given value is less than <dd>health.limits.&lt;limitType&gt;.gray</dd> if will be GRAY.
-     * Respectively <dd>health.limits.&lt;limitType&gt;.warning</dd> and <dd>health.limits.&lt;limitType&gt;.error</dd>
+     * Therefore if the given value is less than <tt>health.limits.&lt;limitType&gt;.gray</tt> if will be GRAY.
+     * Respectively <tt>health.limits.&lt;limitType&gt;.warning</tt> and <tt>health.limits.&lt;limitType&gt;.error</tt>
      * will be used to determine if it is GREEN, YELLOW or RED. If either of the config values is missing or 0, it will
      * be ignored.
      * </p>

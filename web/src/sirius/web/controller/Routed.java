@@ -35,13 +35,16 @@ public @interface Routed {
      * </p>
      *
      * @return the priority used to sort the order of invocation of all rules.
-     *         The default is  {@link PriorityCollector#DEFAULT_PRIORITY}.
+     * The default is  {@link PriorityCollector#DEFAULT_PRIORITY}.
      */
     int priority() default PriorityCollector.DEFAULT_PRIORITY;
 
     /**
      * Returns the URI pattern which describes which request should be handled. Parameters can be placed by
-     * using :1, :2 etc. Therefore <code>/foo/:1</code> matches <code>/foo/test, /foo/hello</code>
+     * using :1, :2 etc. Therefore <code>/foo/:1</code> matches <code>/foo/test, /foo/hello</code>. For handling
+     * paths with varying parts you can use /foo/:1/** which will expect a method with a signature like:
+     * <code>public void foo(WebContext ctx, String param1, List&lt;String&gt; subPath)</code>. Such a list can
+     * contain 0 to n entries.
      *
      * @return the URI pattern describing which requests to handle
      */

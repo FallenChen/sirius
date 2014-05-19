@@ -369,7 +369,7 @@ public class Sirius {
     /**
      * Determines if the framework with the given name is enabled.
      * <p>
-     * Frameworks can be enabled or disabled using the config path <dd>sirius.framework.[name]</dd>. This is
+     * Frameworks can be enabled or disabled using the config path <tt>sirius.framework.[name]</tt>. This is
      * intensively used by the app part, as it provides a lot of basic frameworks which can be turned off or
      * on as required.
      * </p>

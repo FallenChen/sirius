@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * </p>
  * <p>
  * For stability reasons all blocking methods timeout after a given interval of time leading the handle to be in
- * an <dd>error</dd> state. Therefore all incoming data will be discarded and all read requests will fail as
+ * an <tt>error</tt> state. Therefore all incoming data will be discarded and all read requests will fail as
  * some data might have already been lost anyway.
  * </p>
  *
@@ -123,7 +123,7 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
      *                     before the operation is cancelled by a timeout
      * @param writeTimeout contains maximal amount of time a writing thread is blocked, waiting for buffer space,
      *                     before the operation is cancelled by a timeout
-     * @param unit         specifies the time unit used by <dd>readTimeout</dd> and <dd>writeTimeout</dd>
+     * @param unit         specifies the time unit used by <tt>readTimeout</tt> and <tt>writeTimeout</tt>
      */
     public InputStreamHandler(int bufferDepth, int readTimeout, int writeTimeout, TimeUnit unit) {
         this.readTimeout = readTimeout;
