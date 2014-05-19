@@ -20,7 +20,9 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -55,6 +57,26 @@ public class Value {
         val.data = data;
         return val;
     }
+
+    /**
+     * Returns the n-th (index-th) element of the given collection.
+     *
+     * @param index      the zero based index of the element to fetch
+     * @param collection th collection to pick the element from
+     * @return the element at <tt>index</tt> wrapped as <tt>Value</tt>
+     * or an empty value if the collection is <tt>null</tt> or if the index is outside of the collections bounds
+     */
+    @Nonnull
+    public static Value indexOf(int index, Collection<?> collection) {
+        if (collection == null || index < 0 || index >= collection.size()) {
+            return Value.of(null);
+        }
+        if (collection instanceof List) {
+            return Value.of(((List<?>) collection).get(index));
+        }
+        return Value.of(collection.stream().skip(index).findFirst().get());
+    }
+
 
     /**
      * Determines if the wrapped value is <tt>null</tt>
