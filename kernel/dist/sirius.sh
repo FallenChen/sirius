@@ -59,7 +59,7 @@ if [ -z "$JAVA_XMX" ]; then
 fi
 
 if [ -z "$JAVA_OPTS" ]; then
-    JAVA_OPTS="-server -Xmx$JAVA_XMX -XX:MaxPermSize=128M -Djava.net.preferIPv4Stack=true"
+    JAVA_OPTS="-server -Xmx$JAVA_XMX -Djava.net.preferIPv4Stack=true"
 fi
 
 echo ""
