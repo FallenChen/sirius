@@ -1133,8 +1133,23 @@ public class WebContext {
      *
      * @return the file pointing to the content sent by the client
      * @throws IOException in case of an IO error
+     * @deprecated Method renamed to {@link #getContentAsFile()}
      */
+    @Deprecated
     public File getFileContent() throws IOException {
+        return getFileContent();
+    }
+
+    /**
+     * Returns the content of the HTTP request as file on disk.
+     * <p>
+     * Note that the file will be deleted once the request is completely handled.
+     * </p>
+     *
+     * @return the file pointing to the content sent by the client
+     * @throws IOException in case of an IO error
+     */
+    public File getContentAsFile() throws IOException {
         if (content == null) {
             return null;
         }
