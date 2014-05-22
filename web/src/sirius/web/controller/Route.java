@@ -83,7 +83,7 @@ class Route {
                     finalPattern.append("[^/]+");
                 } else if ("**".equals(element)) {
                     finalPattern.append("(.*)");
-                    result.expressions.add(Tuple.create("**".intern(), m.group(2)));
+                    result.expressions.add(Tuple.create("\\*\\*".intern(), params++));
                 } else {
                     finalPattern.append(Pattern.quote(element));
                 }
