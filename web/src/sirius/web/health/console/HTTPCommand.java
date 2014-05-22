@@ -8,6 +8,7 @@
 
 package sirius.web.health.console;
 
+import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.nls.NLS;
 import sirius.web.http.ActiveHTTPConnection;
@@ -25,7 +26,16 @@ public class HTTPCommand implements Command {
 
     @Override
     public void execute(Output output, String... params) throws Exception {
-        if (params.length == 1 && "open".equalsIgnoreCase(params[0])) {
+        Value microtimingMode = Value.indexOf(0, params);
+        if (microtimingMode.isFilled()) {
+            WebServer.setMicrotimingMode(microtimingMode.coerce(WebServer.MicrotimingMode.class,
+                                                                WebServer.MicrotimingMode.URI));
+        }
+        output.apply("Microtiming mode: %s (Modes: URI, IP, BOTH). Use http <mode> to change this.",
+                     WebServer.getMicrotimingMode());
+        output.separator();
+        output.blankLine();
+        if (Value.indexOf(0, params).equalsIgnoreCase("open")) {
             output.apply("%-8s %-23s %10s %10s %10s %10s",
                          "DURATION",
                          "REMOTE",

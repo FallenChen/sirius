@@ -61,7 +61,7 @@ import java.util.regex.Pattern;
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @see WebContext
- * @since 2012/08
+ * @since 2013/08
  */
 public class Response {
     /**
@@ -309,7 +309,7 @@ public class Response {
                 }
                 wc.release();
                 if (wc.microtimingKey != null && Microtiming.isEnabled()) {
-                    cc.getWatch().submitMicroTiming(wc.microtimingKey);
+                    cc.getWatch().submitMicroTiming("HTTP", WebServer.microtimingMode.getMicrotimingKey(wc));
                 }
                 if (!wc.isLongCall() && wc.started > 0) {
                     WebServer.responseTime.addValue(System.currentTimeMillis() - wc.started);
@@ -783,7 +783,8 @@ public class Response {
         addHeaderIfNotExists("Content-Disposition",
                              (download ? "attachment;" : "inline;") + "filename=\"" + name.replaceAll(
                                      "[^A-Za-z0-9\\-_\\.]",
-                                     "_") + "\"");
+                                     "_") + "\""
+        );
     }
 
     /*
@@ -1131,11 +1132,10 @@ public class Response {
                 public STATE onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
                     try {
                         if (WebServer.LOG.isFINE()) {
-                            WebServer.LOG
-                                     .FINE("Tunnel - CHUNK: %s for %s (Last: %s)",
-                                           bodyPart,
-                                           wc.getRequestedURI(),
-                                           bodyPart.isLast());
+                            WebServer.LOG.FINE("Tunnel - CHUNK: %s for %s (Last: %s)",
+                                               bodyPart,
+                                               wc.getRequestedURI(),
+                                               bodyPart.isLast());
                         }
                         if (!ctx.channel().isOpen()) {
                             return STATE.ABORT;
@@ -1202,10 +1202,9 @@ public class Response {
                 @Override
                 public STATE onStatusReceived(com.ning.http.client.HttpResponseStatus httpResponseStatus) throws Exception {
                     if (WebServer.LOG.isFINE()) {
-                        WebServer.LOG
-                                 .FINE("Tunnel - STATUS %s for %s",
-                                       httpResponseStatus.getStatusCode(),
-                                       wc.getRequestedURI());
+                        WebServer.LOG.FINE("Tunnel - STATUS %s for %s",
+                                           httpResponseStatus.getStatusCode(),
+                                           wc.getRequestedURI());
                     }
                     if (httpResponseStatus.getStatusCode() >= 200 && httpResponseStatus.getStatusCode() < 300) {
                         responseCode = httpResponseStatus.getStatusCode();
@@ -1245,10 +1244,9 @@ public class Response {
                 @Override
                 public void onThrowable(Throwable t) {
                     if (WebServer.LOG.isFINE()) {
-                        WebServer.LOG
-                                 .FINE("Tunnel - ERROR %s for %s",
-                                       t.getMessage() + " (" + t.getMessage() + ")",
-                                       wc.getRequestedURI());
+                        WebServer.LOG.FINE("Tunnel - ERROR %s for %s",
+                                           t.getMessage() + " (" + t.getMessage() + ")",
+                                           wc.getRequestedURI());
                     }
                     if (!(t instanceof ClosedChannelException)) {
                         error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));

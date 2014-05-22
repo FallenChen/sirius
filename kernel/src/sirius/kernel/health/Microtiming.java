@@ -8,12 +8,11 @@
 
 package sirius.kernel.health;
 
-import sirius.kernel.commons.Tuple;
+import com.google.common.collect.Maps;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Performance measurement framework which can be used in development as well as in production systems.
@@ -38,50 +37,108 @@ public class Microtiming {
 
     private static volatile boolean enabled = false;
     private static volatile long lastReset;
-    private static Map<String, Average> timings = Collections.synchronizedMap(new HashMap<String, Average>());
-    private static Map<String, Average> liveSet = Collections.synchronizedMap(new HashMap<String, Average>());
+    private static Map<String, Timing> timings = Maps.newConcurrentMap();
+
+    /**
+     * Simple value class which represents a measured timing.
+     */
+    public static class Timing {
+
+        protected String category;
+        protected String key;
+        protected Average avg;
+        protected volatile boolean changedSinceLastCheck = false;
+
+        protected Timing(String category, String key) {
+            this.category = category;
+            this.key = key;
+            this.avg = new Average();
+        }
+
+        /**
+         * Returns the category of the timing
+         *
+         * @return the category of the timing
+         */
+        public String getCategory() {
+            return category;
+        }
+
+        /**
+         * Returns the key of the timing
+         *
+         * @return the key of the timing
+         */
+        public String getKey() {
+            return key;
+        }
+
+        /**
+         * Returns the average duration and number of occurrences of the key.
+         *
+         * @return the {@link sirius.kernel.health.Average} associated with the key
+         */
+        public Average getAvg() {
+            return avg;
+        }
+
+        /*
+         * Reads and returns the changed flag, while also setting it back to false.
+         */
+        protected boolean readAndUnmark() {
+            if (changedSinceLastCheck) {
+                changedSinceLastCheck = false;
+                return true;
+            }
+            return false;
+        }
+
+        /*
+         * Adds the given duration in nanoseconds.
+         * <p>Also toggles the changed flag to <tt>true</tt></p>
+         */
+        protected void addNanos(long durationInNanos) {
+            avg.addValue(durationInNanos / 1000);
+            changedSinceLastCheck = true;
+        }
+    }
 
     /**
      * Returns a list of recorded timings.
      * <p>
-     * Calling this method will clear the internal <tt>live set</tt>. Therefore, only microtiming key which
-     * where submitted since the last call to timing will be returned. Using this approach provides a kind
-     * of auto filtering which permits to enable this framework in production systems while still getting
-     * reasonable small results.
+     * This will only report timings, which changed since the last call of <tt>getTimings</tt>. Using this approach
+     * provides a kind of auto filtering which permits to enable this framework in production systems while
+     * still getting reasonable small results.
      * </p>
      *
-     * @return all keys along with their average execution time which where submitted since the last call to
-     *         <tt>getTimings()</tt>
+     * @return all {@link sirius.kernel.health.Microtiming.Timing} values recorded which where submitted since the
+     * last call to <tt>getTimings()</tt>
      */
-    public static List<Tuple<String, Average>> getTimings() {
-        List<Tuple<String, Average>> result = Tuple.fromMap(liveSet);
-        liveSet.clear();
-        return result;
+    public static List<Timing> getTimings() {
+        return timings.values().stream().filter(t -> t.readAndUnmark()).collect(Collectors.toList());
     }
 
     /**
      * Submits a new timing for the given key.
      * <p>
-     * Adds the average to the "live set" which will be output on the next call to getTimings()
+     * Adds the average to the "live set" which will be output on the next call to {@link #getTimings()}
      * </p>
      * <p>
      * A convenient way to call this method is to use {@link sirius.kernel.commons.Watch#submitMicroTiming(String)}
      * </p>
      *
-     * @param key      the key for which the value should be submitted
-     * @param duration the number of nanoseconds used as timing for the given key
+     * @param key             the key for which the value should be submitted
+     * @param durationInNanos the number of nanoseconds used as timing for the given key
      */
-    public static void submit(String key, long duration) {
+    public static void submit(String category, String key, long durationInNanos) {
         if (!enabled) {
             return;
         }
-        Average avg = timings.get(key);
-        if (avg == null) {
-            avg = new Average();
-            timings.put(key, avg);
+        // Safety check in case someone leaves the framework enabled for a very long period of time...
+        if (timings.size() > 1000) {
+            timings.clear();
         }
-        avg.addValue(duration / 1000);
-        liveSet.put(key, avg);
+        timings.computeIfAbsent(category + key, k -> new Timing(category, key)).addNanos(durationInNanos);
     }
 
     /**
@@ -101,7 +158,6 @@ public class Microtiming {
     public static void setEnabled(boolean enabled) {
         if (enabled && !Microtiming.enabled) {
             timings.clear();
-            liveSet.clear();
             lastReset = System.currentTimeMillis();
         }
         Microtiming.enabled = enabled;
@@ -111,7 +167,7 @@ public class Microtiming {
      * Returns the timestamp of the last reset
      *
      * @return returns the timestamp in milliseconds (as provided by <tt>System.currentTimeMillis()</tt>) since the
-     *         last reset.
+     * last reset.
      */
     public static long getLastReset() {
         return lastReset;

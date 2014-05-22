@@ -62,12 +62,12 @@ public class Value {
      * Returns the n-th (index-th) element of the given collection.
      *
      * @param index      the zero based index of the element to fetch
-     * @param collection th collection to pick the element from
+     * @param collection the collection to pick the element from
      * @return the element at <tt>index</tt> wrapped as <tt>Value</tt>
      * or an empty value if the collection is <tt>null</tt> or if the index is outside of the collections bounds
      */
     @Nonnull
-    public static Value indexOf(int index, Collection<?> collection) {
+    public static Value indexOf(int index, @Nullable Collection<?> collection) {
         if (collection == null || index < 0 || index >= collection.size()) {
             return Value.of(null);
         }
@@ -77,6 +77,21 @@ public class Value {
         return Value.of(collection.stream().skip(index).findFirst().get());
     }
 
+    /**
+     * Returns the n-th (index-th) element of the given array.
+     *
+     * @param index the zero based index of the element to fetch
+     * @param array the array to pick the element from
+     * @return the element at <tt>index</tt> wrapped as <tt>Value</tt>
+     * or an empty value if the array is <tt>null</tt> or if the index is outside of the arrays bounds
+     */
+    @Nonnull
+    public static Value indexOf(int index, @Nullable Object[] array) {
+        if (array == null || index < 0 || index >= array.length) {
+            return Value.of(null);
+        }
+        return Value.of(array[index]);
+    }
 
     /**
      * Determines if the wrapped value is <tt>null</tt>
@@ -1090,13 +1105,44 @@ public class Value {
 
     @Override
     public boolean equals(Object other) {
+        // Compare for identity
+        if (this == other) {
+            return true;
+        }
+        // Unwrap values
+        if (other instanceof Value) {
+            other = ((Value) other).data;
+        }
+        // Compare for object identity
         if (data == other) {
             return true;
         }
+        // Compare with null
         if (data == null) {
             return other == null;
         }
+        // Call equals against wrapped data
         return data.equals(other);
+    }
+
+    /**
+     * Determines if the string representation of the wrapped value is equal to the string representation of the given
+     * object.
+     * <p>In this case equality does not take differences of upper and lower case characters into account. Therefore
+     * this is boilerplate for <code>asString().equalsIgnoreCase(otherString.toString())</code>
+     * (With proper <tt>null</tt> checks.)
+     * </p>
+     *
+     * @param otherString the input to compare against
+     * @return <tt>true</tt> if the string representation of the wrapped object is equal to the string representation
+     * of the given paramter, where differences of lower- and uppercase are not taken into account.
+     * @see String#equalsIgnoreCase(String)
+     */
+    public boolean equalsIgnoreCase(Object otherString) {
+        if (Strings.isEmpty(otherString)) {
+            return isEmptyString();
+        }
+        return asString().equalsIgnoreCase(otherString.toString());
     }
 
     @Override

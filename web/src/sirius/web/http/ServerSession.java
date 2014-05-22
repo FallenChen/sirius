@@ -107,7 +107,7 @@ public class ServerSession {
      * @return the list of all active server sessions
      */
     public static List<ServerSession> getSessions() {
-        return new ArrayList<ServerSession>(sessions.values());
+        return new ArrayList<>(sessions.values());
     }
 
     /**
@@ -150,7 +150,6 @@ public class ServerSession {
             }
         }
     }
-
 
     private long created = System.currentTimeMillis();
     private Map<String, String> createdMDC;

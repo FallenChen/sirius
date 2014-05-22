@@ -476,8 +476,9 @@ public class WebContext {
         if (Strings.isFilled(encodedSession)) {
             Tuple<String, String> sessionInfo = Strings.split(encodedSession, ":");
             if (Strings.areEqual(sessionInfo.getFirst(),
-                                 Hashing.sha512().hashString(sessionInfo.getSecond() + getSessionSecret()).toString()
-            )) {
+                                 Hashing.sha512()
+                                        .hashString(sessionInfo.getSecond() + getSessionSecret())
+                                        .toString())) {
                 QueryStringDecoder qsd = new QueryStringDecoder(encodedSession);
                 for (Map.Entry<String, List<String>> entry : qsd.parameters().entrySet()) {
                     session.put(entry.getKey(), Iterables.getFirst(entry.getValue(), null));
@@ -635,7 +636,8 @@ public class WebContext {
     /**
      * Returns the remote address which sent the request
      *
-     * @return the remote address of the underlying TCP connection
+     * @return the remote address of the underlying TCP connection. This will take a X-Forwarded-For header into
+     * account if the connection was opened from a known proxy ip.
      */
     public InetAddress getRemoteIP() {
         if (remoteIp == null) {

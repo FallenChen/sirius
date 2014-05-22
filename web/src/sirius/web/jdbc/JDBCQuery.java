@@ -128,7 +128,7 @@ public class JDBCQuery {
 
         } finally {
             c.close();
-            w.submitMicroTiming(sql);
+            w.submitMicroTiming("SQL", sql);
         }
     }
 
@@ -171,7 +171,7 @@ public class JDBCQuery {
 
         } finally {
             c.close();
-            w.submitMicroTiming(sql);
+            w.submitMicroTiming("SQL", sql);
         }
     }
 
@@ -226,7 +226,7 @@ public class JDBCQuery {
 
         } finally {
             c.close();
-            w.submitMicroTiming(sql);
+            w.submitMicroTiming("SQL", sql);
         }
     }
 
@@ -257,7 +257,7 @@ public class JDBCQuery {
             }
         } finally {
             c.close();
-            w.submitMicroTiming(sql);
+            w.submitMicroTiming("SQL", sql);
         }
     }
 
@@ -273,7 +273,6 @@ public class JDBCQuery {
     public Row executeUpdateReturnKeys() throws SQLException {
         Connection c = ds.getConnection();
         Watch w = Watch.start();
-        String finalSQL = sql;
 
         try {
             SQLStatementStrategy sa = new SQLStatementStrategy(c, ds.isMySQL());
@@ -301,7 +300,7 @@ public class JDBCQuery {
             }
         } finally {
             c.close();
-            w.submitMicroTiming(sql);
+            w.submitMicroTiming("SQL", sql);
         }
     }
 

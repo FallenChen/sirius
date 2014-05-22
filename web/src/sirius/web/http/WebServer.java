@@ -179,8 +179,8 @@ public class WebServer implements Lifecycle, MetricProvider {
      * Returns all proxy IPs as {@link IPRange.RangeSet}
      *
      * @return a range set describing all proxy ranges. This is probably just a single IP addressed, however, using
-     *         {@link IPRange.RangeSet} permit to name several, even sub nets. If a request comes from a proxy IP
-     *         its X-Forwarded-For header is checked for the original IP.
+     * {@link IPRange.RangeSet} permit to name several, even sub nets. If a request comes from a proxy IP
+     * its X-Forwarded-For header is checked for the original IP.
      */
     protected static IPRange.RangeSet getProxyIPs() {
         if (proxyRanges == null) {
@@ -207,6 +207,39 @@ public class WebServer implements Lifecycle, MetricProvider {
     private EventLoopGroup workerGroup;
     private ServerBootstrap bootstrap;
 
+    /**
+     * Determines how the web server should participate in the microtiming framework.
+     */
+    public static enum MicrotimingMode {
+        /**
+         * Use the remote ip as key - this can be used to group requests by remote ip
+         */
+        IP,
+        /**
+         * Use the requested uri as key - this can be used to group requests by uri
+         */
+        URI,
+        /**
+         * Use remote ip and uri as key - this can be used to lear which peer accesses which uris frequently
+         */
+        BOTH;
+
+        /*
+         * Computes the key used for microtiming based on the current mode
+         */
+        protected String getMicrotimingKey(WebContext context) {
+            switch (this) {
+                case IP:
+                    return context.getRemoteIP().toString();
+                case BOTH:
+                    return context.getRemoteIP().toString() + " <-- " + context.microtimingKey;
+            }
+
+            // URI is the default:
+            return context.microtimingKey;
+        }
+    }
+
     /*
      * Statistics
      */
@@ -224,6 +257,7 @@ public class WebServer implements Lifecycle, MetricProvider {
     protected static volatile long serverErrors = 0;
     protected static Map<WebServerHandler, WebServerHandler> openConnections = Maps.newConcurrentMap();
     protected static Average responseTime = new Average();
+    protected static volatile MicrotimingMode microtimingMode = MicrotimingMode.URI;
 
     /**
      * Returns the minimal value of free disk space accepted until an upload is aborted.
@@ -279,9 +313,8 @@ public class WebServer implements Lifecycle, MetricProvider {
         workerGroup = new NioEventLoopGroup();
         bootstrap = new ServerBootstrap();
         bootstrap.group(bossGroup, workerGroup)
-                 .channel(NioServerSocketChannel.class)
-                .childHandler(ctx.wire(new WebServerInitializer()))
-                        // At mose have 128 connections waiting to be "connected" - drop everything else...
+                 .channel(NioServerSocketChannel.class).childHandler(ctx.wire(new WebServerInitializer()))
+                // At mose have 128 connections waiting to be "connected" - drop everything else...
                 .option(ChannelOption.SO_BACKLOG, 128)
                         // Send a KEEPALIVE packet every 2h and expect and ACK on the TCP layer
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
@@ -470,7 +503,11 @@ public class WebServer implements Lifecycle, MetricProvider {
     @Override
     public void gather(MetricsCollector collector) {
         collector.differentialMetric("http-bytes-in", "http-bytes-in", "HTTP Bytes-In", bytesIn / 1024d / 60, "KB/s");
-        collector.differentialMetric("http-bytes-out", "http-bytes-out", "HTTP Bytes-Out", bytesOut / 1024d / 60, "KB/s");
+        collector.differentialMetric("http-bytes-out",
+                                     "http-bytes-out",
+                                     "HTTP Bytes-Out",
+                                     bytesOut / 1024d / 60,
+                                     "KB/s");
         collector.differentialMetric("http-connects", "http-connects", "HTTP Connects", connections, "/min");
         collector.differentialMetric("http-requests", "http-requests", "HTTP Requests", requests, "/min");
         collector.differentialMetric("http-blocks", "http-blocks", "HTTP Blocked Requests", blocks, "/min");
@@ -501,16 +538,49 @@ public class WebServer implements Lifecycle, MetricProvider {
         }
     }
 
-
-    public static void addOpenConnection(WebServerHandler webServerHandler) {
+    /*
+     * Used to notify the web server about an open connection
+     */
+    protected static void addOpenConnection(WebServerHandler webServerHandler) {
         openConnections.put(webServerHandler, webServerHandler);
     }
 
-    public static void removeOpenConnection(WebServerHandler webServerHandler) {
+    /*
+     * Used to notify the web server about an closed connection
+     */
+    protected static void removeOpenConnection(WebServerHandler webServerHandler) {
         openConnections.remove(webServerHandler);
     }
 
+    /**
+     * Returns all currently open connections of the HTTP server.
+     *
+     * @return a list of all currently open connections
+     */
     public static Collection<? extends ActiveHTTPConnection> getOpenConnections() {
         return openConnections.values();
     }
+
+    /**
+     * Returns the {@link sirius.web.http.WebServer.MicrotimingMode} used by the web server
+     *
+     * @return the current mode of interaction with the microtiming framework
+     * @see sirius.kernel.health.Microtiming
+     */
+    public static MicrotimingMode getMicrotimingMode() {
+        return microtimingMode;
+    }
+
+    /**
+     * Changes the microtiming mode.
+     * <p>
+     * Note that the microtiming framework still has to be enabled to generate any output.
+     * </p>
+     *
+     * @param microtimingMode the new microtiming mode to use.
+     */
+    public static void setMicrotimingMode(MicrotimingMode microtimingMode) {
+        WebServer.microtimingMode = microtimingMode == null ? MicrotimingMode.URI : microtimingMode;
+    }
+
 }

@@ -18,6 +18,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
+import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
 
 import java.io.File;

@@ -122,9 +122,9 @@ public class Watch {
      *
      * @param key the key used to store the elapsed time for.
      */
-    public void submitMicroTiming(String key) {
+    public void submitMicroTiming(String category, String key) {
         long newTime = System.nanoTime();
-        Microtiming.submit(key, newTime - lastMicroTime);
+        Microtiming.submit(category, key, newTime - lastMicroTime);
         lastMicroTime = newTime;
     }
 

@@ -717,7 +717,7 @@ public class Index {
             entity.version = indexResponse.getVersion();
             entity.afterSave();
             queryDuration.addValue(w.elapsedMillis());
-            w.submitMicroTiming("UPDATE " + entity.getClass().getName());
+            w.submitMicroTiming("ES", "UPDATE " + entity.getClass().getName());
             return entity;
         } catch (VersionConflictEngineException e) {
             if (LOG.isFINE()) {
@@ -812,7 +812,7 @@ public class Index {
                 }
             } finally {
                 queryDuration.addValue(w.elapsedMillis());
-                w.submitMicroTiming("UPDATE " + clazz.getName());
+                w.submitMicroTiming("ES", "UPDATE " + clazz.getName());
             }
         } catch (Throwable t) {
             throw Exceptions.handle(LOG, t);
@@ -924,10 +924,10 @@ public class Index {
             if (!force) {
                 drb.setVersion(entity.getVersion());
             }
-            DeleteResponse deleteResponse = drb.execute().actionGet();
+            drb.execute().actionGet();
             entity.deleted = true;
             queryDuration.addValue(w.elapsedMillis());
-            w.submitMicroTiming("DELETE " + entity.getClass().getName());
+            w.submitMicroTiming("ES", "DELETE " + entity.getClass().getName());
             entity.cascadeDelete();
             if (LOG.isFINE()) {
                 LOG.FINE("DELETE: %s.%s: %s SUCCESS",

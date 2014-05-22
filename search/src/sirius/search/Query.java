@@ -706,7 +706,7 @@ public class Query<E extends Entity> {
                            searchResponse.getTookInMillis());
         }
         if (Microtiming.isEnabled()) {
-            w.submitMicroTiming("LIST: " + toString(true));
+            w.submitMicroTiming("ES", "LIST: " + toString(true));
         }
         return result;
     }
@@ -738,7 +738,7 @@ public class Query<E extends Entity> {
                            searchResponse.getTookInMillis());
         }
         if (Microtiming.isEnabled()) {
-            w.submitMicroTiming("FIRST: " + toString(true));
+            w.submitMicroTiming("ES", "FIRST: " + toString(true));
         }
         return result;
     }
@@ -760,7 +760,7 @@ public class Query<E extends Entity> {
                            res.getCount());
         }
         if (Microtiming.isEnabled()) {
-            w.submitMicroTiming("COUNT: " + toString(true));
+            w.submitMicroTiming("ES", "COUNT: " + toString(true));
         }
         return res.getCount();
     }
@@ -830,7 +830,7 @@ public class Query<E extends Entity> {
                                        searchResponse.getTookInMillis());
                     }
                     if (Microtiming.isEnabled()) {
-                        w.submitMicroTiming("SCROLL: " + toString(true));
+                        w.submitMicroTiming("ES", "SCROLL: " + toString(true));
                     }
 
                     for (SearchHit hit : searchResponse.getHits()) {
@@ -941,7 +941,7 @@ public class Query<E extends Entity> {
             }
             builder.execute().actionGet();
             if (Microtiming.isEnabled()) {
-                w.submitMicroTiming("DELETE: " + toString(true));
+                w.submitMicroTiming("ES", "DELETE: " + toString(true));
             }
         } catch (Throwable e) {
             throw Exceptions.handle(Index.LOG, e);

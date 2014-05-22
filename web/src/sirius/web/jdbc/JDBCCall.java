@@ -120,7 +120,7 @@ public class JDBCCall {
             }
         } finally {
             c.close();
-            w.submitMicroTiming("CALL " + fun);
+            w.submitMicroTiming("SQL", "CALL: " + fun);
         }
 
         return this;

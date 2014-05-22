@@ -8,8 +8,8 @@
 
 package sirius.web.health.console;
 
+import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
-import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Average;
 import sirius.kernel.health.Microtiming;
@@ -62,19 +62,29 @@ public class TimingCommand implements Command {
      */
     protected void generateOutput(Output output) {
         long delta = System.currentTimeMillis() - Microtiming.getLastReset();
-        output.apply("%8s %9s %5s %5s %s", "AVG[ms]", "TOTAL[ms]", "RATIO", "COUNT", "NAME");
-        output.separator();
-        for (Tuple<String, Average> timing : Microtiming.getTimings()) {
-            double totalTime = timing.getSecond().getAvg() / 1000d * timing.getSecond().getCount();
-            double percentTime = (totalTime * 100d) / delta;
-            output.apply("%8.2f %9d %4.2f%% %5d %s",
-                         timing.getSecond().getAvg() / 1000d,
-                         Math.round(totalTime),
-                         percentTime,
-                         timing.getSecond().getCount(),
-                         timing.getFirst());
-        }
-        output.separator();
+        Microtiming.getTimings()
+                   .stream()
+                   .collect(MultiMap.groupingBy(MultiMap::create, t -> t.getCategory()))
+                   .stream()
+                   .forEach(c -> {
+                       output.line(c.getKey());
+                       output.separator();
+                       output.apply("%8s %9s %5s %5s %s", "AVG[ms]", "TOTAL[ms]", "RATIO", "COUNT", "NAME");
+                       output.separator();
+                       c.getValue().forEach(v -> {
+                           Average avg = v.getAvg();
+                           double totalTime = avg.getAvg() / 1000d * avg.getCount();
+                           double percentTime = (totalTime * 100d) / delta;
+                           output.apply("%8.2f %9d %4.2f%% %5d %s",
+                                        avg.getAvg() / 1000d,
+                                        Math.round(totalTime),
+                                        percentTime,
+                                        avg.getCount(),
+                                        v.getKey());
+                       });
+                       output.separator();
+                       output.blankLine();
+                   });
     }
 
     @Override
