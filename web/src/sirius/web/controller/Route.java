@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -68,7 +69,6 @@ class Route {
             if (Strings.isFilled(element)) {
                 element = element.trim();
                 element = element.replace("\n", "").replace("\t", "");
-                finalPattern.append("/");
                 Matcher m = EXPR.matcher(element);
                 if (m.matches()) {
                     String key = m.group(1).intern();
@@ -78,13 +78,14 @@ class Route {
                     } else {
                         result.expressions.add(Tuple.create(key, m.group(2)));
                     }
-                    finalPattern.append("([^/]+)");
+                    finalPattern.append("/([^/]+)");
                 } else if ("*".equals(element)) {
-                    finalPattern.append("[^/]+");
+                    finalPattern.append("/[^/]+");
                 } else if ("**".equals(element)) {
-                    finalPattern.append("(.*)");
+                    finalPattern.append("/?(.*)");
                     result.expressions.add(Tuple.create("\\*\\*".intern(), params++));
                 } else {
+                    finalPattern.append("/");
                     finalPattern.append(Pattern.quote(element));
                 }
             }
@@ -130,8 +131,6 @@ class Route {
             Matcher m = pattern.matcher(requestedURI);
             List<Object> result = new ArrayList<Object>(parameterTypes.length);
             if (m.matches()) {
-
-                // Compare NLS (translated texts...)
                 for (int i = 1; i <= m.groupCount(); i++) {
                     Tuple<String, Object> expr = expressions.get(i - 1);
                     String value = URLDecoder.decode(m.group(i), Charsets.UTF_8.name());
@@ -154,6 +153,9 @@ class Route {
                     } else if (expr.getFirst() == "**") {
                         result.add(Arrays.asList(value.split("/")));
                     }
+                }
+                if (parameterTypes.length > result.size() && parameterTypes[parameterTypes.length - 1] == List.class) {
+                    result.add(Collections.emptyList());
                 }
                 CallContext.getCurrent().addToMDC("route", format);
                 return result;
