@@ -226,7 +226,7 @@ public abstract class Entity {
             if (p.getField().isAnnotationPresent(Unique.class) && !Strings.isEmpty(value)) {
                 Query<?> qry = Index.select(getClass()).eq(p.getName(), value);
                 if (!isNew()) {
-                    qry.notEq("_id", id);
+                    qry.notEq(Index.ID_FIELD, id);
                 }
                 Unique unique = p.getField().getAnnotation(Unique.class);
                 if (Strings.isFilled(unique.within())) {

@@ -10,6 +10,9 @@ package sirius.search.constraints;
 
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
+import sirius.search.Entity;
+import sirius.search.EntityRef;
+import sirius.search.Index;
 
 /**
  * Represents a constraint which checks if the given field has not the given value.
@@ -19,15 +22,29 @@ import org.elasticsearch.index.query.QueryBuilder;
  */
 public class FieldNotEqual implements Constraint {
     private final String field;
-    private final Object value;
+    private Object value;
     private boolean isFilter;
 
     /*
      * Use the #on(String, Object) factory method
      */
     private FieldNotEqual(String field, Object value) {
-        this.field = field;
+        // In search queries the id field must be referenced via "_id" not "id..
+        if (Entity.ID.equalsIgnoreCase(field)) {
+            this.field = Index.ID_FIELD;
+        } else {
+            this.field = field;
+        }
         this.value = value;
+        if (value != null && value.getClass().isEnum()) {
+            this.value = ((Enum<?>) value).name();
+        }
+        if (value != null && value instanceof Entity) {
+            this.value = ((Entity) value).getId();
+        }
+        if (value != null && value instanceof EntityRef) {
+            this.value = ((EntityRef) value).getId();
+        }
     }
 
     /**

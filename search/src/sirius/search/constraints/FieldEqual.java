@@ -15,6 +15,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import sirius.search.Entity;
 import sirius.search.EntityRef;
 import sirius.kernel.commons.Strings;
+import sirius.search.Index;
 
 /**
  * Represents a constraint which checks if the given field has the given value.
@@ -32,7 +33,12 @@ public class FieldEqual implements Constraint {
      * Use the #on(String, Object) factory method
      */
     private FieldEqual(String field, Object value) {
-        this.field = field;
+        // In search queries the id field must be referenced via "_id" not "id..
+        if (Entity.ID.equalsIgnoreCase(field)) {
+            this.field = Index.ID_FIELD;
+        } else {
+            this.field = field;
+        }
         this.value = value;
         if (value != null && value.getClass().isEnum()) {
             this.value = ((Enum<?>) value).name();

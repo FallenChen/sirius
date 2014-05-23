@@ -9,6 +9,9 @@
 package sirius.search.constraints;
 
 import org.elasticsearch.index.query.*;
+import sirius.search.Entity;
+import sirius.search.EntityRef;
+import sirius.search.Index;
 
 import java.util.Collection;
 
@@ -30,7 +33,12 @@ public class OneInField implements Constraint {
      */
     private OneInField(Collection<?> values, String field) {
         this.values = values;
-        this.field = field;
+        // In search queries the id field must be referenced via "_id" not "id..
+        if (Entity.ID.equalsIgnoreCase(field)) {
+            this.field = Index.ID_FIELD;
+        } else {
+            this.field = field;
+        }
     }
 
     /**
