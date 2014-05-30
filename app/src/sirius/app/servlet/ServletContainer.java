@@ -23,7 +23,7 @@ import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.web.http.MimeHelper;
-import sirius.web.http.ServerSession;
+import sirius.web.http.session.ServerSession;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 

@@ -37,26 +37,12 @@ public class HipChat implements ExceptionHandler, Lifecycle {
 
     @Override
     public void started() {
-        HipChat.sendMessage("start",
-                            Strings.apply("%s (%s) on %s is starting up...",
-                                          Sirius.getProductName(),
-                                          Sirius.getProductVersion(),
-                                          CallContext.getNodeName()),
-                            HipChat.Color.GREEN,
-                            false
-        );
+        HipChat.sendMessage("start", "Node is starting up...", HipChat.Color.GREEN, false);
     }
 
     @Override
     public void stopped() {
-        HipChat.sendMessage("stop",
-                            Strings.apply("%s (%s) on %s is shutting down...",
-                                          Sirius.getProductName(),
-                                          Sirius.getProductVersion(),
-                                          CallContext.getNodeName()),
-                            HipChat.Color.GRAY,
-                            true
-        );
+        HipChat.sendMessage("stop", "Node is shutting down...", HipChat.Color.GRAY, true);
     }
 
     @Override
@@ -72,12 +58,9 @@ public class HipChat implements ExceptionHandler, Lifecycle {
     @Override
     public void handle(Incident incident) throws Exception {
         sendMessage("incident",
-                    Strings.apply("%s (%s) on %s: %s [%s]",
-                                  Sirius.getProductName(),
-                                  Sirius.getProductVersion(),
-                                  CallContext.getNodeName(),
-                                  incident.getException().getMessage(),
-                                  incident.getLocation()),
+                    Strings.apply("%s [%s]",
+
+                                  incident.getException().getMessage(), incident.getLocation()),
                     Color.RED,
                     true
         );
@@ -147,7 +130,13 @@ public class HipChat implements ExceptionHandler, Lifecycle {
             ctx.put("auth_token", authToken);
             ctx.put("message_format", "html");
             ctx.put("room_id", room);
-            ctx.put("message", message);
+            ctx.put("message",
+                    Strings.apply("%s (%s) on %s: %s",
+                                  Sirius.getProductName(),
+                                  Sirius.getProductVersion(),
+                                  CallContext.getNodeName(),
+                                  message)
+            );
             ctx.put("notify", notify ? 1 : 0);
             Outcall call = new Outcall(new URL(messageUrl), ctx);
             call.getData();

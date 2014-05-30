@@ -14,7 +14,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 import sirius.web.http.MimeHelper;
-import sirius.web.http.ServerSession;
+import sirius.web.http.session.ServerSession;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebServer;
 

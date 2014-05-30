@@ -208,6 +208,31 @@ public class Strings {
         return result;
     }
 
+    /**
+     * Splits the given string at the last occurrence of the separator.
+     * <p>
+     * If the given input is empty, a tuple with <tt>null</tt> as first and second component will be returned.
+     * </p>
+     *
+     * @param input     the input to be split
+     * @param separator the separator used to split at
+     * @return a <tt>Tuple</tt> containing the part before the separator as first
+     *         and the part after the separator as second component
+     */
+    public static Tuple<String, String> splitAtLast(String input, String separator) {
+        Tuple<String, String> result = Tuple.create();
+        if (isFilled(input)) {
+            int idx = input.lastIndexOf(separator);
+            if (idx > -1) {
+                result.setFirst(input.substring(0, idx));
+                result.setSecond(input.substring(idx + separator.length()));
+            } else {
+                result.setFirst(input);
+            }
+        }
+        return result;
+    }
+
 
     /**
      * Limits the length of the given string to the given length.

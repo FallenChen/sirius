@@ -25,11 +25,14 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.ConfigValue;
+import sirius.kernel.di.std.Part;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredInput;
 import sirius.kernel.xml.XMLStructuredInput;
+import sirius.web.http.session.ServerSession;
+import sirius.web.http.session.SessionManager;
 
 import javax.annotation.Nonnull;
 import java.io.*;
@@ -235,6 +238,9 @@ public class WebContext {
      */
     @ConfigValue("http.addP3PHeader")
     protected static boolean addP3PHeader;
+
+    @Part
+    private static SessionManager sessionManager;
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -569,7 +575,7 @@ public class WebContext {
             }
         }
         if (Strings.isFilled(requestedSessionId) || create) {
-            serverSession = ServerSession.getSession(requestedSessionId);
+            serverSession = sessionManager.getSession(requestedSessionId).orElseGet(() -> sessionManager.create());
             if (serverSession.isNew()) {
                 serverSession.putValue(ServerSession.INITIAL_URI, getRequestedURI());
                 serverSession.putValue(ServerSession.USER_AGENT, getHeader(HttpHeaders.Names.USER_AGENT));

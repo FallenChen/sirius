@@ -13,6 +13,7 @@ import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.resource.Resource;
 import org.apache.velocity.runtime.resource.loader.ResourceLoader;
 import sirius.kernel.di.std.Parts;
+import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.health.Exceptions;
 
 import java.io.InputStream;
@@ -29,7 +30,7 @@ import java.util.Collection;
  */
 public class VelocityResourceLoader extends ResourceLoader {
 
-    @Parts(Resolver.class)
+    @PriorityParts(Resolver.class)
     private static Collection<Resolver> resolvers;
 
     public static final VelocityResourceLoader INSTANCE = new VelocityResourceLoader();

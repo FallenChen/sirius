@@ -26,6 +26,7 @@ import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Context;
+import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Average;
 import sirius.kernel.health.Exceptions;
@@ -33,6 +34,8 @@ import sirius.kernel.health.Log;
 import sirius.kernel.timer.EveryTenSeconds;
 import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricsCollector;
+import sirius.web.http.session.ServerSession;
+import sirius.web.http.session.SessionManager;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -109,6 +112,9 @@ public class WebServer implements Lifecycle, MetricProvider {
     private static String ipFilter;
     private static IPRange.RangeSet filterRanges;
     private Channel channel;
+
+    @Part
+    private static SessionManager sessionManager;
 
     /**
      * Returns an ip filter which determines which IPs may connect to the web server.
@@ -524,7 +530,7 @@ public class WebServer implements Lifecycle, MetricProvider {
                                      "/min");
         collector.metric("http-open-connections", "HTTP Open Connections", openConnections.size(), null);
         collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAvg(), "ms");
-        collector.metric("http-sessions", "HTTP Sessions", ServerSession.getSessions().size(), null);
+        collector.metric("http-sessions", "HTTP Sessions", sessionManager.getNumberOfSessions(), null);
     }
 
     @Register

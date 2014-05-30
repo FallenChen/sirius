@@ -1,5 +1,7 @@
 package sirius.web.templates;
 
+import sirius.kernel.di.std.Priorized;
+
 import java.net.URL;
 
 /**
@@ -12,7 +14,7 @@ import java.net.URL;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2014/01
  */
-public interface Resolver {
+public interface Resolver extends Priorized {
 
     /**
      * Resolves the given resource into an URL.

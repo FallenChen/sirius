@@ -9,7 +9,7 @@
 package sirius.app.servlet;
 
 import sirius.kernel.commons.Callback;
-import sirius.web.http.ServerSession;
+import sirius.web.http.session.ServerSession;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.*;
