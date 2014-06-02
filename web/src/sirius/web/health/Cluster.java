@@ -29,6 +29,7 @@ import sirius.web.mails.MailService;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Iterator;
@@ -131,7 +132,9 @@ public class Cluster implements EveryMinute {
      */
     public boolean isBestAvailableNode() {
         for (NodeInfo info : nodes) {
-            if (info.getPriority() < priority && info.getNodeState() == MetricState.GREEN) {
+            if ((info.getPriority() < priority || info.getPriority() == priority && info.getName()
+                                                                                        .compareTo(CallContext.getNodeName()) < 0) && info
+                    .getNodeState() == MetricState.GREEN) {
                 return false;
             }
         }
@@ -225,7 +228,11 @@ public class Cluster implements EveryMinute {
                     LOG.FINE("Node: %s is %s (%s)", info.getName(), info.getNodeState(), info.getClusterState());
                 }
             } catch (Throwable t) {
-                Exceptions.handle(LOG, t);
+                if (t instanceof ConnectException) {
+                    LOG.WARN(t);
+                } else {
+                    Exceptions.handle(LOG, t);
+                }
                 info.setNodeState(MetricState.RED);
                 info.setClusterState(MetricState.RED);
                 newClusterState = MetricState.RED;
@@ -252,7 +259,10 @@ public class Cluster implements EveryMinute {
         } else if (clusterState == MetricState.RED && newClusterState != MetricState.RED) {
             if (inCharge()) {
                 LOG.FINE("Cluster recovered");
-                HipChat.sendMessage("cluster", "Cluster is now in state: " + newClusterState, HipChat.Color.GREEN, true);
+                HipChat.sendMessage("cluster",
+                                    "Cluster is now in state: " + newClusterState,
+                                    HipChat.Color.GREEN,
+                                    true);
             }
         }
         LOG.FINE("Cluster check complete. Status was %s and is now %s", clusterState, newClusterState);
