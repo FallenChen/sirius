@@ -31,6 +31,9 @@ public class PartAnnotationProcessor implements AnnotationProcessor {
 
     @Override
     public void handle(MutableGlobalContext ctx, Object object, Field field) throws Exception {
-        field.set(object, ctx.getPart(field.getType()));
+        Object part = ctx.getPart(field.getType());
+        if (part != null) {
+            field.set(object, part);
+        }
     }
 }
