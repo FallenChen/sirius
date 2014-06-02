@@ -96,7 +96,7 @@ public class AssetsDispatcher implements WebDispatcher {
             }
         }
         if (url == null) {
-            ctx.respondWith().error(HttpResponseStatus.NOT_FOUND);
+            return false;
         } else if ("file".equals(url.getProtocol())) {
             ctx.respondWith().file(new File(url.toURI()));
         } else {
