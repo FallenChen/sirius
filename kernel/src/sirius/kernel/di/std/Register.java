@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
  * @since 2013/08
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Register {
 
     /**

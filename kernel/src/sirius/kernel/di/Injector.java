@@ -15,7 +15,9 @@ import sirius.kernel.health.Log;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -38,7 +40,7 @@ import java.util.regex.Pattern;
  * {@link #context()}. This can be used to retrieve parts by class or by class and name. The second way
  * to access parts is to used marker annotations like {@link sirius.kernel.di.std.Part},
  * {@link sirius.kernel.di.std.Parts} or {@link sirius.kernel.di.std.Context}. Again,
- * these annotations are not processed by the micro kernel itself, but by subclasses of {@link AnnotationProcessor}.
+ * these annotations are not processed by the micro kernel itself, but by subclasses of {@link FieldAnnotationProcessor}.
  * To process all annotations of a given java object, {@link GlobalContext#wire(Object)} can be used. This will
  * be automatically called for each part which is auto-instantiated by a <tt>ClassLoadAction</tt>.
  * </p>
@@ -74,7 +76,7 @@ public class Injector {
         final List<ClassLoadAction> actions = new ArrayList<ClassLoadAction>();
         LOG.INFO("Initializing the MicroKernel....");
 
-        LOG.INFO("Stage 1: Scanning .class files...");
+        LOG.INFO("~ Scanning .class files...");
         classpath.find(Pattern.compile(".*?.class")).forEach(matcher -> {
             String relativePath = matcher.group();
             String className = relativePath.substring(0, relativePath.length() - 6).replace("/", ".");
@@ -109,7 +111,7 @@ public class Injector {
             }
         });
 
-        LOG.INFO("Stage 2: Applying %d class load actions on %d classes...", actions.size(), classes.size());
+        LOG.INFO("~ Applying %d class load actions on %d classes...", actions.size(), classes.size());
         for (Class<?> clazz : classes) {
             for (ClassLoadAction action : actions) {
                 if (action.getTrigger() == null || clazz.isAnnotationPresent(action.getTrigger())) {
@@ -129,7 +131,30 @@ public class Injector {
             }
         }
 
-        LOG.INFO("Stage 3: Enhancing context");
+        Collection<MethodAnnotationProcessor> methodAnnotations = ctx.getParts(MethodAnnotationProcessor.class);
+        if (!methodAnnotations.isEmpty()) {
+            LOG.INFO("~ Applying %d factory load actions on %d classes...", methodAnnotations.size(), classes.size());
+            for (Class<?> clazz : classes) {
+                for (MethodAnnotationProcessor p : methodAnnotations) {
+                    for (Method method : clazz.getDeclaredMethods()) {
+                        if (method.isAnnotationPresent(p.getTrigger())) {
+                            try {
+                                p.handle(ctx, method);
+                            } catch (Throwable e) {
+                                Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
+                                                  p.getTrigger().getName(),
+                                                  method.getDeclaringClass().getName(),
+                                                  method.getName(),
+                                                  e.getMessage(),
+                                                  e.getClass().getName());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        LOG.INFO("~ Enhancing context...");
         if (callback != null) {
             try {
                 callback.invoke(ctx);
@@ -138,14 +163,13 @@ public class Injector {
             }
         }
 
-        LOG.INFO("Stage 4: Initializing static parts-references...");
+        LOG.INFO("~ Initializing static parts-references...");
         for (Class<?> clazz : classes) {
             ctx.wireClass(clazz);
         }
 
-        LOG.INFO("Stage 5: Initializing parts...");
+        LOG.INFO("~ Initializing parts...");
         ctx.processAnnotations();
-
     }
 
     /**

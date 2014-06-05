@@ -62,6 +62,13 @@ public class MailService {
     private static final String MAIL_SMTP_HOST = "mail.smtp.host";
     private static final String SMTP = "smtp";
     private static final String MAIL_SMTP_PORT = "mail.smtp.port";
+    private static final String MAIL_SMTP_CONNECTIONTIMEOUT = "mail.smtp.connectiontimeout";
+    private static final String MAIL_SMTP_TIMEOUT = "mail.smtp.timeout";
+    private static final String MAIL_SMTP_WRITETIMEOUT = "mail.smtp.writetimeout";
+    /*
+     * Contains the default timeout used for all socket operations and is set to 60s (=60000ms)
+     */
+    private static final String MAIL_SOCKET_TIMEOUT = "60000";
 
     @ConfigValue("mail.smtp.host")
     private String smtpHost;
@@ -145,13 +152,18 @@ public class MailService {
         }
     }
 
-    public Session getMailSession(SMTPConfiguration config) {
+    private Session getMailSession(SMTPConfiguration config) {
         Properties props = new Properties();
         props.put(MAIL_SMTP_PORT, Strings.isEmpty(config.getMailPort()) ? "25" : config.getMailPort());
         props.put(MAIL_SMTP_HOST, config.getMailHost());
         if (Strings.isFilled(config.getMailSender())) {
             props.put(MAIL_FROM, config.getMailSender());
         }
+        // Set a fixed timeout of 60s for all operations - the default timeout is "infinite"
+        props.put(MAIL_SMTP_CONNECTIONTIMEOUT, MAIL_SOCKET_TIMEOUT);
+        props.put(MAIL_SMTP_TIMEOUT, MAIL_SOCKET_TIMEOUT);
+        props.put(MAIL_SMTP_WRITETIMEOUT, MAIL_SOCKET_TIMEOUT);
+
         props.put(MAIL_TRANSPORT_PROTOCOL, SMTP);
         Authenticator auth = new MailAuthenticator(config);
         if (Strings.isEmpty(config.getMailPassword())) {

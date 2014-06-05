@@ -9,11 +9,14 @@
 package sirius.kernel.di.std;
 
 import com.google.common.collect.Lists;
-import sirius.kernel.di.AnnotationProcessor;
+import sirius.kernel.di.FieldAnnotationProcessor;
 import sirius.kernel.di.MutableGlobalContext;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -23,12 +26,12 @@ import java.util.List;
  * Handles the {@link sirius.kernel.di.std.PriorityParts} annotation.
  *
  * @author Andreas Haufler (aha@scireum.de)
- * @see sirius.kernel.di.AnnotationProcessor
+ * @see sirius.kernel.di.FieldAnnotationProcessor
  * @see sirius.kernel.di.std.PriorityParts
  * @since 2013/08
  */
 @Register
-public class PriorityPartsAnnotationProcessor implements AnnotationProcessor {
+public class PriorityPartsAnnotationProcessor implements FieldAnnotationProcessor {
     @Override
     public Class<? extends Annotation> getTrigger() {
         return PriorityParts.class;
@@ -64,4 +67,5 @@ public class PriorityPartsAnnotationProcessor implements AnnotationProcessor {
                     "Only fields of type Collection or List are allowed whe using @PriorityParts.");
         }
     }
+
 }

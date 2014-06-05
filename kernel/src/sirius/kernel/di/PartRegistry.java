@@ -15,8 +15,10 @@ import sirius.kernel.commons.Tuple;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * An instance of PartRegistry is kept by {@link sirius.kernel.di.Injector} to track all registered
@@ -37,7 +39,8 @@ class PartRegistry implements MutableGlobalContext {
      * be contained in parts. This is just a lookup map if searched by unique
      * name.
      */
-    private final Map<Class<?>, Map<String, Object>> namedParts = Collections.synchronizedMap(new HashMap<Class<?>, Map<String, Object>>());
+    private final Map<Class<?>, Map<String, Object>> namedParts = Collections.synchronizedMap(new HashMap<>());
+    private final Map<Class<?>, Map<String, Supplier<Optional<?>>>> factories = Collections.synchronizedMap(new HashMap<>());
 
     @SuppressWarnings("unchecked")
     @Override
@@ -111,20 +114,18 @@ class PartRegistry implements MutableGlobalContext {
         for (Field field : clazz.getDeclaredFields()) {
             if ((!Modifier.isFinal(field.getModifiers())) && (object != null || Modifier.isStatic(field.getModifiers()))) {
                 field.setAccessible(true);
-                for (AnnotationProcessor proc : getParts(AnnotationProcessor.class)) {
-                    if (field.isAnnotationPresent(proc.getTrigger())) {
-                        try {
-                            proc.handle(this, object, field);
-                        } catch (Throwable e) {
-                            Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
-                                              proc.getTrigger().getName(),
-                                              field.getDeclaringClass().getName(),
-                                              field.getName(),
-                                              e.getMessage(),
-                                              e.getClass().getName());
-                        }
+                getParts(FieldAnnotationProcessor.class).stream().filter(p -> field.isAnnotationPresent(p.getTrigger())).forEach(p -> {
+                    try {
+                        p.handle(this, object, field);
+                    } catch (Throwable e) {
+                        Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
+                                          p.getTrigger().getName(),
+                                          field.getDeclaringClass().getName(),
+                                          field.getName(),
+                                          e.getMessage(),
+                                          e.getClass().getName());
                     }
-                }
+                });
             }
         }
     }
@@ -161,12 +162,47 @@ class PartRegistry implements MutableGlobalContext {
                             partsOfClass.get(uniqueName).getClass().getName()));
                 }
             } else {
-                partsOfClass = Collections.synchronizedMap(new TreeMap<String, Object>());
+                partsOfClass = Collections.synchronizedMap(new TreeMap<>());
                 namedParts.put(clazz, partsOfClass);
             }
             partsOfClass.put(uniqueName, part);
             parts.put(clazz, part);
         }
+    }
+
+    @Override
+    public void registerFactory(String uniqueName, Supplier<?> factory, Class<?> lookupClass) {
+        Map<String, Supplier<Optional<?>>> factoriesOfClass = factories.computeIfAbsent(lookupClass,
+                                                                                        k -> Collections.synchronizedMap(
+                                                                                                new TreeMap<>())
+        );
+        if (factoriesOfClass.containsKey(uniqueName)) {
+            throw new IllegalArgumentException(Strings.apply(
+                    "The factory '%s' cannot be registered as '%s' for class '%s'. The id is already taken by: %s (%s)",
+                    factory,
+                    lookupClass.getName(),
+                    uniqueName,
+                    factoriesOfClass.get(uniqueName),
+                    factoriesOfClass.get(uniqueName).getClass().getName()));
+        }
+        factoriesOfClass.put(uniqueName, () -> Optional.ofNullable(factory.get()));
+    }
+
+    @Override
+    public <P> Optional<P> make(Class<P> type, String factoryName) {
+        return (Optional<P>) Optional.ofNullable(factories.get(type))
+                                     .map(m -> m.get(factoryName))
+                                     .map(f -> f.get())
+                                     .orElseGet(() -> Optional.empty());
+    }
+
+    private static final Supplier<Optional<?>> EMPTY_FACTORY = () -> Optional.empty();
+
+    @Override
+    public <P> Supplier<Optional<P>> getFactory(Class<P> type, String factoryName) {
+        return (Supplier<Optional<P>>) (Object) Optional.ofNullable(factories.get(type))
+                                                        .map(m -> m.get(factoryName))
+                                                        .orElse(EMPTY_FACTORY);
     }
 
     @Override
@@ -197,7 +233,6 @@ class PartRegistry implements MutableGlobalContext {
                 }
             }
         }
-
     }
 
 }

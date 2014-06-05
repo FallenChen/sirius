@@ -173,13 +173,7 @@ public class Cluster implements EveryMinute {
             }
             if (m.getState().ordinal() > MetricState.GREEN.ordinal()) {
                 HipChat.sendMessage("metric",
-                                    Strings.apply("%s (%s) on %s: %s is %s (%s)",
-                                                  Sirius.getProductName(),
-                                                  Sirius.getProductVersion(),
-                                                  CallContext.getNodeName(),
-                                                  m.getName(),
-                                                  m.getValueAsString(),
-                                                  m.getState()),
+                                    Strings.apply("%s is %s (%s)", m.getName(), m.getValueAsString(), m.getState()),
                                     m.getState() == MetricState.YELLOW ? HipChat.Color.YELLOW : HipChat.Color.RED,
                                     false
                 );
@@ -251,13 +245,13 @@ public class Cluster implements EveryMinute {
         // Check cluster state
         if (clusterState == MetricState.RED && newClusterState == MetricState.RED) {
             LOG.FINE("Cluster was RED and remained RED - ensuring alert...");
-            if (inCharge()) {
+            if (inCharge(MetricState.RED)) {
                 LOG.FINE("This node is in charge of action at the bell....fire alert!");
                 alertClusterFailure();
                 HipChat.sendMessage("cluster", "Cluster is RED", HipChat.Color.RED, true);
             }
         } else if (clusterState == MetricState.RED && newClusterState != MetricState.RED) {
-            if (inCharge()) {
+            if (inCharge(newClusterState)) {
                 LOG.FINE("Cluster recovered");
                 HipChat.sendMessage("cluster",
                                     "Cluster is now in state: " + newClusterState,
@@ -272,13 +266,13 @@ public class Cluster implements EveryMinute {
     /*
      * Determines if this node is in charge of sending alerts
      */
-    private boolean inCharge() {
+    private boolean inCharge(MetricState clusterStateToBroadcast) {
         if (isBestAvailableNode()) {
             return true;
         }
         for (NodeInfo info : getNodeInfos()) {
             if (info.getPriority() < getNodePriority() &&
-                    info.getClusterState() == MetricState.RED &&
+                    info.getClusterState() == clusterStateToBroadcast &&
                     info.getNodeState() == MetricState.GREEN) {
                 // Another node took care of it...
                 LOG.FINE("Node %s is in charge of sending an alert", info.getName());

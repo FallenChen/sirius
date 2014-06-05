@@ -16,6 +16,7 @@ import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredOutput;
+import sirius.web.health.SystemController;
 import sirius.web.services.ServiceCall;
 import sirius.web.services.StructuredService;
 
@@ -38,6 +39,9 @@ public class ConsoleService implements StructuredService {
 
     @Override
     public void call(ServiceCall call, StructuredOutput out) throws Exception {
+        if (!ctx.make(Boolean.class, SystemController.SYSTEM_CONSOLE_ACCESS_CHECKER).orElse(true)) {
+            throw Exceptions.createHandled().withSystemErrorMessage("The console is disabled!").handle();
+        }
         out.beginResult();
         try {
             Watch w = Watch.start();

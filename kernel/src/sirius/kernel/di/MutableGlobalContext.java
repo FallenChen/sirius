@@ -9,9 +9,10 @@
 package sirius.kernel.di;
 
 import javax.annotation.Nonnull;
+import java.util.function.Supplier;
 
 /**
- * Visible for instances of {@link sirius.kernel.di.ClassLoadAction} and {@link AnnotationProcessor} during the system
+ * Visible for instances of {@link sirius.kernel.di.ClassLoadAction} and {@link FieldAnnotationProcessor} during the system
  * initialization to make parts visible in the <tt>GlobalContext</tt>
  *
  * @author Andreas Haufler (aha@scireum.de)
@@ -43,4 +44,14 @@ public interface MutableGlobalContext extends GlobalContext {
      *                      part will be discarded.
      */
     void registerPart(String uniqueName, Object part, Class<?>... lookupClasses);
+
+    /**
+     * Registers a new factory with the given name and for the given lookupClass.
+     *
+     * @param uniqueName  the name of the factory used to retrieve the factory.
+     *                    Note that this must be unique per <tt>lookupClass</tt>.
+     * @param factory     the actual factory method used to generate new objects
+     * @param lookupClass the class of objects made by the factory
+     */
+    void registerFactory(String uniqueName, Supplier<?> factory, Class<?> lookupClass);
 }

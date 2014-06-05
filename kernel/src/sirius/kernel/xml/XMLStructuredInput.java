@@ -58,7 +58,7 @@ public class XMLStructuredInput implements StructuredInput {
 
     @Override
     public String toString() {
-        return node == null ? "" : node.toString(); //$NON-NLS-1$
+        return node == null ? "" : node.toString();
     }
 
     /**

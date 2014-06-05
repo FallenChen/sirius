@@ -8,7 +8,7 @@
 
 /**
  * Contains standard annotations and implementations for {@link sirius.kernel.di.ClassLoadAction} and
- * {@link sirius.kernel.di.AnnotationProcessor} to process them.
+ * {@link sirius.kernel.di.FieldAnnotationProcessor} to process them.
  * <p>
  * The defined annotations handle common tasks (self-registering parts, loading parts into fields etc.)
  * </p>

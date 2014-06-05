@@ -142,7 +142,6 @@ public class JDBCQuery {
     public void perform(RowHandler handler, int maxRows) throws SQLException {
         Watch w = Watch.start();
         Connection c = ds.getConnection();
-        String finalSQL = sql;
         try {
             SQLStatementStrategy sa = new SQLStatementStrategy(c, ds.isMySQL());
             StatementCompiler.buildParameterizedStatement(sa, sql, params);
@@ -152,7 +151,6 @@ public class JDBCQuery {
             if (maxRows > 0) {
                 sa.getStmt().setMaxRows(maxRows);
             }
-            finalSQL = sa.getQueryString();
             ResultSet rs = sa.getStmt().executeQuery();
             try {
                 while (rs.next()) {
@@ -184,7 +182,6 @@ public class JDBCQuery {
     public Row queryFirst() throws SQLException {
         Connection c = ds.getConnection();
         Watch w = Watch.start();
-        String finalSQL = sql;
         try {
             SQLStatementStrategy sa = new SQLStatementStrategy(c, ds.isMySQL());
             StatementCompiler.buildParameterizedStatement(sa, sql, params);
@@ -242,7 +239,6 @@ public class JDBCQuery {
     public int executeUpdate() throws SQLException {
         Connection c = ds.getConnection();
         Watch w = Watch.start();
-        String finalSQL = sql;
 
         try {
             SQLStatementStrategy sa = new SQLStatementStrategy(c, ds.isMySQL());

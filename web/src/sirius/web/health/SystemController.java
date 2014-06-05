@@ -9,6 +9,8 @@
 package sirius.web.health;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import sirius.kernel.di.GlobalContext;
+import sirius.kernel.di.std.Context;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.HandledException;
@@ -26,9 +28,31 @@ import sirius.web.http.WebContext;
 @Register(classes = Controller.class)
 public class SystemController implements Controller {
 
+    /**
+     * Used to retrieve a factory (via {@link sirius.kernel.di.GlobalContext#make(Class, String)} which checks access
+     * to /system/console.
+     */
+    public static final String SYSTEM_CONSOLE_ACCESS_CHECKER = "SystemController.SYSTEM_CONSOLE_ACCESS_CHECKER";
+
+    /**
+     * Used to retrieve a factory (via {@link sirius.kernel.di.GlobalContext#make(Class, String)} which checks access
+     * to /system/logs.
+     */
+    public static final String SYSTEM_LOGS_ACCESS_CHECKER = "SystemController.SYSTEM_LOGS_ACCESS_CHECKER";
+
+    /**
+     * Used to retrieve a factory (via {@link sirius.kernel.di.GlobalContext#make(Class, String)} which checks access
+     * to /system/errors.
+     */
+    public static final String SYSTEM_ERRORS_ACCESS_CHECKER = "SystemController.SYSTEM_ERRORS_ACCESS_CHECKER";
+
     @Routed("/system/console")
     public void console(WebContext ctx) {
-        ctx.respondWith().cached().template("/view/system/console.html");
+        if (context.make(Boolean.class, SYSTEM_CONSOLE_ACCESS_CHECKER).orElse(true)) {
+            ctx.respondWith().cached().template("/view/system/console.html");
+        } else {
+            ctx.respondWith().error(HttpResponseStatus.FORBIDDEN);
+        }
     }
 
     @Override
@@ -45,14 +69,25 @@ public class SystemController implements Controller {
     @Part
     private Metrics metrics;
 
+    @Context
+    private GlobalContext context;
+
     @Routed("/system/logs")
     public void logs(WebContext ctx) {
-        ctx.respondWith().template("/view/system/logs.html", monitor.getMessages());
+        if (context.make(Boolean.class, SYSTEM_LOGS_ACCESS_CHECKER).orElse(true)) {
+            ctx.respondWith().template("/view/system/logs.html", monitor.getMessages());
+        } else {
+            ctx.respondWith().error(HttpResponseStatus.FORBIDDEN);
+        }
     }
 
     @Routed("/system/errors")
     public void errors(WebContext ctx) {
-        ctx.respondWith().template("/view/system/errors.html", monitor.getIncidents());
+        if (context.make(Boolean.class, SYSTEM_ERRORS_ACCESS_CHECKER).orElse(true)) {
+            ctx.respondWith().template("/view/system/errors.html", monitor.getIncidents());
+        } else {
+            ctx.respondWith().error(HttpResponseStatus.FORBIDDEN);
+        }
     }
 
     @Routed("/system/ok")
@@ -71,7 +106,7 @@ public class SystemController implements Controller {
 
     @Routed("/system/info")
     public void info(WebContext ctx) {
-        ctx.respondWith().template("/view/system/info.html", monitor.getIncidents());
+        ctx.respondWith().template("/view/system/info.html");
     }
 
     @Routed("/system/state")

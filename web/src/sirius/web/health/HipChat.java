@@ -125,7 +125,7 @@ public class HipChat implements ExceptionHandler, Lifecycle {
             }
 
             Context ctx = Context.create();
-            ctx.put("from", Strings.isEmpty(sender) ? Sirius.getProductName() : sender);
+            ctx.put("from", Strings.isEmpty(sender) ? CallContext.getNodeName() : sender);
             ctx.put("color", color.name().toLowerCase());
             ctx.put("auth_token", authToken);
             ctx.put("message_format", "html");

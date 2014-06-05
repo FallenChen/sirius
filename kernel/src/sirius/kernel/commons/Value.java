@@ -19,10 +19,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -177,6 +175,63 @@ public class Value {
             return this;
         }
         return Value.of(supplier.get());
+    }
+
+    /**
+     * Returns an optional value computed by the given mapper. If this value is <tt>empty</tt> the mapper will not
+     * be called, but an empty optional will be returned.
+     *
+     * @param mapper the function used to convert the value into the desired object
+     * @param <R>    the type of the desired result
+     * @return an Optional object wrapping the result of the computation or an empty Optional, if the value wasn't
+     * filled
+     */
+    @Nonnull
+    public <R> Optional<R> map(@Nonnull Function<Value, R> mapper) {
+        if (isFilled()) {
+            return Optional.ofNullable(mapper.apply(this));
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Boilerplate for <code>Optional.ofNullable(get(type, null))</code>.
+     * <p>
+     * Returns the internal value wrapped as Optional.
+     * </p>
+     *
+     * @param type the desired type of the data
+     * @return the internal value (casted to the given type) wrapped as Optional or an empty Optional if the value
+     * was empty or the cast failed.
+     */
+    @Nonnull
+    public <T> Optional<T> asOptional(@Nonnull Class<T> type) {
+        return Optional.ofNullable(get(type, null));
+    }
+
+    /**
+     * Returns the internal value wrapped as Optional while expecting it to be an integer number.
+     * <p>
+     * If the value is empty or not an integer, an empty Optional will be returned.
+     * </p>
+     *
+     * @return the internal value wrapped as Optional or an empty Optional if the value is not filled or non-integer
+     */
+    public Optional<Integer> asOptionalInt() {
+        return isFilled() ? Optional.of(getInteger()) : Optional.empty();
+    }
+
+    /**
+     * Returns the internal value wrapped as Optional.
+     * <p>
+     * If the value is empty, an empty Optional will be returned.
+     * </p>
+     *
+     * @return the internal value wrapped as Optional or an empty Optional if the value is not filled
+     */
+    public Optional<String> asOptionalString() {
+        return isFilled() ? Optional.of(asString()) : Optional.empty();
     }
 
     /**

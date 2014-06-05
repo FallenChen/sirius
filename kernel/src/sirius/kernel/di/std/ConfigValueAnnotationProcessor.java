@@ -12,25 +12,28 @@ import com.typesafe.config.ConfigValueType;
 import org.joda.time.Duration;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
-import sirius.kernel.di.AnnotationProcessor;
+import sirius.kernel.di.FieldAnnotationProcessor;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.MutableGlobalContext;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
 /**
  * AnnotationProcessor which handles the {@link ConfigValue} annotation.
  *
- * @see AnnotationProcessor
+ * @see sirius.kernel.di.FieldAnnotationProcessor
  * @see ConfigValue
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08
  */
 @Register
-public class ConfigValueAnnotationProcessor implements AnnotationProcessor {
+public class ConfigValueAnnotationProcessor implements FieldAnnotationProcessor {
     @Override
     public Class<? extends Annotation> getTrigger() {
         return ConfigValue.class;
@@ -68,4 +71,5 @@ public class ConfigValueAnnotationProcessor implements AnnotationProcessor {
                        field.getName());
         }
     }
+
 }
