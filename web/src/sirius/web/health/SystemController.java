@@ -11,6 +11,7 @@ package sirius.web.health;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Context;
+import sirius.kernel.di.std.Factory;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.HandledException;
@@ -18,6 +19,8 @@ import sirius.kernel.health.MemoryBasedHealthMonitor;
 import sirius.web.controller.Controller;
 import sirius.web.controller.Routed;
 import sirius.web.http.WebContext;
+
+import java.util.function.Supplier;
 
 /**
  * Contains the default admin GUI.

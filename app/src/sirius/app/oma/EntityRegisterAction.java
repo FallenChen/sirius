@@ -36,7 +36,7 @@ public class EntityRegisterAction implements ClassLoadAction {
     @Override
     public void handle(@Nonnull MutableGlobalContext ctx, @Nonnull Class<?> clazz) throws Exception {
         Table t = clazz.getAnnotation(Table.class);
-        if (Strings.isFilled(t.framework()) && !Sirius.isFrameworkEnabled(t.framework())) {
+        if (!Sirius.isFrameworkEnabled(t.framework())) {
             return;
         }
         try {

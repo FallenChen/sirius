@@ -34,7 +34,7 @@ public class AutoRegisterAction implements ClassLoadAction {
     public void handle(MutableGlobalContext ctx, Class<?> clazz) throws Exception {
         Object part = clazz.newInstance();
         Register r = clazz.getAnnotation(Register.class);
-        if (Strings.isFilled(r.framework()) && !Sirius.isFrameworkEnabled(r.framework())) {
+        if (!Sirius.isFrameworkEnabled(r.framework())) {
             return;
         }
         Class<?>[] classes = r.classes();

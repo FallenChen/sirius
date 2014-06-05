@@ -378,6 +378,9 @@ public class Sirius {
      * @return <tt>true</tt> if the framework is enabled, <tt>false</tt> otherwise
      */
     public static boolean isFrameworkEnabled(String framework) {
+        if (Strings.isEmpty(framework)) {
+            return true;
+        }
         if (Sirius.isDev() && !frameworks.containsKey(framework)) {
             LOG.WARN("Status of unknown framework '%s' requested. Will report as disabled framework.", framework);
         }

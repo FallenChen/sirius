@@ -8,6 +8,7 @@
 
 package sirius.kernel.di.std;
 
+import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.MethodAnnotationProcessor;
@@ -65,6 +66,9 @@ public class RegisterAnnotationProcessor implements MethodAnnotationProcessor {
     public void handle(@Nonnull MutableGlobalContext ctx,
                        @Nonnull Method method) throws Exception {
         String factoryName = method.getAnnotation(Register.class).name();
+        if (!Sirius.isFrameworkEnabled(method.getAnnotation(Register.class).framework())) {
+            return;
+        }
         if (Strings.isEmpty(factoryName)) {
             throw Exceptions.handle()
                             .to(Injector.LOG)
