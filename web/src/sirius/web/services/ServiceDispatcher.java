@@ -13,6 +13,7 @@ import sirius.kernel.async.Async;
 import sirius.kernel.commons.*;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Context;
+import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.web.http.WebContext;
@@ -73,54 +74,58 @@ public class ServiceDispatcher implements WebDispatcher {
         }
         // Cut /service/
         final String subpath = uri.substring(9);
-        Async.executor("web-services").fork(new Runnable() {
-            @Override
-            public void run() {
-                ServiceCall call = null;
-                Tuple<String, String> callPath = Strings.split(subpath, "/");
-                String type = callPath.getFirst();
-                String service = callPath.getSecond();
-                if ("xml".equals(type)) {
-                    call = new XMLServiceCall(ctx);
-                } else if ("json".equals(type)) {
-                    call = new JSONServiceCall(ctx);
-                } else {
-                    if (Strings.isFilled(service)) {
-                        service = type + "/" + service;
-                    } else {
-                        service = type;
-                    }
-                    call = new RawServiceCall(ctx);
-                }
+        Async.executor("web-services")
+             .fork(new Runnable() {
+                 @Override
+                 public void run() {
+                     ServiceCall call = null;
+                     Tuple<String, String> callPath = Strings.split(subpath, "/");
+                     String type = callPath.getFirst();
+                     String service = callPath.getSecond();
+                     if ("xml".equals(type)) {
+                         call = new XMLServiceCall(ctx);
+                     } else if ("json".equals(type)) {
+                         call = new JSONServiceCall(ctx);
+                     } else {
+                         if (Strings.isFilled(service)) {
+                             service = type + "/" + service;
+                         } else {
+                             service = type;
+                         }
+                         call = new RawServiceCall(ctx);
+                     }
 
-                if (call == null) {
-                    ctx.respondWith()
-                       .error(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
-                              Exceptions.createHandled()
-                                        .withSystemErrorMessage("Unknown or unsupported type: %s. Use 'xml' or 'json'",
-                                                                type)
-                                        .handle());
-                    return;
-                }
-                StructuredService serv = gc.getPart(service, StructuredService.class);
-                if (serv == null) {
-                    call.handle(null,
-                                Exceptions.createHandled()
-                                          .withSystemErrorMessage(
-                                                  "Unknown service: %s. Try /services for a complete list of available services.",
-                                                  service)
-                                          .handle());
-                } else {
-                    call.invoke(serv);
-                }
-            }
+                     if (call == null) {
+                         ctx.respondWith()
+                            .error(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   Exceptions.createHandled()
+                                             .withSystemErrorMessage(
+                                                     "Unknown or unsupported type: %s. Use 'xml' or 'json'",
+                                                     type)
+                                             .handle()
+                            );
+                         return;
+                     }
 
-        }).dropOnOverload(new Runnable() {
-            @Override
-            public void run() {
-                ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, "Request dropped - System overload!");
-            }
-        }).execute();
+                     StructuredService serv = gc.getPart(service, StructuredService.class);
+                     if (serv == null) {
+                         call.handle(null,
+                                     Exceptions.createHandled()
+                                               .withSystemErrorMessage(
+                                                       "Unknown service: %s. Try /services for a complete list of available services.",
+                                                       service)
+                                               .handle()
+                         );
+                     } else {
+                         call.invoke(serv);
+                     }
+                 }
+
+             })
+             .dropOnOverload(() -> ctx.respondWith()
+                                      .error(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                             "Request dropped - System overload!"))
+             .execute();
         return true;
     }
 

@@ -231,14 +231,12 @@ public class Sirius {
         NLS.init(classpath);
 
         // Initialize dependency injection...
-        Injector.init(new Callback<MutableGlobalContext>() {
-            @Override
-            public void invoke(MutableGlobalContext value) throws Exception {
-                value.registerPart(config, Config.class);
-            }
-        }, classpath);
+        Injector.init(ctx ->ctx.registerPart(config, Config.class), classpath);
 
         start();
+
+        // Start resource monitoring...
+        NLS.startMonitoring(classpath);
     }
 
     /**

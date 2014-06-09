@@ -139,4 +139,16 @@ public interface GlobalContext {
     @Nonnull
     <P> Supplier<Optional<P>> getFactory(Class<P> type, String factoryName);
 
+    /**
+     * Registers a new part for the given name and lookup classes.
+     * <p>
+     *     In contrast to {@link sirius.kernel.di.MutableGlobalContext#registerPart(String, Object, Class[])} this
+     *     method may replace already existing implementations
+     * </p>
+     * @param uniqueName the unique name of the part
+     * @param part the part itself
+     * @param partInterface the lookup class for which the part is registered
+     */
+    void registerDynamicPart(@Nonnull String uniqueName,@Nonnull  Object part, @Nonnull Class<?> partInterface);
+
 }

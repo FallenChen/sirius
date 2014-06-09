@@ -12,6 +12,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import sirius.kernel.commons.Reflection;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.references.ReflectionValueReference;
 import sirius.search.annotations.Indexed;
@@ -132,7 +133,7 @@ public class EntityDescriptor {
     private boolean hasSetter(Field field) {
         try {
             field.getDeclaringClass()
-                 .getMethod("set" + ReflectionValueReference.toFirstUpper(field.getName()), field.getType());
+                 .getMethod("set" + Reflection.toFirstUpper(field.getName()), field.getType());
             return true;
         } catch (NoSuchMethodException e) {
             return false;

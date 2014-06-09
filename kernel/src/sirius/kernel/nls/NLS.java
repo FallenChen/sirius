@@ -19,6 +19,8 @@ import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.AdvancedDateParser;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Value;
+import sirius.kernel.di.Injector;
+import sirius.kernel.timer.TimerService;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -69,7 +71,7 @@ public class NLS {
      * Returns the currently active language as two-letter code.
      *
      * @return a two-letter code of the currently active language, as defined in
-     *         {@link sirius.kernel.async.CallContext#getLang()}
+     * {@link sirius.kernel.async.CallContext#getLang()}
      */
     public static String getCurrentLang() {
         return CallContext.getCurrent().getLang();
@@ -155,6 +157,20 @@ public class NLS {
     }
 
     /**
+     * Start the monitoring of resources in development environments.
+     *
+     * @param classpath the classpath used to resolve .properties files
+     */
+    public static void startMonitoring(Classpath classpath) {
+        TimerService timer = Injector.context().getPart(TimerService.class);
+        for (String name : blubb.getLoadedResourceBundles()) {
+            timer.addWatchedResource(classpath.getLoader().getResource(name), () -> {
+                blubb.reloadBundle(name);
+            });
+        }
+    }
+
+    /**
      * Provides direct access to the translation engine to supply new properties or inspect current ones.
      *
      * @return the internally used translation engine
@@ -172,7 +188,7 @@ public class NLS {
      *
      * @param property the key for which a translation is requested
      * @return a translated string for the current language (or for the default language if no translation was found)
-     *         or the property itself if no translation for neither of both languages is available.
+     * or the property itself if no translation for neither of both languages is available.
      */
     public static String get(String property) {
         return blubb.get(property, null, true).translate(getCurrentLang());
@@ -202,7 +218,7 @@ public class NLS {
      * @param property the key for which a translation is requested
      * @param lang     a two-letter language code for which the translation is requested
      * @return a translated text in the requested language (or in the default language if no translation for the given
-     *         language was found). Returns <tt>null</tt> if no translation for this property exists at all.
+     * language was found). Returns <tt>null</tt> if no translation for this property exists at all.
      */
     public static String getIfExists(String property, String lang) {
         Translation translation = blubb.get(property, null, false);
@@ -220,8 +236,8 @@ public class NLS {
      * @param fallback the fallback key for which a translation is requested
      * @param lang     a two-letter language code for which the translation is requested
      * @return a translated text in the requested language for the given property, or for the given fallback. If either
-     *         of both doesn't provide a translation for the given language, the translation for the default
-     *         language is returned. If neither of both keys exist <tt>property</tt> will be returned.
+     * of both doesn't provide a translation for the given language, the translation for the default
+     * language is returned. If neither of both keys exist <tt>property</tt> will be returned.
      */
     public static String safeGet(String property, String fallback, String lang) {
         return blubb.get(property, fallback, true).translate(lang);
@@ -234,8 +250,8 @@ public class NLS {
      * @param property the primary key for which a translation is requested
      * @param fallback the fallback key for which a translation is requested
      * @return a translated text in the current language for the given property, or for the given fallback. If either
-     *         of both doesn't provide a translation for the given language, the translation for the default
-     *         language is returned. If neither of both keys exist <tt>property</tt> will be returned.
+     * of both doesn't provide a translation for the given language, the translation for the default
+     * language is returned. If neither of both keys exist <tt>property</tt> will be returned.
      */
     public static String safeGet(String property, String fallback) {
         return blubb.get(property, fallback, true).translate(getCurrentLang());
@@ -315,7 +331,7 @@ public class NLS {
      *
      * @param day the weekday to be translated. Use constants {@link Calendar#MONDAY} etc.
      * @return the name of the given weekday in the current language
-     *         or <code>""</code> if an invalid index was given
+     * or <code>""</code> if an invalid index was given
      */
     public static String getDayOfWeek(int day) {
         switch (day) {
@@ -342,7 +358,7 @@ public class NLS {
      *
      * @param day the weekday to be translated. Use constants {@link Calendar#MONDAY} etc.
      * @return returns the first two letters of the name
-     *         or <code>""</code> if the given index was invalid.
+     * or <code>""</code> if the given index was invalid.
      */
     public static String getDayOfWeekShort(int day) {
         return Value.of(getDayOfWeek(day)).substring(0, 2);
@@ -354,7 +370,7 @@ public class NLS {
      * @param month the month which name is requested. Use constants like {@link Calendar#JANUARY}, since the
      *              developers of this API chose quite brain-dead indices (January is 0....).
      * @return the name of the given month translated in the current language
-     *         or <code>""</code> if an invalid index was given
+     * or <code>""</code> if an invalid index was given
      */
     public static String getMonthName(int month) {
         switch (month) {
@@ -391,7 +407,7 @@ public class NLS {
      *
      * @param month the month to be translated. Use constants {@link Calendar#JANUARY} etc.
      * @return returns the first three letters of the name
-     *         or <code>""</code> if the given index was invalid.
+     * or <code>""</code> if the given index was invalid.
      */
     public static String getMonthNameShort(int month) {
         String result = getMonthName(month);
@@ -455,7 +471,7 @@ public class NLS {
      * Returns the decimal format symbols for the current language
      *
      * @return the decimal format symbols like thousands separator or decimal separator
-     *         as described by the current language
+     * as described by the current language
      */
     public static DecimalFormatSymbols getDecimalFormatSymbols() {
         return getDecimalFormatSymbols(getCurrentLang());
@@ -466,7 +482,7 @@ public class NLS {
      *
      * @param lang the two-letter code of the language for which the decimal format symbols should be returned
      * @return the decimal format symbols like thousands separator or decimal separator
-     *         as described by the given language
+     * as described by the given language
      */
     public static DecimalFormatSymbols getDecimalFormatSymbols(String lang) {
         DecimalFormatSymbols sym = new DecimalFormatSymbols();
@@ -480,7 +496,7 @@ public class NLS {
      *
      * @param data the input data which should be converted to string
      * @return string representation of the given object, which can be parsed by
-     *         {@link #parseMachineString(Class, String)} independently of the language settings
+     * {@link #parseMachineString(Class, String)} independently of the language settings
      */
     public static String toMachineString(Object data) {
         if (data == null) {
@@ -549,7 +565,7 @@ public class NLS {
      *
      * @param number the number to be converted
      * @return a string representation of the given number using a dot as decimal separator
-     *         independent of the current language settings
+     * independent of the current language settings
      */
     public static String toEnglishRepresentation(Number number) {
         return new DecimalFormat("#.##", DecimalFormatSymbols.getInstance(Locale.ENGLISH)).format(number);
@@ -785,8 +801,8 @@ public class NLS {
                 return (V) format.parse(value);
             } catch (ParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                           .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                           .format(), e);
+                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
+                                                                             .format(), e);
             }
         }
         if (Time.class.equals(clazz)) {
@@ -795,8 +811,8 @@ public class NLS {
                 return (V) new Time(format.parse(value).getTime());
             } catch (ParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                           .set("format", "HH:mm:ss")
-                                                           .format(), e);
+                                                                             .set("format", "HH:mm:ss")
+                                                                             .format(), e);
             }
         }
         if (DateTime.class.equals(clazz)) {
@@ -805,8 +821,8 @@ public class NLS {
                 return (V) new DateTime(format.parse(value));
             } catch (ParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                           .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                           .format(), e);
+                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
+                                                                             .format(), e);
             }
         }
         if (LocalDate.class.equals(clazz)) {
@@ -815,8 +831,8 @@ public class NLS {
                 return (V) new LocalDate(format.parse(value));
             } catch (ParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                           .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                           .format(), e);
+                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
+                                                                             .format(), e);
             }
         }
         if (DateMidnight.class.equals(clazz)) {
@@ -825,8 +841,8 @@ public class NLS {
                 return (V) new DateMidnight(format.parse(value));
             } catch (ParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                           .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                           .format(), e);
+                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
+                                                                             .format(), e);
             }
         }
         if (LocalTime.class.equals(clazz)) {
@@ -835,8 +851,8 @@ public class NLS {
                 return (V) new LocalTime(format.parse(value));
             } catch (ParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                           .set("format", "HH:mm:ss")
-                                                           .format(), e);
+                                                                             .set("format", "HH:mm:ss")
+                                                                             .format(), e);
             }
         }
         if (Calendar.class.equals(clazz)) {
@@ -845,8 +861,8 @@ public class NLS {
                 return (V) format.parse(value);
             } catch (ParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                           .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                           .format(), e);
+                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
+                                                                             .format(), e);
             }
         }
         throw new IllegalArgumentException(fmtr("NLS.parseError").set("type", clazz).format());
@@ -1040,7 +1056,7 @@ public class NLS {
      * @param includeSeconds determines whether to include seconds or to ignore everything below minutes
      * @param includeMillis  determines whether to include milli seconds or to ignore everything below seconds
      * @return a string representation of the given duration in days, hours, minutes and,
-     *         if enabled, seconds and milliseconds
+     * if enabled, seconds and milliseconds
      */
     public static String convertDuration(long duration, boolean includeSeconds, boolean includeMillis) {
         StringBuilder result = new StringBuilder();
@@ -1131,7 +1147,7 @@ public class NLS {
      *
      * @param number the number to be rounded
      * @return a string representation using the current languages decimal format.
-     *         Rounds fractional parts less or equal to <code>0.00001</code>
+     * Rounds fractional parts less or equal to <code>0.00001</code>
      */
     public static String smartRound(double number) {
         if (Math.abs(Math.floor(number) - number) > 0.000001D) {
@@ -1150,7 +1166,7 @@ public class NLS {
      *
      * @param size the size to format in bytes
      * @return an english representation (using dot as decimal separator) along with one of the known abbreviations:
-     *         <code>Byes, KB, MB, GB, TB, PB</code>.
+     * <code>Byes, KB, MB, GB, TB, PB</code>.
      */
     public static String formatSize(long size) {
         int index = 0;

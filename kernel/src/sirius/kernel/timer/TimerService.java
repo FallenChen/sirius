@@ -1,5 +1,6 @@
 package sirius.kernel.timer;
 
+import com.google.common.collect.Lists;
 import org.joda.time.DateTime;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.Async;
@@ -11,7 +12,12 @@ import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
 
+import javax.annotation.Nonnull;
+import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Date;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -65,17 +71,16 @@ public class TimerService implements Lifecycle {
         public void run() {
             try {
                 runTenSecondTimers();
-                if (TimeUnit.MINUTES
-                            .convert(System.currentTimeMillis() - lastOneMinuteExecution, TimeUnit.MILLISECONDS) >= 1) {
+                if (TimeUnit.MINUTES.convert(System.currentTimeMillis() - lastOneMinuteExecution,
+                                             TimeUnit.MILLISECONDS) >= 1) {
                     runOneMinuteTimers();
                 }
-                if (TimeUnit.MINUTES
-                            .convert(System.currentTimeMillis() - lastTenMinutesExecution,
-                                     TimeUnit.MILLISECONDS) >= 10) {
+                if (TimeUnit.MINUTES.convert(System.currentTimeMillis() - lastTenMinutesExecution,
+                                             TimeUnit.MILLISECONDS) >= 10) {
                     runTenMinuteTimers();
                 }
-                if (TimeUnit.MINUTES
-                            .convert(System.currentTimeMillis() - lastHourExecution, TimeUnit.MILLISECONDS) >= 60) {
+                if (TimeUnit.MINUTES.convert(System.currentTimeMillis() - lastHourExecution,
+                                             TimeUnit.MILLISECONDS) >= 60) {
                     runOneHourTimers();
                     runEveryDayTimers(false);
                 }
@@ -86,11 +91,36 @@ public class TimerService implements Lifecycle {
 
     }
 
+    /*
+     * Used to monitor a resource for changes
+     */
+    private class WatchedResource {
+        private File file;
+        private long lastModified;
+        private Runnable callback;
+    }
+
+
+    /*
+     * Contains the relative paths of all loaded files
+     */
+    private List<WatchedResource> loadedFiles = Lists.newCopyOnWriteArrayList();
+
+    /*
+     * Used to frequently check loaded properties when running in DEVELOP mode.
+     */
+    private Timer reloadTimer;
+
+    /*
+     * Determines the interval which files are checked for update
+     */
+    private static final int RELOAD_INTERVAL = 1000;
+
     /**
      * Returns the timestamp of the last execution of the 10 second timer.
      *
      * @return a textual representation of the last execution of the ten seconds timer. Returns "-" if the timer didn't
-     *         run yet.
+     * run yet.
      */
     public String getLastTenSecondsExecution() {
         if (lastTenSecondsExecution == 0) {
@@ -103,7 +133,7 @@ public class TimerService implements Lifecycle {
      * Returns the timestamp of the last execution of the one minute timer.
      *
      * @return a textual representation of the last execution of the one minute timer. Returns "-" if the timer didn't
-     *         run yet.
+     * run yet.
      */
     public String getLastOneMinuteExecution() {
         if (lastOneMinuteExecution == 0) {
@@ -116,7 +146,7 @@ public class TimerService implements Lifecycle {
      * Returns the timestamp of the last execution of the ten minutes timer.
      *
      * @return a textual representation of the last execution of the ten minutes timer. Returns "-" if the timer didn't
-     *         run yet.
+     * run yet.
      */
     public String getLastTenMinutesExecution() {
         if (lastTenMinutesExecution == 0) {
@@ -129,7 +159,7 @@ public class TimerService implements Lifecycle {
      * Returns the timestamp of the last execution of the one hour timer.
      *
      * @return a textual representation of the last execution of the one hour timer. Returns "-" if the timer didn't
-     *         run yet.
+     * run yet.
      */
     public String getLastHourExecution() {
         if (lastHourExecution == 0) {
@@ -157,6 +187,33 @@ public class TimerService implements Lifecycle {
         } catch (Throwable t) {
             Exceptions.handle(LOG, t);
         }
+
+        if (Sirius.isDev()) {
+            if (reloadTimer == null) {
+                reloadTimer = new Timer(true);
+                reloadTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        Thread.currentThread().setName("Resource-Watch");
+                        for (WatchedResource res : loadedFiles) {
+                            long lastModified = res.file.lastModified();
+                            if (lastModified > res.lastModified) {
+                                res.lastModified = res.file.lastModified();
+                                LOG.INFO("Reloading: %s", res.file.toString());
+                                try {
+                                    res.callback.run();
+                                } catch (Exception e) {
+                                    Exceptions.handle()
+                                              .withSystemErrorMessage("Error reloading %s: %s (%s)",
+                                                                      res.file.toString())
+                                              .handle();
+                                }
+                            }
+                        }
+                    }
+                }, RELOAD_INTERVAL, RELOAD_INTERVAL);
+            }
+        }
     }
 
     @Override
@@ -178,6 +235,32 @@ public class TimerService implements Lifecycle {
     @Override
     public void awaitTermination() {
         // Not necessary
+    }
+
+    /**
+     * Adds the given file to the list of watched resources in DEVELOP mode ({@link sirius.kernel.Sirius#isDev()}.
+     * <p>
+     * This is used to reload files like properties in development environments. In production systems, no
+     * reloading will be performed.
+     * </p>
+     *
+     * @param url      the file to watch
+     * @param callback the callback to invoke once the file has changed
+     */
+    public void addWatchedResource(@Nonnull URL url, @Nonnull Runnable callback) {
+        try {
+            WatchedResource res = new WatchedResource();
+            File file = new File(url.toURI());
+            res.file = file;
+            res.callback = callback;
+            res.lastModified = file.lastModified();
+            loadedFiles.add(res);
+        } catch (URISyntaxException e) {
+            Exceptions.handle()
+                      .withSystemErrorMessage("Cannot monitor URL '%s' for changes: %s (%s)", url)
+                      .to(LOG)
+                      .handle();
+        }
     }
 
     @Override

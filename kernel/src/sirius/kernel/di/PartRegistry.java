@@ -8,6 +8,7 @@
 
 package sirius.kernel.di;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
@@ -39,8 +40,8 @@ class PartRegistry implements MutableGlobalContext {
      * be contained in parts. This is just a lookup map if searched by unique
      * name.
      */
-    private final Map<Class<?>, Map<String, Object>> namedParts = Collections.synchronizedMap(new HashMap<>());
-    private final Map<Class<?>, Map<String, Supplier<Optional<?>>>> factories = Collections.synchronizedMap(new HashMap<>());
+    private final Map<Class<?>, Map<String, Object>> namedParts = Maps.newConcurrentMap();
+    private final Map<Class<?>, Map<String, Supplier<Optional<?>>>> factories = Maps.newConcurrentMap();
 
     @SuppressWarnings("unchecked")
     @Override
@@ -114,18 +115,19 @@ class PartRegistry implements MutableGlobalContext {
         for (Field field : clazz.getDeclaredFields()) {
             if ((!Modifier.isFinal(field.getModifiers())) && (object != null || Modifier.isStatic(field.getModifiers()))) {
                 field.setAccessible(true);
-                getParts(FieldAnnotationProcessor.class).stream().filter(p -> field.isAnnotationPresent(p.getTrigger())).forEach(p -> {
-                    try {
-                        p.handle(this, object, field);
-                    } catch (Throwable e) {
-                        Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
-                                          p.getTrigger().getName(),
-                                          field.getDeclaringClass().getName(),
-                                          field.getName(),
-                                          e.getMessage(),
-                                          e.getClass().getName());
-                    }
-                });
+                getParts(FieldAnnotationProcessor.class).stream().filter(p -> field.isAnnotationPresent(p.getTrigger())).forEach(
+                        p -> {
+                            try {
+                                p.handle(this, object, field);
+                            } catch (Throwable e) {
+                                Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
+                                                  p.getTrigger().getName(),
+                                                  field.getDeclaringClass().getName(),
+                                                  field.getName(),
+                                                  e.getMessage(),
+                                                  e.getClass().getName());
+                            }
+                        });
             }
         }
     }
@@ -145,6 +147,22 @@ class PartRegistry implements MutableGlobalContext {
             return null;
         }
         return (P) partsOfClass.get(uniqueName);
+    }
+
+    @Override
+    public void registerDynamicPart(String uniqueName, Object part, Class<?> lookupClass) {
+        Map<String, Object> partsOfClass = namedParts.get(lookupClass);
+        if (partsOfClass != null) {
+            Object originalPart = partsOfClass.get(uniqueName);
+            if (originalPart != null) {
+                partsOfClass.remove(uniqueName);
+                Collection<Object> specificParts = parts.getUnderlyingMap().get(lookupClass);
+                if (specificParts != null) {
+                    specificParts.remove(originalPart);
+                }
+            }
+        }
+        registerPart(uniqueName, part, lookupClass);
     }
 
     @Override

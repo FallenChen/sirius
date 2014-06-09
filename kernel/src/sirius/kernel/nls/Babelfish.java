@@ -8,9 +8,9 @@
 
 package sirius.kernel.nls;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import sirius.kernel.Classpath;
-import sirius.kernel.Sirius;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.ValueHolder;
@@ -22,7 +22,6 @@ import java.io.FileOutputStream;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -55,21 +54,6 @@ public class Babelfish {
      * Contains all known translations
      */
     private Map<String, Translation> translationMap = Maps.newTreeMap();
-
-    /*
-     * Contains the relative paths of all loaded files
-     */
-    private Map<String, Long> loadedFiles = Maps.newConcurrentMap();
-
-    /*
-     * Used to frequently check loaded properties when running in DEVELOP mode.
-     */
-    private Timer reloadTimer;
-
-    /*
-     * Determines the interval which files are checked for update
-     */
-    private static final int RELOAD_INTERVAL = 1000;
 
     /**
      * Enumerates all translations matching the given filter.
@@ -260,6 +244,21 @@ public class Babelfish {
      */
     private static final Pattern PROPERTIES_FILE = Pattern.compile("(.*?)_([a-z]{2}).properties");
 
+    /*
+     * Contains a list of all loaded resource bundles. Once the framework is booted, this is passed to
+     * the TimerService.addWatchedResource to reload changes from the development environment.
+     */
+    private List<String> loadedResourceBundles = Lists.newArrayList();
+
+    /**
+     * Returns a list of all loaded resource bundles.
+     *
+     * @return a list of all loaded resource bundles (.properties files)
+     */
+    public List<String> getLoadedResourceBundles() {
+        return loadedResourceBundles;
+    }
+
     /**
      * Initializes the translation engine by using the given classpath.
      * <p>
@@ -273,38 +272,20 @@ public class Babelfish {
             LOG.FINE("Loading: %s", value.group());
             String baseName = value.group(1);
             String lang = value.group(2);
-            importProperties(value.group(), baseName, lang, getLastModified(classpath, value.group()));
+            importProperties(value.group(), baseName, lang);
+            loadedResourceBundles.add(value.group());
         });
-
-        if (Sirius.isDev()) {
-            if (reloadTimer == null) {
-                reloadTimer = new Timer(true);
-                reloadTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        Thread.currentThread().setName("Babelfish-ResourceWatch");
-                        for (Map.Entry<String, Long> entry : loadedFiles.entrySet()) {
-                            long lastModified = getLastModified(classpath, entry.getKey());
-                            if (lastModified > entry.getValue()) {
-                                LOG.INFO("Reloading: %s", entry.getKey());
-                                Matcher m = PROPERTIES_FILE.matcher(entry.getKey());
-                                if (m.matches()) {
-                                    importProperties(entry.getKey(), m.group(1), m.group(2), lastModified);
-                                }
-                            }
-                        }
-                    }
-                }, RELOAD_INTERVAL, RELOAD_INTERVAL);
-            }
-        }
     }
 
-    private long getLastModified(Classpath classpath, String relativePath) {
-        try {
-            return new File(classpath.getLoader().getResource(relativePath).toURI()).lastModified();
-        } catch (Throwable e) {
-            return 0;
-        }
+    /*
+     * Reloads the given properties file
+     */
+    protected void reloadBundle(String name) {
+        LOG.FINE("Reloading: %s", name);
+        Matcher m = PROPERTIES_FILE.matcher(name);
+        String baseName = m.group(1);
+        String lang = m.group(2);
+        importProperties(name, baseName, lang);
     }
 
     /*
@@ -322,7 +303,7 @@ public class Babelfish {
     private static ResourceBundle.Control CONTROL = new NonCachingControl();
 
 
-    private void importProperties(String relativePath, String baseName, String lang, long lastModified) {
+    private void importProperties(String relativePath, String baseName, String lang) {
         ResourceBundle bundle = ResourceBundle.getBundle(baseName + "_" + lang, CONTROL);
         translationsWriteLock.lock();
         try {
@@ -335,7 +316,6 @@ public class Babelfish {
         } finally {
             translationsWriteLock.unlock();
         }
-        loadedFiles.put(relativePath, lastModified);
     }
 
     private static void importProperty(Map<String, Translation> modifyableTranslationsCopy,

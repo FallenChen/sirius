@@ -12,7 +12,6 @@ import org.apache.commons.collections.ExtendedProperties;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.resource.Resource;
 import org.apache.velocity.runtime.resource.loader.ResourceLoader;
-import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.health.Exceptions;
 
@@ -40,7 +39,13 @@ public class VelocityResourceLoader extends ResourceLoader {
         return getLastModified(resource.getName());
     }
 
-    private URL resolve(String name) {
+    /**
+     * Resolves the given relative path into an URL.
+     *
+     * @param name the file to resolve
+     * @return an URL to the file or <tt>null</tt> if no such file was found
+     */
+    public URL resolve(String name) {
         if (name == null) {
             return null;
         }
@@ -58,7 +63,7 @@ public class VelocityResourceLoader extends ResourceLoader {
      *
      * @param name name of the resource to check
      * @return the last modification time in milliseconds. If the resource does not exist,
-     *         <code>System.currentTimeMillis()</code> will be returned
+     * <code>System.currentTimeMillis()</code> will be returned
      */
     public long getLastModified(String name) {
         try {
