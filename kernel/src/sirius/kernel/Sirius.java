@@ -566,12 +566,12 @@ public class Sirius {
     private static void setupEncoding() {
         LOG.INFO("Setting " + Charsets.UTF_8.name() + " as default encoding (file.encoding)");
         System.setProperty("file.encoding", Charsets.UTF_8.name());
-        LOG.INFO("Setting " + Charsets.ISO_8859_1.name() + " as default mime encoding (mail.mime.charset)");
+        LOG.INFO("Setting " + Charsets.UTF_8.name() + " as default mime encoding (mail.mime.charset)");
         System.setProperty("mail.mime.charset", Charsets.UTF_8.name());
     }
 
     /*
-     * By default java infinitely caches all DNS entries. WIll be changed to 10 seconds...
+     * By default java infinitely caches all DNS entries. Will be changed to 10 seconds...
      */
     private static void setupDNSCache() {
         LOG.INFO("Setting DNS-Cache to 10 seconds...");
