@@ -24,7 +24,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.Callable;
 
 /**
  * Implementation of <tt>Cache</tt> used by the <tt>CacheManager</tt>
@@ -191,57 +190,56 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
     }
 
     @Override
-    public V get(final K key,final ValueComputer<K, V> computer) {
+    public V get(final K key, final ValueComputer<K, V> computer) {
         try {
             if (key == null) {
                 return null;
             }
+            // Caches are lazily initialized so that the system config is present once they are accessed
             if (data == null) {
                 init();
             }
+
             long now = System.currentTimeMillis();
-            CacheEntry<K, V> entry = null;
-            if (computer != null) {
-                entry = data.get(key, new Callable<CacheEntry<K, V>>() {
-                    @Override
-                    public CacheEntry<K, V> call() throws Exception {
-                        misses.inc();
-                        V value = computer.compute(key);
-                        return new CacheEntry<K, V>(key,
-                                                    value,
-                                                    timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
-                                                    verificationInterval + System.currentTimeMillis());
+            CacheEntry<K, V> entry = data.getIfPresent(key);
+
+            if (entry != null) {
+                // Verify age of entry
+                if (entry.getMaxAge() > 0 && entry.getMaxAge() < now) {
+                    data.invalidate(key);
+                    entry = null;
+                    // Apply verifier if present
+                } else if (verifier != null && entry != null && verificationInterval > 0 && entry.getNextVerification() < now) {
+                    if (!verifier.valid(entry.getValue())) {
+                        data.invalidate(key);
+                        entry = null;
                     }
-                });
-            } else {
-                entry = data.getIfPresent(key);
+                }
             }
-            if (entry != null && entry.getMaxAge() > 0 && entry.getMaxAge() < now) {
-                data.invalidate(key);
-                entry = null;
+
+            if (entry != null) {
+                // Entry was found (and verified) - increment statistics
+                hits.inc();
+                entry.getHits().inc();
+            } else {
+                // No entry was found, try to compute one if possible
+                misses.inc();
                 if (computer != null) {
                     V value = computer.compute(key);
                     entry = new CacheEntry<K, V>(key,
                                                  value,
                                                  timeToLive > 0 ? timeToLive + System.currentTimeMillis() : 0,
                                                  verificationInterval + System.currentTimeMillis());
+                    data.put(key, entry);
                 }
             }
-            if (verifier != null && entry != null && verificationInterval > 0 && entry.getNextVerification() < now) {
-                if (!verifier.valid(entry.getValue())) {
-                    entry = null;
-                } else {
-                    entry.setNextVerification(verificationInterval + now);
-                }
-            }
+
             if (entry != null) {
-                hits.inc();
-                entry.getHits().inc();
                 return entry.getValue();
             } else {
-                misses.inc();
                 return null;
             }
+
         } catch (Throwable e) {
             throw Exceptions.handle(CacheManager.LOG, e);
         }
@@ -283,7 +281,7 @@ class ManagedCache<K, V> implements Cache<K, V>, RemovalListener<Object, Object>
         if (data == null) {
             init();
         }
-        return new ArrayList<CacheEntry<K, V>>(data.asMap().values());
+        return new ArrayList<>(data.asMap().values());
     }
 
     @Override
