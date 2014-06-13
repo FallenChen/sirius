@@ -9,6 +9,7 @@
 package sirius.kernel.health;
 
 
+import com.google.common.collect.Lists;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import sirius.kernel.Sirius;
@@ -17,6 +18,9 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.di.PartCollection;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.nls.NLS;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * The logging facade used by the system.
@@ -47,6 +51,7 @@ import sirius.kernel.nls.NLS;
 public class Log {
 
     private final Logger logger;
+    private static final List<Log> all = Lists.newCopyOnWriteArrayList();
 
     @Parts(LogTap.class)
     private static PartCollection<LogTap> taps;
@@ -62,7 +67,91 @@ public class Log {
      * @return a new logger logging with the given name.
      */
     public static Log get(String name) {
-        return new Log(Logger.getLogger(name));
+        Log result = new Log(Logger.getLogger(name));
+        all.add(result);
+        return result;
+    }
+
+    /**
+     * Returns a list of all known loggers.
+     *
+     * @return a list of all known loggers
+     */
+    public static List<Log> getAllLoggers() {
+        return Collections.unmodifiableList(all);
+    }
+
+    /**
+     * Helper method the change the log-level for a given logger.
+     * <p>
+     * By default the system configuration is used to set the leg level (logging.[name]=LEVEL). Also the "logger"
+     * command in the console can be used to change the log level at runtime.
+     * </p>
+     *
+     * @param logger the name of the logger to change
+     * @param level  the desired log level
+     */
+    public static void setLevel(String logger, Level level) {
+        // Setup log4j
+        Logger.getLogger(logger).setLevel(level);
+
+        // Setup java.util.logging
+        java.util.logging.Logger.getLogger(logger).setLevel(convertLog4jLevel(level));
+    }
+
+    /**
+     * Converts a given java.util.logging.Level to a log4j level.
+     *
+     * @param juliLevel the java.util.logging level
+     * @return the converted equivalent for log4j
+     */
+    public static Level convertJuliLevel(java.util.logging.Level juliLevel) {
+        if (juliLevel.equals(java.util.logging.Level.FINEST)) {
+            return Level.TRACE;
+        } else if (juliLevel.equals(java.util.logging.Level.FINER)) {
+            return Level.DEBUG;
+        } else if (juliLevel.equals(java.util.logging.Level.FINE)) {
+            return Level.DEBUG;
+        } else if (juliLevel.equals(java.util.logging.Level.INFO)) {
+            return Level.INFO;
+        } else if (juliLevel.equals(java.util.logging.Level.WARNING)) {
+            return Level.WARN;
+        } else if (juliLevel.equals(java.util.logging.Level.SEVERE)) {
+            return Level.ERROR;
+        } else if (juliLevel.equals(java.util.logging.Level.ALL)) {
+            return Level.ALL;
+        } else if (juliLevel.equals(java.util.logging.Level.OFF)) {
+            return Level.OFF;
+        }
+        return Level.DEBUG;
+
+    }
+
+    /**
+     * Converts a given log4j to a java.util.logging.Level level.
+     *
+     * @param log4jLevel the log4j level
+     * @return the converted equivalent java.util.logging
+     */
+    public static java.util.logging.Level convertLog4jLevel(Level log4jLevel) {
+        if (log4jLevel.equals(Level.TRACE)) {
+            return java.util.logging.Level.FINEST;
+        } else if (log4jLevel.equals(Level.DEBUG)) {
+            return java.util.logging.Level.FINER;
+        } else if (log4jLevel.equals(Level.INFO)) {
+            return java.util.logging.Level.INFO;
+        } else if (log4jLevel.equals(Level.WARN)) {
+            return java.util.logging.Level.WARNING;
+        } else if (log4jLevel.equals(Level.ERROR)) {
+            return java.util.logging.Level.SEVERE;
+        } else if (log4jLevel.equals(Level.FATAL)) {
+            return java.util.logging.Level.SEVERE;
+        } else if (log4jLevel.equals(Level.ALL)) {
+            return java.util.logging.Level.ALL;
+        } else if (log4jLevel.equals(Level.OFF)) {
+            return java.util.logging.Level.OFF;
+        }
+        return java.util.logging.Level.FINE;
     }
 
     /*

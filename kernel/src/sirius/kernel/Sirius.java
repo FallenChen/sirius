@@ -112,9 +112,9 @@ public class Sirius {
      */
     private static void setupLogLevels() {
         if (Sirius.isDev()) {
-            setLevel("debug", Level.ALL);
+            Log.setLevel("debug", Level.ALL);
         } else {
-            setLevel("debug", Level.OFF);
+            Log.setLevel("debug", Level.OFF);
         }
         if (!config.hasPath("logging")) {
             return;
@@ -123,7 +123,7 @@ public class Sirius {
         Config logging = config.getConfig("logging");
         for (Map.Entry<String, com.typesafe.config.ConfigValue> entry : logging.entrySet()) {
             LOG.INFO("* Setting %s to: %s", entry.getKey(), logging.getString(entry.getKey()));
-            setLevel(entry.getKey(), Level.toLevel(logging.getString(entry.getKey())));
+            Log.setLevel(entry.getKey(), Level.toLevel(logging.getString(entry.getKey())));
         }
     }
 
@@ -155,14 +155,6 @@ public class Sirius {
         LOG.INFO("Enabled %d of %d frameworks...", numEnabled, total);
 
         frameworks = frameworkStatus;
-    }
-
-    private static void setLevel(String logger, Level level) {
-        // Setup log4j
-        Logger.getLogger(logger).setLevel(level);
-
-        // Setup java.util.health
-        java.util.logging.Logger.getLogger(logger).setLevel(convertLog4jLevel(level));
     }
 
     /*
@@ -485,7 +477,7 @@ public class Sirius {
             Logger.getRootLogger().addAppender(fa);
         }
 
-        // Redirect java.utils.health to log4j...
+        // Redirect java.utils.logging to log4j...
         java.util.logging.Logger rootLogger = LogManager.getLogManager().getLogger("");
         // remove old handlers
         for (Handler handler : rootLogger.getHandlers()) {
@@ -499,7 +491,7 @@ public class Sirius {
             @Override
             public void publish(LogRecord record) {
                 repository.getLogger(record.getLoggerName())
-                          .log(convertJuliLevel(record.getLevel()),
+                          .log(Log.convertJuliLevel(record.getLevel()),
                                formatter.formatMessage(record),
                                record.getThrown());
             }
@@ -515,49 +507,6 @@ public class Sirius {
         handler.setLevel(java.util.logging.Level.ALL);
         rootLogger.addHandler(handler);
         rootLogger.setLevel(java.util.logging.Level.INFO);
-    }
-
-    public static Level convertJuliLevel(java.util.logging.Level juliLevel) {
-        if (juliLevel.equals(java.util.logging.Level.FINEST)) {
-            return Level.TRACE;
-        } else if (juliLevel.equals(java.util.logging.Level.FINER)) {
-            return Level.DEBUG;
-        } else if (juliLevel.equals(java.util.logging.Level.FINE)) {
-            return Level.DEBUG;
-        } else if (juliLevel.equals(java.util.logging.Level.INFO)) {
-            return Level.INFO;
-        } else if (juliLevel.equals(java.util.logging.Level.WARNING)) {
-            return Level.WARN;
-        } else if (juliLevel.equals(java.util.logging.Level.SEVERE)) {
-            return Level.ERROR;
-        } else if (juliLevel.equals(java.util.logging.Level.ALL)) {
-            return Level.ALL;
-        } else if (juliLevel.equals(java.util.logging.Level.OFF)) {
-            return Level.OFF;
-        }
-        return Level.DEBUG;
-
-    }
-
-    public static java.util.logging.Level convertLog4jLevel(Level log4jLevel) {
-        if (log4jLevel.equals(Level.TRACE)) {
-            return java.util.logging.Level.FINEST;
-        } else if (log4jLevel.equals(Level.DEBUG)) {
-            return java.util.logging.Level.FINER;
-        } else if (log4jLevel.equals(Level.INFO)) {
-            return java.util.logging.Level.INFO;
-        } else if (log4jLevel.equals(Level.WARN)) {
-            return java.util.logging.Level.WARNING;
-        } else if (log4jLevel.equals(Level.ERROR)) {
-            return java.util.logging.Level.SEVERE;
-        } else if (log4jLevel.equals(Level.FATAL)) {
-            return java.util.logging.Level.SEVERE;
-        } else if (log4jLevel.equals(Level.ALL)) {
-            return java.util.logging.Level.ALL;
-        } else if (log4jLevel.equals(Level.OFF)) {
-            return java.util.logging.Level.OFF;
-        }
-        return java.util.logging.Level.FINE;
     }
 
     /*
