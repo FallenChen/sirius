@@ -173,7 +173,7 @@ public class Query<E extends Entity> {
      */
     public Query<E> containsAny(String field, String commaSeparatedValues) {
         if (Strings.isFilled(commaSeparatedValues)) {
-            String[] values = commaSeparatedValues.split(",");
+            String[] values = commaSeparatedValues.split("[,\\|]");
             List<Constraint> constraints = Lists.newArrayList();
             for (String val : values) {
                 val = val.trim();
