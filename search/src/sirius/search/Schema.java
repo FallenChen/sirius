@@ -172,15 +172,15 @@ public class Schema {
         XContentBuilder builder = XContentFactory.jsonBuilder().startObject().startObject("index");
         builder.field("number_of_shards",
                       Sirius.getConfig()
-                            .hasPath("index.settings." + ed.getIndex() + ".numberOfShards") ? Sirius.getConfig()
-                                                                                                    .getInt("index.settings." + ed
-                                                                                                            .getIndex() + ".numberOfShards") : "index.settings.default.numberOfShards"
+                            .getInt(Sirius.getConfig()
+                                          .hasPath("index.settings." + ed.getIndex() + ".numberOfShards") ? "index.settings." + ed
+                                    .getIndex() + ".numberOfShards" : "index.settings.default.numberOfShards")
         );
         builder.field("number_of_replicas",
                       Sirius.getConfig()
-                            .hasPath("index.settings." + ed.getIndex() + ".numberOfReplicas") ? Sirius.getConfig()
-                                                                                                      .getInt("index.settings." + ed
-                                                                                                              .getIndex() + ".numberOfReplicas") : "index.settings.default.numberOfReplicas"
+                            .getInt(Sirius.getConfig()
+                                          .hasPath("index.settings." + ed.getIndex() + ".numberOfReplicas") ? "index.settings." + ed
+                                    .getIndex() + ".numberOfReplicas" : "index.settings.default.numberOfReplicas")
         );
         return builder.endObject().endObject();
     }
