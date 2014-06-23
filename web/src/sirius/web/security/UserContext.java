@@ -6,13 +6,19 @@
  * http://www.scireum.de - info@scireum.de
  */
 
-package sirius.web.controller;
+package sirius.web.security;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.di.GlobalContext;
+import sirius.kernel.di.std.Context;
+import sirius.kernel.di.std.Part;
+import sirius.kernel.extensions.Extension;
+import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
+import sirius.web.controller.Message;
 import sirius.web.http.WebContext;
 
 import java.util.Collection;
@@ -23,7 +29,7 @@ import java.util.Map;
  * Can be used to collect messages and errors to be displayed to the user.
  * <p>
  * Get hold of a {@link UserContext} by calling <code>CallContext.getCurrent().get(UserContext.class)</code> or
- * by using a helper method like {@link #message(Message)}.
+ * by using a helper method like {@link #message(sirius.web.controller.Message)}.
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
@@ -32,8 +38,52 @@ import java.util.Map;
 public class UserContext {
 
     public static Log LOG = Log.get("user");
+
+    @Part
+    private static ScopeDetector detector;
+    private static Map<String, UserManager> managers = Maps.newConcurrentMap();
+
+    private UserInfo currentUser = null;
+    private ScopeInfo currentScope = null;
     private List<Message> msgList = Lists.newArrayList();
     private Map<String, String> fieldErrors = Maps.newHashMap();
+
+
+    @Context
+    private static GlobalContext context;
+
+    /*
+     * Determines which UserManager to use for a given scope
+     */
+    private static UserManager getManager(ScopeInfo scope) {
+        Extension ext = Extensions.getExtension("security.scopes", scope.getScopeType());
+        return context.getPart(ext.get("manager").asString(), UserManagerFactory.class).createManager(scope, ext);
+    }
+
+
+    /*
+     * Loads the current user and scope from the given web context.
+     */
+    private void bindToRequest(WebContext ctx) {
+        if (ctx != null && detector != null) {
+            currentScope = detector.detectScope(ctx);
+        } else {
+            currentScope = ScopeInfo.DEFAULT_SCOPE;
+        }
+        if (ctx != null) {
+            UserManager manager = managers.get(currentScope.getScopeId());
+            if (manager == null) {
+                manager = getManager(currentScope);
+                managers.put(currentScope.getScopeId(), manager);
+            }
+            currentUser = manager.bindToRequest(ctx);
+        } else {
+            currentUser = UserInfo.NOBODY;
+        }
+        CallContext.getCurrent().addToMDC("user", currentUser.getUserId());
+        CallContext.getCurrent().addToMDC("username", currentUser.getUserName());
+        CallContext.getCurrent().addToMDC("scope", currentScope.getScopeId());
+    }
 
     /**
      * Adds a message to be shown to the user.
@@ -97,13 +147,12 @@ public class UserContext {
         return NLS.toUserString(value);
     }
 
-
     /**
      * Returns the originally submitted field value even if it was rejected due to an error.
      *
      * @param field the name of the form field
      * @return the originally submitted value (if an error occurred) or the parameter (using field as name)
-     *         from the current {@link WebContext} otherwise
+     * from the current {@link WebContext} otherwise
      */
     public String getFieldValue(String field) {
         if (fieldErrors.containsKey(field)) {
@@ -120,6 +169,37 @@ public class UserContext {
      */
     public Collection<String> getFieldValues(String field) {
         return CallContext.getCurrent().get(WebContext.class).getParameters(field);
+    }
+
+    public UserInfo getUser() {
+        if (currentUser == null) {
+            bindToRequest(CallContext.getCurrent().get(WebContext.class));
+        }
+        return currentUser;
+    }
+
+    public void attachUserToSession() {
+
+    }
+
+    public void detachUserFromSession() {
+
+    }
+
+    public ScopeInfo getScope() {
+        if (currentScope == null) {
+            bindToRequest(CallContext.getCurrent().get(WebContext.class));
+        }
+        return currentScope;
+    }
+
+    public static UserInfo getCurrentUser() {
+        return CallContext.getCurrent().get(UserContext.class).getUser();
+    }
+
+
+    public static ScopeInfo getCurrentScope() {
+        return CallContext.getCurrent().get(UserContext.class).getScope();
     }
 
     /**
@@ -150,4 +230,5 @@ public class UserContext {
     public static void setFieldError(String field, Object value) {
         CallContext.getCurrent().get(UserContext.class).addFieldError(field, NLS.toUserString(value));
     }
+
 }

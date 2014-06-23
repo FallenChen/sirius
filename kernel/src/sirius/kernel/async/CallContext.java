@@ -72,9 +72,8 @@ public class CallContext {
                 try {
                     nodeName = InetAddress.getLocalHost().getHostName();
                 } catch (UnknownHostException e) {
-                    Async.LOG
-                         .WARN(Strings.apply(
-                                 "Cannot determine hostname - consider setting 'sirius.nodeName' in the configuration."));
+                    Async.LOG.WARN(Strings.apply(
+                            "Cannot determine hostname - consider setting 'sirius.nodeName' in the configuration."));
                     nodeName = "unknown";
                 }
             }
@@ -172,8 +171,8 @@ public class CallContext {
      * Returns the Watch representing the execution time.
      *
      * @return a Watch, representing the duration since the creation of the <b>CallContext</b>. Due to CallContexts
-     *         being passed to forked sub tasks, the returned duration can be longer than the execution time within the
-     *         current thread.
+     * being passed to forked sub tasks, the returned duration can be longer than the execution time within the
+     * current thread.
      */
     public Watch getWatch() {
         return watch;
@@ -273,4 +272,5 @@ public class CallContext {
 
         return sb.toString();
     }
+
 }

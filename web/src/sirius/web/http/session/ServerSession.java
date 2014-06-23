@@ -11,7 +11,6 @@ package sirius.web.http.session;
 import sirius.kernel.commons.Value;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -44,7 +43,7 @@ public interface ServerSession {
     public static final String USER_AGENT = "_USER_AGENT";
 
     /**
-     * Fixes field storing the name of the current user owning this session
+     * Fixed field storing the name of the current user owning this session
      */
     public static final String USER = "_USER";
 
@@ -101,9 +100,9 @@ public interface ServerSession {
      * Stores the given name value pair in the session.
      *
      * @param key  the key used to associate the data with
-     * @param data the data to store for the given key
+     * @param data the data to store for the given key. Note that data needs to be serializable!
      */
-    void putValue(String key, Serializable data);
+    void putValue(String key, Object data);
 
     /**
      * Deletes the stored value for the given key.

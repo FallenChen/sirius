@@ -14,7 +14,7 @@ import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
-import sirius.web.controller.UserContext;
+import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
 
 import java.lang.reflect.Field;

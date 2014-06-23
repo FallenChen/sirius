@@ -23,7 +23,7 @@ import sirius.search.annotations.RefType;
 import sirius.search.annotations.Transient;
 import sirius.search.annotations.Unique;
 import sirius.search.properties.Property;
-import sirius.web.controller.UserContext;
+import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
 
 import java.security.SecureRandom;

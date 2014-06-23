@@ -47,10 +47,18 @@ public class Value {
     }
 
     /**
+     * Represents an empty value which contains <tt>null</tt> as data.
+     */
+    public static final Value EMPTY = new Value();
+
+    /**
      * Creates a new wrapper for the given data.
      */
     @Nonnull
     public static Value of(@Nullable Object data) {
+        if (data == null) {
+            return EMPTY;
+        }
         Value val = new Value();
         val.data = data;
         return val;

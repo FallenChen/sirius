@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Represents a value which is computed by another task or thread.
@@ -150,7 +151,7 @@ public class Promise<V> {
      *         or if the mapper throws an exception.
      */
     @Nonnull
-    public <X> Promise<X> map(@Nonnull final Mapper<V, X> mapper) {
+    public <X> Promise<X> map(@Nonnull final Function<V, X> mapper) {
         final Promise<X> result = new Promise<X>();
         onComplete(new CompletionHandler<V>() {
             @Override
@@ -180,7 +181,7 @@ public class Promise<V> {
      *         or if the mapper throws an exception.
      */
     @Nonnull
-    public <X> Promise<X> flatMap(@Nonnull final Mapper<V, Promise<X>> mapper) {
+    public <X> Promise<X> flatMap(@Nonnull final Function<V, Promise<X>> mapper) {
         final Promise<X> result = new Promise<X>();
         onComplete(new CompletionHandler<V>() {
             @Override
@@ -231,7 +232,7 @@ public class Promise<V> {
      *                promise.
      * @param <X>     type of the value expected by the given promise.
      */
-    public <X> void mapChain(@Nonnull final Promise<X> promise, @Nonnull final Mapper<V, X> mapper) {
+    public <X> void mapChain(@Nonnull final Promise<X> promise, @Nonnull final Function<V, X> mapper) {
         onComplete(new CompletionHandler<V>() {
             @Override
             public void onSuccess(V value) throws Exception {

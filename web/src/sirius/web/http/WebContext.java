@@ -559,9 +559,9 @@ public class WebContext {
      * @return the session associated with the client (based on session id parameter or cookie) or <tt>null</tt> if
      * neither an active session was found nor a new one was created.
      */
-    public ServerSession getServerSession(boolean create) {
+    public Optional<ServerSession> getServerSession(boolean create) {
         if (serverSession != null) {
-            return serverSession;
+            return Optional.of(serverSession);
         }
         if (serverSessionSource == null) {
             requestedSessionId = getParameter(serverSessionParameterName);
@@ -581,7 +581,7 @@ public class WebContext {
                 serverSession.putValue(ServerSession.USER_AGENT, getHeader(HttpHeaders.Names.USER_AGENT));
             }
         }
-        return serverSession;
+        return Optional.ofNullable(serverSession);
     }
 
     /**
@@ -596,7 +596,7 @@ public class WebContext {
      * @return the currently active session for this client. Will create a new session if no active session was found
      */
     public ServerSession getServerSession() {
-        return getServerSession(true);
+        return getServerSession(true).get();
     }
 
     /**
@@ -678,6 +678,28 @@ public class WebContext {
         }
 
         return trusted;
+    }
+
+    /**
+     * Determines if this is an HTTPS (SSL protected) call.
+     * <p>
+     * Currently we rely on SSL termination by a proxy. Therefore we check for the header "X-Forwarded-Proto".
+     * </p>
+     *
+     * @return <tt>true</tt> if this is an HTTPS request, <tt>false</tt> otherwise
+     */
+    public boolean isSSL() {
+        return getHeaderValue("X-Forwarded-Proto").asBoolean(false);
+    }
+
+    /**
+     * Determines if the current request is secured by SSL.
+     * <p>This is boilerplate for: <code>CallContext.getCurrent().get(WebContext.class).isSSL()</code></p>
+     *
+     * @return <tt>true</tt> if this is an HTTPS request, <tt>false</tt> otherwise
+     */
+    public static boolean isCurrentRequestSSL() {
+        return CallContext.getCurrent().get(WebContext.class).isSSL();
     }
 
     /**
@@ -963,6 +985,9 @@ public class WebContext {
      * @return the contents of the named header wrapped as <tt>Value</tt>
      */
     public Value getHeaderValue(String header) {
+        if (request == null) {
+            return Value.EMPTY;
+        }
         return Value.of(request.headers().get(header));
     }
 

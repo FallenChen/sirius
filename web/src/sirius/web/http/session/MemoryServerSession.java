@@ -15,7 +15,6 @@ import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.ConfigValue;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -98,7 +97,7 @@ class MemoryServerSession implements ServerSession {
     }
 
     @Override
-    public void putValue(String key, Serializable data) {
+    public void putValue(String key, Object data) {
         values.put(key, data);
     }
 

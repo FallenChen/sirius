@@ -15,7 +15,7 @@ import sirius.kernel.nls.NLS;
 import sirius.search.Entity;
 import sirius.search.Index;
 import sirius.search.annotations.NotNull;
-import sirius.web.controller.UserContext;
+import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
 
 import java.io.IOException;

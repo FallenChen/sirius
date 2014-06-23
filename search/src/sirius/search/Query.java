@@ -28,7 +28,7 @@ import sirius.kernel.nls.NLS;
 import sirius.search.constraints.*;
 import sirius.search.properties.EnumProperty;
 import sirius.search.properties.Property;
-import sirius.web.controller.UserContext;
+import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
 
 import javax.annotation.Nonnull;

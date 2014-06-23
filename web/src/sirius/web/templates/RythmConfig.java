@@ -26,7 +26,7 @@ import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
-import sirius.web.controller.UserContext;
+import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
 
 import java.io.File;
