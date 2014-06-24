@@ -25,9 +25,20 @@ import java.util.stream.Collectors;
  */
 public class SSOUserManager extends GenericUserManager {
 
+    @Register(name = "sso")
+    public static class PublicUserManagerFactory implements UserManagerFactory {
+
+        @Nonnull
+        @Override
+        public UserManager createManager(@Nonnull ScopeInfo scope, @Nonnull Extension config) {
+            return new SSOUserManager(scope, config);
+        }
+
+    }
+
     private final boolean parseRoles;
 
-    public SSOUserManager(ScopeInfo scope, Extension config) {
+    protected SSOUserManager(ScopeInfo scope, Extension config) {
         super(scope, config);
         if (sessionStorage == SESSION_STORAGE_TYPE_CLIENT) {
             UserContext.LOG.WARN(
@@ -73,14 +84,4 @@ public class SSOUserManager extends GenericUserManager {
         return null;
     }
 
-    @Register(name = "sso")
-    public static class PublicUserManagerFactory implements UserManagerFactory {
-
-        @Nonnull
-        @Override
-        public UserManager createManager(@Nonnull ScopeInfo scope, @Nonnull Extension config) {
-            return new SSOUserManager(scope, config);
-        }
-
-    }
 }

@@ -44,7 +44,6 @@ class MemoryServerSession implements ServerSession {
      * @param sessionStorage the storage which keeps a map of all known session IDs
      */
     public MemoryServerSession(sirius.web.http.session.SessionManager.DefaultSessionStorage sessionStorage) {
-
         this.sessionStorage = sessionStorage;
     }
 

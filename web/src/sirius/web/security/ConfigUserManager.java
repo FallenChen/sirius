@@ -39,7 +39,7 @@ public class ConfigUserManager extends GenericUserManager {
 
     }
 
-    public ConfigUserManager(ScopeInfo scope, Extension config) {
+    protected ConfigUserManager(ScopeInfo scope, Extension config) {
         super(scope, config);
     }
 

@@ -45,7 +45,7 @@ public class LDAPUserManager extends GenericUserManager {
 
     }
 
-    public LDAPUserManager(ScopeInfo scope, Extension config) {
+    protected LDAPUserManager(ScopeInfo scope, Extension config) {
         super(scope, config);
     }
 

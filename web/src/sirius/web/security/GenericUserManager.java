@@ -44,7 +44,7 @@ public abstract class GenericUserManager implements UserManager {
 
     protected static Map<String, Set<String>> profilesCache;
 
-    public GenericUserManager(ScopeInfo scope, Extension config) {
+    protected GenericUserManager(ScopeInfo scope, Extension config) {
         this.scope = scope;
         this.config = config;
         this.sessionStorage = config.get("session-storage").asString().intern();

@@ -33,7 +33,7 @@ public class PublicUserManager extends GenericUserManager {
 
     }
 
-    public PublicUserManager(ScopeInfo scope, Extension config) {
+    protected PublicUserManager(ScopeInfo scope, Extension config) {
         super(scope, config);
         this.user = new UserInfo("(public)", "(public)", "", transformRoles(Collections.emptySet()), null);
     }
