@@ -198,4 +198,13 @@ public class EntityRefList<E extends Entity> {
         this.valueFromCache = false;
     }
 
+    /**
+     * Removes all references from the list and clears the locally cached values
+     */
+    public void clear() {
+        this.ids.clear();
+
+        this.values = null;
+        this.valueFromCache = false;
+    }
 }
