@@ -1355,7 +1355,7 @@ public class WebContext {
             } catch (Exception e) {
                 Exceptions.handle(WebServer.LOG, e);
             }
-            postDecoder = null;
+            contentHandler = null;
         }
         if (postDecoder != null) {
             try {
