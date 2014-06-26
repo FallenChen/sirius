@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class SSOUserManager extends GenericUserManager {
 
     @Register(name = "sso")
-    public static class PublicUserManagerFactory implements UserManagerFactory {
+    public static class Factory implements UserManagerFactory {
 
         @Nonnull
         @Override
@@ -63,7 +63,7 @@ public class SSOUserManager extends GenericUserManager {
                                             .asOptionalString()
                                             .map(this::parseRolesString)
                                             .orElse(Collections.emptySet()) : Collections.emptySet();
-        return new UserInfo(user, user, null, transformRoles(roles), null);
+        return new UserInfo(null, null, user, user, null, transformRoles(roles), null);
     }
 
     private Set<String> parseRolesString(String rolesString) {

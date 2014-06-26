@@ -23,7 +23,7 @@ public class PublicUserManager extends GenericUserManager {
     private final UserInfo user;
 
     @Register(name = "public")
-    public static class PublicUserManagerFactory implements UserManagerFactory {
+    public static class Factory implements UserManagerFactory {
 
         @Nonnull
         @Override
@@ -35,9 +35,8 @@ public class PublicUserManager extends GenericUserManager {
 
     protected PublicUserManager(ScopeInfo scope, Extension config) {
         super(scope, config);
-        this.user = new UserInfo("(public)", "(public)", "", transformRoles(Collections.emptySet()), null);
+        this.user = new UserInfo(null, null, "(public)", "(public)", "", transformRoles(Collections.emptySet()), null);
     }
-
 
     @Nonnull
     @Override

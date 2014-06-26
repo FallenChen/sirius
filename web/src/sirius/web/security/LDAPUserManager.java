@@ -35,7 +35,7 @@ import java.util.Set;
 public class LDAPUserManager extends GenericUserManager {
 
     @Register(name = "ldap")
-    public static class PublicUserManagerFactory implements UserManagerFactory {
+    public static class Factory implements UserManagerFactory {
 
         @Nonnull
         @Override

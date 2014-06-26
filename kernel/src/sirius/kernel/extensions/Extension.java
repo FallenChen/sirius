@@ -9,6 +9,7 @@
 package sirius.kernel.extensions;
 
 import com.typesafe.config.Config;
+import sirius.kernel.commons.Context;
 import sirius.kernel.commons.Value;
 
 import javax.annotation.Nonnull;
@@ -48,7 +49,7 @@ public interface Extension {
      * Determined if this extension is an artifically created default extension.
      *
      * @return <tt>true</tt> if this is an artifically created default extension used by
-     *         {@link Extensions#getExtension(String, String)} if nothing was found
+     * {@link Extensions#getExtension(String, String)} if nothing was found
      */
     boolean isDefault();
 
@@ -65,10 +66,19 @@ public interface Extension {
      *
      * @param path the access path to retrieve the value
      * @return the value wrapping the contents for the given path. This will never by <tt>null</tt>,
-     *         but might be empty: {@link sirius.kernel.commons.Value#isNull()}
+     * but might be empty: {@link sirius.kernel.commons.Value#isNull()}
      */
     @Nonnull
     Value get(String path);
+
+    /**
+     * Returns all values defined in this extension as {@link Context}.
+     *
+     * @return a context containing all values defined by this extension or the <tt>default</tt> extension.
+     */
+    @Nonnull
+    Context getContext();
+
 
     /**
      * Returns the sub config available for the given key.
@@ -101,7 +111,7 @@ public interface Extension {
      *
      * @param key the path to the config object containing a list of sub object.
      * @return a list of config object underneath the given object.
-     *         Returns an empty list if no matching element was found.
+     * Returns an empty list if no matching element was found.
      */
     @Nonnull
     List<? extends Config> getConfigs(String key);
@@ -115,8 +125,7 @@ public interface Extension {
      *
      * @param path the access path to retrieve the value
      * @return the encoded duration as milliseconds.
-     * @throws sirius.kernel.health.HandledException
-     *          if an invalid value was given in the config
+     * @throws sirius.kernel.health.HandledException if an invalid value was given in the config
      */
     long getMilliseconds(String path);
 
@@ -133,8 +142,7 @@ public interface Extension {
      *
      * @param path the access path to retrieve the value
      * @return the value wrapping the contents for the given path. This will never by <tt>null</tt>.
-     * @throws sirius.kernel.health.HandledException
-     *          if no value was found for the given <tt>path</tt>
+     * @throws sirius.kernel.health.HandledException if no value was found for the given <tt>path</tt>
      */
     @Nonnull
     Value require(String path);
@@ -152,8 +160,7 @@ public interface Extension {
      *
      * @param classProperty the property which is used to retrieve the class name
      * @return a new instance of the given class
-     * @throws sirius.kernel.health.HandledException
-     *          if no valid class was given, or if no instance could be created
+     * @throws sirius.kernel.health.HandledException if no valid class was given, or if no instance could be created
      */
     @Nonnull
     Object make(String classProperty);

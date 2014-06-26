@@ -19,14 +19,13 @@ import sirius.kernel.nls.NLS;
 import sirius.web.http.InputStreamHandler;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebServer;
+import sirius.web.security.Permissions;
+import sirius.web.security.UserContext;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,19 +47,22 @@ class Route {
     private Class<?>[] parameterTypes;
     private Controller controller;
     private boolean preDispatchable;
+    private Set<String> permissions = null;
 
     /**
      * Compiles a method defined by a {@link Controller}
      *
-     * @param routed         the {@link Routed} annotation
-     * @param parameterTypes the parameters defined by the method
+     * @param method the method wearing the Routed annotation
+     * @param routed the {@link Routed} annotation
      * @return a compiled matcher handling matching URIs
      */
-    protected static Route compile(Routed routed, Class<?>[] parameterTypes) {
+    protected static Route compile(Method method, Routed routed) {
         Route result = new Route();
         result.uri = routed.value();
-        result.parameterTypes = parameterTypes;
+        result.parameterTypes = method.getParameterTypes();
         result.format = routed.value();
+        result.permissions = Permissions.computePermissionsFromAnnotations(method);
+
 
         String[] elements = routed.value().split("/");
         StringBuilder finalPattern = new StringBuilder();
@@ -92,18 +94,18 @@ class Route {
         }
         if (routed.preDispatchable()) {
             params++;
-            if (!InputStreamHandler.class.equals(parameterTypes[parameterTypes.length - 1])) {
+            if (!InputStreamHandler.class.equals(result.parameterTypes[result.parameterTypes.length - 1])) {
                 throw new IllegalArgumentException(Strings.apply("Pre-Dispatchable method needs '%s' as last parameter",
                                                                  InputStreamHandler.class.getName()));
             }
         }
-        if (parameterTypes.length - 1 != params) {
+        if (result.parameterTypes.length - 1 != params) {
             throw new IllegalArgumentException(Strings.apply("Method has %d parameters, route '%s' has %d",
-                                                             parameterTypes.length,
+                                                             result.parameterTypes.length,
                                                              routed.value(),
                                                              params));
         }
-        if (!WebContext.class.equals(parameterTypes[0])) {
+        if (!WebContext.class.equals(result.parameterTypes[0])) {
             throw new IllegalArgumentException(Strings.apply("Method needs '%s' as first parameter",
                                                              WebContext.class.getName()));
         }
@@ -166,6 +168,23 @@ class Route {
         }
     }
 
+    /**
+     * Determines if the current user is authorized to access this routing.
+     *
+     * @return <tt>null</tt> if the user is authorized or otherwise the name of the permission which the user is missing.
+     */
+    protected String checkAuth() {
+        if (permissions == null) {
+            return null;
+        }
+        for (String p : permissions) {
+            if (!UserContext.getCurrentUser().hasPermission(p)) {
+                return p;
+            }
+        }
+
+        return null;
+    }
 
     @Override
     public String toString() {

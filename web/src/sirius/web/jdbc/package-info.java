@@ -9,7 +9,7 @@
 /**
  * Support layer for using JDBC (accessing SQL Databases).
  * <p>
- *     Provides pooled access to JDBC datasources via {@link Databases}. Provides convenient wrappers like
+ *     Provides pooled access to JDBC datasources via {@link sirius.web.jdbc.Database}. Provides convenient wrappers like
  *     {@link sirius.web.jdbc.JDBCQuery} to simplify resource handling.
  * </p>
  */

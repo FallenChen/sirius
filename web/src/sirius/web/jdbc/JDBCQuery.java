@@ -8,10 +8,13 @@
 
 package sirius.web.jdbc;
 
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
 import sirius.kernel.commons.Context;
 import sirius.kernel.commons.Watch;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,9 +22,9 @@ import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Represents a flexible way of executing parameterized SQL queries without
@@ -85,6 +88,7 @@ public class JDBCQuery {
      * @return a list of {@link Row}s
      * @throws SQLException in case of a database error
      */
+    @Nonnull
     public List<Row> queryList() throws SQLException {
         return queryList(0);
     }
@@ -96,18 +100,17 @@ public class JDBCQuery {
      * @return a list of {@link Row}s
      * @throws SQLException in case of a database error
      */
+    @Nonnull
     public List<Row> queryList(int maxRows) throws SQLException {
         Watch w = Watch.start();
         Connection c = ds.getConnection();
-        List<Row> result = new ArrayList<Row>();
-        String finalSQL = sql;
+        List<Row> result = Lists.newArrayList();
         try {
             SQLStatementStrategy sa = new SQLStatementStrategy(c, ds.isMySQL());
             StatementCompiler.buildParameterizedStatement(sa, sql, params);
             if (sa.getStmt() == null) {
                 return result;
             }
-            finalSQL = sa.getQueryString();
             if (maxRows > 0) {
                 sa.getStmt().setMaxRows(maxRows);
             }
@@ -175,10 +178,16 @@ public class JDBCQuery {
 
     /**
      * Executes the given query returning the first matching row.
+     * <p>
+     * If the resulting row contains a {@link Blob} an {@link OutputStream} as to be passed in as parameter
+     * with the name name as the column. The contents of the blob will then be written into the given
+     * output stream (without closing it).
+     * </p>
      *
      * @return the first matching row for the given query or <tt>null</tt> if no matching row was found
      * @throws SQLException in case of a database error
      */
+    @Nullable
     public Row queryFirst() throws SQLException {
         Connection c = ds.getConnection();
         Watch w = Watch.start();
@@ -195,20 +204,7 @@ public class JDBCQuery {
                     for (int col = 1; col <= rs.getMetaData().getColumnCount(); col++) {
                         Object obj = rs.getObject(col);
                         if (obj instanceof Blob) {
-                            OutputStream out = (OutputStream) params.get(rs.getMetaData().getColumnLabel(col));
-                            if (out != null) {
-                                try {
-                                    Blob blob = (Blob) obj;
-                                    InputStream in = blob.getBinaryStream();
-                                    try {
-                                        ByteStreams.copy(in, out);
-                                    } finally {
-                                        in.close();
-                                    }
-                                } catch (IOException e) {
-                                    throw new SQLException(e);
-                                }
-                            }
+                            writeBlobToParameter(rs, col, (Blob) obj);
                         } else {
                             row.fields.put(rs.getMetaData().getColumnLabel(col), obj);
                         }
@@ -224,6 +220,40 @@ public class JDBCQuery {
         } finally {
             c.close();
             w.submitMicroTiming("SQL", sql);
+        }
+    }
+
+    /**
+     * Executes the given query returning the first matching row wrapped as {@link java.util.Optional}.
+     * <p>
+     * This method behaves like {@link #queryFirst()} but returns an optional value instead of {@link null}.
+     * </p>
+     *
+     * @return the resulting row wrapped as optional, or an empty optional if no matching row was found.
+     * @throws SQLException in case of a database error
+     */
+    @Nonnull
+    public Optional<Row> first() throws SQLException {
+        return Optional.ofNullable(queryFirst());
+    }
+
+    /*
+     * If a Blob is inside a result set, we expect an OutputStream as parameter with the same name which we write
+     * the data to.
+     */
+    private void writeBlobToParameter(ResultSet rs, int col, Blob blob) throws SQLException {
+        OutputStream out = (OutputStream) params.get(rs.getMetaData().getColumnLabel(col));
+        if (out != null) {
+            try {
+                InputStream in = blob.getBinaryStream();
+                try {
+                    ByteStreams.copy(in, out);
+                } finally {
+                    in.close();
+                }
+            } catch (IOException e) {
+                throw new SQLException(e);
+            }
         }
     }
 

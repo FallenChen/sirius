@@ -17,7 +17,6 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
-import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
@@ -636,7 +635,13 @@ public class Index {
         try {
             return update(entity, true, false);
         } catch (OptimisticLockException e) {
-            throw Exceptions.handle(LOG, e);
+            throw Exceptions.handle()
+                            .to(LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to update '%s' (%s): %s (%s)",
+                                                    entity.toString(),
+                                                    entity.getId())
+                            .handle();
         }
     }
 
@@ -726,7 +731,13 @@ public class Index {
             optimisticLockErrors.inc();
             throw new OptimisticLockException(e, entity);
         } catch (Throwable e) {
-            throw Exceptions.handle(LOG, e);
+            throw Exceptions.handle()
+                            .to(LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to update '%s' (%s): %s (%s)",
+                                                    entity.toString(),
+                                                    entity.getId())
+                            .handle();
         }
     }
 
@@ -815,7 +826,11 @@ public class Index {
                 w.submitMicroTiming("ES", "UPDATE " + clazz.getName());
             }
         } catch (Throwable t) {
-            throw Exceptions.handle(LOG, t);
+            throw Exceptions.handle()
+                            .to(LOG)
+                            .error(t)
+                            .withSystemErrorMessage("Failed to find '%s' (%s): %s (%s)", id, clazz.getName())
+                            .handle();
         }
     }
 
@@ -876,7 +891,13 @@ public class Index {
         try {
             delete(entity, false);
         } catch (OptimisticLockException e) {
-            throw Exceptions.handle(LOG, e);
+            throw Exceptions.handle()
+                            .to(LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to delete '%s' (%s): %s (%s)",
+                                                    entity.toString(),
+                                                    entity.getId())
+                            .handle();
         }
     }
 
@@ -908,7 +929,6 @@ public class Index {
             if (entity.isNew()) {
                 return;
             }
-            final CallContext ctx = CallContext.getCurrent();
             if (LOG.isFINE()) {
                 LOG.FINE("DELETE[FORCE: %b]: %s.%s: %s",
                          force,
@@ -942,7 +962,13 @@ public class Index {
             optimisticLockErrors.inc();
             throw new OptimisticLockException(e, entity);
         } catch (Throwable e) {
-            throw Exceptions.handle(LOG, e);
+            throw Exceptions.handle()
+                            .to(LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to delete '%s' (%s): %s (%s)",
+                                                    entity.toString(),
+                                                    entity.getId())
+                            .handle();
         }
     }
 
