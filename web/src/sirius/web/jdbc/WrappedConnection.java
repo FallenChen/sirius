@@ -51,7 +51,7 @@ class WrappedConnection implements Connection {
             // issues).
             // The next release of DBCP will fix this problem. The exception is
             // logged at INFO level
-            // in case a "real" problem occured. If we wouldn't call
+            // in case a "real" problem occurred. If we wouldn't call
             // delegate.close, the connection would
             // remain active and might block the pool.
             Database.LOG.INFO("Error closing connection");
@@ -235,7 +235,8 @@ class WrappedConnection implements Connection {
                                                                       resultSetType,
                                                                       resultSetConcurrency,
                                                                       resultSetHoldability),
-                                            sql);
+                                            sql
+        );
     }
 
     @Override

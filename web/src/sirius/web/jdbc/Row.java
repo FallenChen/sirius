@@ -9,8 +9,10 @@
 package sirius.web.jdbc;
 
 import com.google.common.collect.Maps;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Value;
 
+import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ public class Row {
      *
      * @return the underlying map, containing all fields and values. Modifying this map will modify the row
      */
+    @Nonnull
     public Map<String, Object> getFields() {
         return fields;
     }
@@ -38,8 +41,13 @@ public class Row {
      *
      * @param key the name of the field to retrieve
      * @return the value associated with the given key wrapped as {@link sirius.kernel.commons.Value}
+     * @throws java.lang.IllegalArgumentException if an unknown column key is requested
      */
+    @Nonnull
     public Value getValue(Object key) {
+        if (!fields.containsKey(key)) {
+            throw new IllegalArgumentException(Strings.apply("Unknown row: %s in %s", key, this));
+        }
         return Value.of(fields.get(key));
     }
 
@@ -54,6 +62,7 @@ public class Row {
      * @throws ClassCastException if the stored value isn't a list. <tt>null</tt> is handled gracefully
      */
     @SuppressWarnings("unchecked")
+    @Nonnull
     public List<Row> getSublist(Object key) {
         return (List<Row>) getValue(key).get(Collections.emptyList());
     }

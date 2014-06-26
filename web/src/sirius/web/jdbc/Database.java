@@ -18,6 +18,7 @@ import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Average;
 import sirius.kernel.health.Counter;
 import sirius.kernel.health.Log;
+import sirius.kernel.nls.Formatter;
 import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricsCollector;
 
@@ -30,6 +31,14 @@ import java.util.Map;
 /**
  * Provides a {@link javax.sql.DataSource} which can be configured via the system
  * configuration.
+ * <p>
+ * Use <code>Database.get("name")</code> to obtain a managed connection to the database. For most queries,
+ * prefer {@link #createQuery(String)} to create and execute a SQL query as it has connection management built in.
+ * </p>
+ * <p>
+ * Configuration is done via the system configuration. To declare a database provide an extension in
+ * "jdbc.database". For examples see "component-web.conf".
+ * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/11
@@ -63,9 +72,12 @@ public class Database {
 
         @Override
         public void gather(MetricsCollector collector) {
-            collector.differentialMetric("jdbc-use", "db-uses", "JDBC Uses", numUses.getCount(), null);
-            collector.differentialMetric("jdbc-queries", "db-queries", "JDBC Queries", numQueries.getCount(), null);
-            collector.metric("db-query-duration", "JDBC Query Duration", queryDuration.getAvg(), "ms");
+            // Only report statistics if we have at least one database connection...
+            if (!datasources.isEmpty()) {
+                collector.differentialMetric("jdbc-use", "db-uses", "JDBC Uses", numUses.getCount(), null);
+                collector.differentialMetric("jdbc-queries", "db-queries", "JDBC Queries", numQueries.getCount(), null);
+                collector.metric("db-query-duration", "JDBC Query Duration", queryDuration.getAvg(), "ms");
+            }
         }
     }
 
@@ -97,16 +109,30 @@ public class Database {
      */
     private Database(String name) {
         Extension ext = Extensions.getExtension("jdbc.database", name);
+        Extension profile = Extensions.getExtension("jdbc.profile", ext.get("profile").asString("default"));
+        Context ctx = profile.getContext();
+        ctx.putAll(ext.getContext());
         this.name = name;
-        this.driver = ext.get("driver").asString();
-        this.url = ext.get("url").asString();
-        this.username = ext.get("user").asString();
-        this.password = ext.get("password").asString();
-        this.initialSize = ext.get("initialSize").asInt(0);
-        this.maxActive = ext.get("maxActive").asInt(10);
-        this.maxIdle = ext.get("maxIdle").asInt(1);
-        this.testOnBorrow = ext.get("testOnBorrow").asBoolean();
-        this.validationQuery = ext.get("validationQuery").asString();
+        this.driver = ext.get("driver").isEmptyString() ? Formatter.create(profile.get("driver").asString())
+                                                                   .set(ctx)
+                                                                   .format() : ext.get("driver").asString();
+        this.url = ext.get("url").isEmptyString() ? Formatter.create(profile.get("url").asString())
+                                                             .set(ctx)
+                                                             .format() : ext.get("url").asString();
+        this.username = ext.get("user").isEmptyString() ? Formatter.create(profile.get("user").asString())
+                                                                   .set(ctx)
+                                                                   .format() : ext.get("user").asString();
+        this.password = ext.get("password").isEmptyString() ? Formatter.create(profile.get("password").asString())
+                                                                       .set(ctx)
+                                                                       .format() : ext.get("password").asString();
+        this.initialSize = ext.get("initialSize").isFilled() ? ext.get("initialSize").asInt(0) : profile.get(
+                "initialSize").asInt(0);
+        this.maxActive = ext.get("maxActive").isFilled() ? ext.get("maxActive").asInt(10) : profile.get("maxActive")
+                                                                                                   .asInt(10);
+        this.maxIdle = ext.get("maxIdle").isFilled() ? ext.get("maxIdle").asInt(1) : profile.get("maxIdle").asInt(1);
+        this.validationQuery = ext.get("validationQuery").isEmptyString() ? Formatter.create(profile.get(
+                "validationQuery").asString()).set(ctx).format() : ext.get("validationQuery").asString();
+        this.testOnBorrow = Strings.isFilled(validationQuery);
     }
 
     /**
@@ -206,7 +232,7 @@ public class Database {
                 }
             }
             String sql = "INSERT INTO " + table + " (" + fields.toString() + ") VALUES(" + values + ")";
-            PreparedStatement stmt = c.prepareStatement(sql,  Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement stmt = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             try {
                 int index = 1;
                 for (Object o : valueList) {
@@ -298,7 +324,7 @@ public class Database {
     /**
      * Determines if the target database is MySQL
      *
-     * @return <tt>true</tt> if the taret database is MySQL, <tt>false</tt> otherwise
+     * @return <tt>true</tt> if the target database is MySQL, <tt>false</tt> otherwise
      */
     public boolean isMySQL() {
         return "com.mysql.jdbc.Driver".equalsIgnoreCase(driver);

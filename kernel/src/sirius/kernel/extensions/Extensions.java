@@ -11,9 +11,12 @@ package sirius.kernel.extensions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.typesafe.config.*;
+import com.typesafe.config.ConfigValue;
 import sirius.kernel.Sirius;
+import sirius.kernel.commons.Context;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.commons.Value;
+import sirius.kernel.di.std.*;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 
@@ -254,6 +257,21 @@ public class Extensions {
                 return config.toConfig().getConfig(key);
             }
             return null;
+        }
+
+        @Override
+        public Context getContext() {
+            Context ctx = Context.create();
+            if (def != null) {
+                for (String key : def.keySet()) {
+                    ctx.put(key, get(key).get());
+                }
+            }
+            for(String key : config.keySet()) {
+                ctx.put(key, get(key).get());
+            }
+
+            return ctx;
         }
 
         @Nonnull

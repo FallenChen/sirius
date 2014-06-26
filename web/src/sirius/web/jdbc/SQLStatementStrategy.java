@@ -42,7 +42,7 @@ class SQLStatementStrategy implements StatementStrategy {
 
     @Override
     public void set(int idx, Object value) throws SQLException {
-        parameters.add(new Tuple<Integer, Object>(idx, value));
+        parameters.add(Tuple.create(idx, value));
     }
 
     @Override
