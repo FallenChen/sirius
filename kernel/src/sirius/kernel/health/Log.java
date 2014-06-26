@@ -242,11 +242,12 @@ public class Log {
      * @param params the parameters used to format the resulting log message
      */
     public void INFO(String msg, Object... params) {
+        msg = (params.length == 0) ? msg : Strings.apply(msg, params);
         if (logger.isInfoEnabled()) {
             fixMDC();
-            logger.info(Strings.apply(msg, params));
+            logger.info(msg);
         }
-        tap(Strings.apply(msg, params), logger.isInfoEnabled(), Level.INFO);
+        tap(msg, logger.isInfoEnabled(), Level.INFO);
     }
 
     /**
@@ -282,11 +283,12 @@ public class Log {
      * @param params the parameters used to format the resulting log message
      */
     public void FINE(String msg, Object... params) {
+        msg = (params.length == 0) ? msg : Strings.apply(msg, params);
         if (logger.isDebugEnabled()) {
             fixMDC();
-            logger.debug(Strings.apply(msg, params));
+            logger.debug(msg);
         }
-        tap(Strings.apply(msg, params), logger.isDebugEnabled(), Level.DEBUG);
+        tap(msg, logger.isDebugEnabled(), Level.DEBUG);
     }
 
     /**
@@ -318,9 +320,11 @@ public class Log {
      * @param params the parameters used to format the resulting log message
      */
     public void WARN(String msg, Object... params) {
+        msg = (params.length == 0) ? msg : Strings.apply(msg, params);
+
         fixMDC();
-        logger.warn(Strings.apply(msg, params));
-        tap(Strings.apply(msg, params), true, Level.WARN);
+        logger.warn(msg);
+        tap(msg, true, Level.WARN);
     }
 
     /**
