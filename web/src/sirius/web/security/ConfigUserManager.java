@@ -23,13 +23,21 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by aha on 20.06.14.
+ * Uses the system configuration to authenticate users.
+ * <p>
+ * Users can be defined in <tt>security.users</tt>.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/06
  */
 public class ConfigUserManager extends GenericUserManager {
 
-
+    /**
+     * Creates a new user manager for the given scope and configuration.
+     */
     @Register(name = "config")
-    public static class PublicUserManagerFactory implements UserManagerFactory {
+    public static class Factory implements UserManagerFactory {
 
         @Nonnull
         @Override
@@ -87,7 +95,9 @@ public class ConfigUserManager extends GenericUserManager {
     }
 
     private UserInfo getUserInfo(String userId, Extension e) {
-        return new UserInfo(userId,
+        return new UserInfo(null,
+                            null,
+                            userId,
                             e.get("name").asString(),
                             e.get("email").asString(),
                             computeRoles(null, userId),
@@ -112,9 +122,11 @@ public class ConfigUserManager extends GenericUserManager {
 
     @Override
     protected void storeRolesForUser(UserInfo user, WebContext ctx) {
+        // Roles are constant - no need to store them in a session...
     }
 
     @Override
     protected void clearRolesForUser(UserInfo user, WebContext ctx) {
+        // Roles are constant - no need to store them in a session...
     }
 }

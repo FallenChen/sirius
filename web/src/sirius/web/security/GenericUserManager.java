@@ -9,11 +9,8 @@
 package sirius.web.security;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
-import com.typesafe.config.Config;
-import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.commons.Value;
@@ -27,7 +24,13 @@ import javax.annotation.Nonnull;
 import java.util.*;
 
 /**
- * Created by aha on 20.06.14.
+ * Base class for various implementations of {@link sirius.web.security.UserManager}.
+ * <p>
+ * Provides session handling and roles expansion using profiles (security.profiles).
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/06
  */
 public abstract class GenericUserManager implements UserManager {
 
@@ -41,9 +44,10 @@ public abstract class GenericUserManager implements UserManager {
     protected boolean ssoEnabled;
     protected String ssoSecret;
     protected List<String> defaultRoles;
+    protected UserInfo defaultUser;
 
-    protected static Map<String, Set<String>> profilesCache;
 
+    @SuppressWarnings("unchecked")
     protected GenericUserManager(ScopeInfo scope, Extension config) {
         this.scope = scope;
         this.config = config;
@@ -51,6 +55,13 @@ public abstract class GenericUserManager implements UserManager {
         this.ssoSecret = config.get("sso-secret").asString();
         this.ssoEnabled = Strings.isFilled(ssoSecret) && config.get("sso-enabled").asBoolean(false);
         this.defaultRoles = config.get("default-roles").get(List.class, Collections.emptyList());
+        this.defaultUser = new UserInfo(null,
+                                        null,
+                                        "(nobody)",
+                                        "(nobody)",
+                                        null,
+                                        Permissions.applyProfilesAndPublicRoles(Collections.emptySet()),
+                                        null);
 
     }
 
@@ -72,7 +83,7 @@ public abstract class GenericUserManager implements UserManager {
             return result;
         }
 
-        return UserInfo.NOBODY;
+        return defaultUser;
     }
 
     private UserInfo loginViaSSOToken(WebContext ctx) {
@@ -114,23 +125,10 @@ public abstract class GenericUserManager implements UserManager {
     }
 
     protected Set<String> transformRoles(Collection<String> roles) {
-        Set<String> result = Sets.newTreeSet();
-        for (String role : defaultRoles) {
-            expand(role, result);
-        }
-        for (String role : roles) {
-            expand(role, result);
-        }
-        return result;
-    }
+        Set<String> allRoles = Sets.newTreeSet(roles);
+        allRoles.addAll(defaultRoles);
 
-    private void expand(String role, Set<String> result) {
-        if (!result.contains(role)) {
-            result.add(role);
-            for (String subRole : getProfile(role)) {
-                expand(subRole, result);
-            }
-        }
+        return Permissions.applyProfilesAndPublicRoles(allRoles);
     }
 
     protected void log(String pattern, Object... params) {
@@ -139,19 +137,6 @@ public abstract class GenericUserManager implements UserManager {
                              scope.getScopeId(),
                              scope.getScopeType(),
                              Strings.apply(pattern, params));
-    }
-
-    private Set<String> getProfile(String role) {
-        if (profilesCache == null) {
-            Map<String, Set<String>> profiles = Maps.newHashMap();
-            Config profilesConfig = Sirius.getConfig().atPath("security.profiles");
-            profilesConfig.entrySet()
-                          .stream()
-                          .map(e -> e.getKey())
-                          .forEach(key -> profiles.put(key, Sets.newTreeSet(profilesConfig.getStringList(key))));
-            profilesCache = profiles;
-        }
-        return profilesCache.getOrDefault(role, Collections.emptySet());
     }
 
     protected abstract UserInfo findUserByName(WebContext ctx, String user);
@@ -180,6 +165,8 @@ public abstract class GenericUserManager implements UserManager {
                 Value userId = ctx.getServerSession().getValue(scope.getScopeId() + "-user-id");
                 if (userId.isFilled()) {
                     return new UserInfo(userId.asString(),
+                                        ctx.getServerSession().getValue(scope.getScopeId() + "-tenant-id").asString(),
+                                        ctx.getServerSession().getValue(scope.getScopeId() + "-tenant-name").asString(),
                                         ctx.getServerSession().getValue(scope.getScopeId() + "-user-name").asString(),
                                         ctx.getServerSession().getValue(scope.getScopeId() + "-user-email").asString(),
                                         computeRoles(ctx, userId.asString()),
@@ -190,6 +177,8 @@ public abstract class GenericUserManager implements UserManager {
             Value userId = ctx.getSessionValue(scope.getScopeId() + "-user-id");
             if (userId.isFilled()) {
                 return new UserInfo(userId.asString(),
+                                    ctx.getSessionValue(scope.getScopeId() + "-tenant-id").asString(),
+                                    ctx.getSessionValue(scope.getScopeId() + "-tenant-name").asString(),
                                     ctx.getSessionValue(scope.getScopeId() + "-user-name").asString(),
                                     ctx.getSessionValue(scope.getScopeId() + "-user-email").asString(),
                                     computeRoles(ctx, userId.asString()),
@@ -200,6 +189,7 @@ public abstract class GenericUserManager implements UserManager {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     protected Set<String> computeRoles(WebContext ctx, String userId) {
         if (sessionStorage == SESSION_STORAGE_TYPE_SERVER) {
             return ctx.getServerSession()
@@ -216,10 +206,14 @@ public abstract class GenericUserManager implements UserManager {
     public void attachToSession(@Nonnull UserInfo user, @Nonnull WebContext ctx) {
         if (sessionStorage == SESSION_STORAGE_TYPE_SERVER) {
             ServerSession sess = ctx.getServerSession();
+            sess.putValue(scope.getScopeId() + "-tenant-id", user.getTenantId());
+            sess.putValue(scope.getScopeId() + "-tenant-name", user.getTenantName());
             sess.putValue(scope.getScopeId() + "-user-id", user.getUserId());
             sess.putValue(scope.getScopeId() + "-user-name", user.getUserName());
             sess.putValue(scope.getScopeId() + "-user-email", user.getEmail());
         } else if (sessionStorage == SESSION_STORAGE_TYPE_CLIENT) {
+            ctx.setSessionValue(scope.getScopeId() + "-tenant-id", user.getTenantId());
+            ctx.setSessionValue(scope.getScopeId() + "-tenant-name", user.getTenantName());
             ctx.setSessionValue(scope.getScopeId() + "-user-id", user.getUserId());
             ctx.setSessionValue(scope.getScopeId() + "-user-name", user.getUserName());
             ctx.setSessionValue(scope.getScopeId() + "-user-email", user.getEmail());
@@ -242,12 +236,16 @@ public abstract class GenericUserManager implements UserManager {
             Optional<ServerSession> s = ctx.getServerSession(false);
             if (s.isPresent()) {
                 ServerSession sess = s.get();
+                sess.putValue(scope.getScopeId() + "-tenant-id", null);
+                sess.putValue(scope.getScopeId() + "-tenant-name", null);
                 sess.putValue(scope.getScopeId() + "-user-id", null);
                 sess.putValue(scope.getScopeId() + "-user-name", null);
                 sess.putValue(scope.getScopeId() + "-user-email", null);
                 sess.putValue(scope.getScopeId() + "-user-roles", null);
             }
         } else if (sessionStorage == "client") {
+            ctx.setSessionValue(scope.getScopeId() + "-tenant-id", null);
+            ctx.setSessionValue(scope.getScopeId() + "-tenant-name", null);
             ctx.setSessionValue(scope.getScopeId() + "-user-id", null);
             ctx.setSessionValue(scope.getScopeId() + "-user-name", null);
             ctx.setSessionValue(scope.getScopeId() + "-user-email", null);

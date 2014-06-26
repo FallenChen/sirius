@@ -11,7 +11,6 @@ package sirius.web.health;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Context;
-import sirius.kernel.di.std.Factory;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.HandledException;
@@ -19,8 +18,7 @@ import sirius.kernel.health.MemoryBasedHealthMonitor;
 import sirius.web.controller.Controller;
 import sirius.web.controller.Routed;
 import sirius.web.http.WebContext;
-
-import java.util.function.Supplier;
+import sirius.web.security.Permission;
 
 /**
  * Contains the default admin GUI.
@@ -31,31 +29,19 @@ import java.util.function.Supplier;
 @Register(classes = Controller.class)
 public class SystemController implements Controller {
 
-    /**
-     * Used to retrieve a factory (via {@link sirius.kernel.di.GlobalContext#make(Class, String)} which checks access
-     * to /system/console.
-     */
-    public static final String SYSTEM_CONSOLE_ACCESS_CHECKER = "SystemController.SYSTEM_CONSOLE_ACCESS_CHECKER";
 
-    /**
-     * Used to retrieve a factory (via {@link sirius.kernel.di.GlobalContext#make(Class, String)} which checks access
-     * to /system/logs.
-     */
-    public static final String SYSTEM_LOGS_ACCESS_CHECKER = "SystemController.SYSTEM_LOGS_ACCESS_CHECKER";
+    public static final String PERMISSION_SYSTEM_CONSOLE = "permission-system-console";
 
-    /**
-     * Used to retrieve a factory (via {@link sirius.kernel.di.GlobalContext#make(Class, String)} which checks access
-     * to /system/errors.
-     */
-    public static final String SYSTEM_ERRORS_ACCESS_CHECKER = "SystemController.SYSTEM_ERRORS_ACCESS_CHECKER";
+    public static final String PERMISSION_SYSTEM_LOGS = "permission-system-logs";
+
+    public static final String PERMISSION_SYSTEM_ERRORS = "permission-system-errors";
+
+    public static final String PERMISSION_SYSTEM_STATE = "permission-system-state";
 
     @Routed("/system/console")
+    @Permission(PERMISSION_SYSTEM_CONSOLE)
     public void console(WebContext ctx) {
-        if (context.make(Boolean.class, SYSTEM_CONSOLE_ACCESS_CHECKER).orElse(true)) {
-            ctx.respondWith().cached().template("/view/system/console.html");
-        } else {
-            ctx.respondWith().error(HttpResponseStatus.FORBIDDEN);
-        }
+        ctx.respondWith().cached().template("/view/system/console.html");
     }
 
     @Override
@@ -76,21 +62,15 @@ public class SystemController implements Controller {
     private GlobalContext context;
 
     @Routed("/system/logs")
+    @Permission(PERMISSION_SYSTEM_LOGS)
     public void logs(WebContext ctx) {
-        if (context.make(Boolean.class, SYSTEM_LOGS_ACCESS_CHECKER).orElse(true)) {
-            ctx.respondWith().template("/view/system/logs.html", monitor.getMessages());
-        } else {
-            ctx.respondWith().error(HttpResponseStatus.FORBIDDEN);
-        }
+        ctx.respondWith().template("/view/system/logs.html", monitor.getMessages());
     }
 
     @Routed("/system/errors")
+    @Permission(PERMISSION_SYSTEM_ERRORS)
     public void errors(WebContext ctx) {
-        if (context.make(Boolean.class, SYSTEM_ERRORS_ACCESS_CHECKER).orElse(true)) {
-            ctx.respondWith().template("/view/system/errors.html", monitor.getIncidents());
-        } else {
-            ctx.respondWith().error(HttpResponseStatus.FORBIDDEN);
-        }
+        ctx.respondWith().template("/view/system/errors.html", monitor.getIncidents());
     }
 
     @Routed("/system/ok")
@@ -113,6 +93,7 @@ public class SystemController implements Controller {
     }
 
     @Routed("/system/state")
+    @Permission(PERMISSION_SYSTEM_STATE)
     public void state(WebContext ctx) {
         ctx.respondWith().template("/view/system/state.html", cluster, metrics, ctx.get("all").asBoolean(false));
     }

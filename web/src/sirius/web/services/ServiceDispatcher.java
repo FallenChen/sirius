@@ -13,11 +13,12 @@ import sirius.kernel.async.Async;
 import sirius.kernel.commons.*;
 import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Context;
-import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
+import sirius.web.security.Permissions;
+import sirius.web.security.UserContext;
 
 import java.util.Collection;
 import java.util.List;
@@ -117,6 +118,12 @@ public class ServiceDispatcher implements WebDispatcher {
                                                .handle()
                          );
                      } else {
+                         for (String p : Permissions.computePermissionsFromAnnotations(serv.getClass())) {
+                             if (!UserContext.getCurrentUser().hasPermission(p)) {
+                                 ctx.respondWith().error(HttpResponseStatus.UNAUTHORIZED, "Missing permission: " + p);
+                                 return;
+                             }
+                         }
                          call.invoke(serv);
                      }
                  }

@@ -71,11 +71,7 @@ public class UserContext {
             currentScope = ScopeInfo.DEFAULT_SCOPE;
         }
         if (ctx != null) {
-            UserManager manager = managers.get(currentScope.getScopeId());
-            if (manager == null) {
-                manager = getManager(currentScope);
-                managers.put(currentScope.getScopeId(), manager);
-            }
+            UserManager manager = getUserManager();
             currentUser = manager.bindToRequest(ctx);
         } else {
             currentUser = UserInfo.NOBODY;
@@ -179,11 +175,33 @@ public class UserContext {
     }
 
     public void attachUserToSession() {
+        WebContext ctx = CallContext.getCurrent().get(WebContext.class);
+        if (ctx == null) {
+            return;
+        }
+        if (!getCurrentUser().isLoggedIn()) {
+            return;
+        }
+        UserManager manager = getUserManager();
+        manager.attachToSession(getUser(), ctx);
+    }
 
+    private UserManager getUserManager() {
+        UserManager manager = managers.get(getScope().getScopeId());
+        if (manager == null) {
+            manager = getManager(currentScope);
+            managers.put(currentScope.getScopeId(), manager);
+        }
+        return manager;
     }
 
     public void detachUserFromSession() {
-
+        WebContext ctx = CallContext.getCurrent().get(WebContext.class);
+        if (ctx == null) {
+            return;
+        }
+        UserManager manager = getUserManager();
+        manager.detachFromSession(getCurrentUser(), ctx);
     }
 
     public ScopeInfo getScope() {

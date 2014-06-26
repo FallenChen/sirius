@@ -20,6 +20,7 @@ import sirius.kernel.health.Log;
 import sirius.web.http.InputStreamHandler;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
+import sirius.web.security.UserContext;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -83,42 +84,62 @@ public class ControllerDispatcher implements WebDispatcher {
                         params.add(ish);
                         ctx.setContentHandler(ish);
                     }
-                    Async.executor("web-mvc").fork(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                params.add(0, ctx);
-                                for (Interceptor interceptor : interceptors) {
-                                    if (interceptor.before(ctx, route.getController(), route.getSuccessCallback())) {
-                                        return;
-                                    }
-                                }
-                                route.getSuccessCallback().invoke(route.getController(), params.toArray());
-                            } catch (InvocationTargetException ex) {
-                                handleFailure(ctx, route, ex.getTargetException());
-                            } catch (Throwable ex) {
-                                handleFailure(ctx, route, ex);
-                            }
-                            ctx.enableTiming(route.toString());
-                        }
-                    }).dropOnOverload(new Runnable() {
-                        @Override
-                        public void run() {
-                            ctx.respondWith()
-                               .error(HttpResponseStatus.INTERNAL_SERVER_ERROR, "Request dropped - System overload!");
-                        }
-                    }).execute();
+                    Async.executor("web-mvc")
+                         .fork(() -> {
+                             try {
+                                 params.add(0, ctx);
+                                 // Check if we're allowed to call this route...
+                                 String missingPermission = route.checkAuth();
+                                 if (missingPermission != null) {
+                                     // No...handle permission error
+                                     for (Interceptor interceptor : interceptors) {
+                                         if (interceptor.beforePermissionError(missingPermission,
+                                                                               ctx,
+                                                                               route.getController(),
+                                                                               route.getSuccessCallback())) {
+                                             return;
+                                         }
+                                     }
+
+                                     // No Interceptor is in charge...use default templates...
+                                     if (UserContext.getCurrentUser().isLoggedIn()) {
+                                         ctx.respondWith().template("permission-error.html");
+                                     } else {
+                                         ctx.respondWith().template("login.html");
+                                     }
+                                 } else {
+                                     // Intercept call...
+                                     for (Interceptor interceptor : interceptors) {
+                                         if (interceptor.before(ctx,
+                                                                route.getController(),
+                                                                route.getSuccessCallback())) {
+                                             return;
+                                         }
+                                     }
+                                     // If a user authenticated during this call...bind to session!
+                                     if (UserContext.getCurrentUser().isLoggedIn()) {
+                                         CallContext.getCurrent().get(UserContext.class).attachUserToSession();
+                                     }
+
+                                     // Execute routing
+                                     route.getSuccessCallback().invoke(route.getController(), params.toArray());
+                                 }
+                             } catch (InvocationTargetException ex) {
+                                 handleFailure(ctx, route, ex.getTargetException());
+                             } catch (Throwable ex) {
+                                 handleFailure(ctx, route, ex);
+                             }
+                             ctx.enableTiming(route.toString());
+                         })
+                         .dropOnOverload(() -> ctx.respondWith()
+                                                  .error(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                                         "Request dropped - System overload!")
+                         )
+                         .execute();
                     return true;
                 }
             } catch (final Throwable e) {
-                Async.executor("web-mvc").fork(new Runnable() {
-                    @Override
-                    public void run() {
-                        handleFailure(ctx, route, e);
-                    }
-
-
-                }).execute();
+                Async.executor("web-mvc").fork(() -> handleFailure(ctx, route, e)).execute();
                 return true;
             }
         }
@@ -129,8 +150,8 @@ public class ControllerDispatcher implements WebDispatcher {
         try {
             CallContext.getCurrent()
                        .addToMDC("controller",
-                                 route.getController().getClass().getName() + "." + route.getSuccessCallback()
-                                                                                         .getName());
+                                 route.getController().getClass().getName() + "." + route.getSuccessCallback().getName()
+                       );
             route.getController().onError(ctx, Exceptions.handle(ControllerDispatcher.LOG, ex));
         } catch (Throwable t) {
             ctx.respondWith()
@@ -163,7 +184,7 @@ public class ControllerDispatcher implements WebDispatcher {
      */
     private Route compileMethod(Routed routed, final Controller controller, final Method m) {
         try {
-            final Route route = Route.compile(routed, m.getParameterTypes());
+            final Route route = Route.compile(m, routed);
             route.setPreDispatchable(routed.preDispatchable());
             route.setController(controller);
             route.setSuccessCallback(m);

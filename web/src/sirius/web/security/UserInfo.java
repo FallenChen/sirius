@@ -21,9 +21,17 @@ public class UserInfo {
 
     public static final String PERMISSION_LOGGED_IN = "flag-logged-in";
 
-    public static final UserInfo NOBODY = new UserInfo("ANONYMOUS", "(no user)", "", null, null);
-    public static final UserInfo GOD_LIKE = new UserInfo("ADMIN", "(admin)", "", Collections.singleton("*"), null);
+    public static final UserInfo NOBODY = new UserInfo(null, null, "ANONYMOUS", "(no user)", "", null, null);
+    public static final UserInfo GOD_LIKE = new UserInfo(null,
+                                                         null,
+                                                         "ADMIN",
+                                                         "(admin)",
+                                                         "",
+                                                         Collections.singleton("*"),
+                                                         null);
 
+    private String tenantId;
+    private String tenantName;
     private String userId;
     private String username;
     private String eMail;
@@ -31,11 +39,15 @@ public class UserInfo {
     private boolean allPermissions = false;
     private Function<UserInfo, Object> userSupplier;
 
-    public UserInfo(String userId,
+    public UserInfo(String tenantId,
+                    String tenantName,
+                    String userId,
                     String username,
                     String eMail,
                     Set<String> permissions,
                     Function<UserInfo, Object> userSupplier) {
+        this.tenantId = tenantId;
+        this.tenantName = tenantName;
         this.userId = userId;
         this.username = username;
         this.eMail = eMail;
@@ -50,6 +62,14 @@ public class UserInfo {
 
     public String getUserName() {
         return username;
+    }
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public String getTenantName() {
+        return tenantName;
     }
 
     public String getEmail() {

@@ -29,4 +29,6 @@ public interface Interceptor {
      *         invoked
      */
     boolean before(WebContext ctx, Controller controller, Method method) throws Exception;
+
+    boolean beforePermissionError(String permission,WebContext ctx, Controller controller, Method method) throws Exception;
 }
