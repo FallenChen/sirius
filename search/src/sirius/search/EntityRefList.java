@@ -15,6 +15,7 @@ import sirius.kernel.commons.Tuple;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Used as field type which references a list of other entities.
@@ -58,19 +59,38 @@ public class EntityRefList<E extends Entity> {
     /**
      * Returns the entity value represented by this reference.
      *
+     * @return the value represented by this reference
+     */
+    public List<E> getValues() {
+        return getValuesWithRouting(null);
+    }
+
+    /**
+     * Returns the entity value represented by this reference.
+     *
      * @param routing the routing info used to lookup the entities (might be <tt>null</tt> if no routing is required).
      * @return the value represented by this reference
      */
-    public List<E> getValues(String routing) {
+    public List<E> getValuesWithRouting(String routing) {
         if (!isValueLoaded() || valueFromCache) {
+            EntityDescriptor descriptor = Index.getDescriptor(clazz);
             List<E> result = Lists.newArrayList();
             for (String id : ids) {
-                E obj = Index.find(clazz, id);
-                if (obj != null) {
-                    result.add(obj);
+                if (descriptor.hasRouting()) {
+                    if (Strings.isFilled(routing)) {
+                        result.add(Index.find(routing, clazz, id));
+                    } else {
+                        Index.LOG.WARN(
+                                "Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                                clazz.getName(),
+                                id);
+                        result.add(Index.select(clazz).eq(Index.ID_FIELD, id).queryFirst());
+                    }
+                } else {
+                    result.add(Index.find(clazz, id));
                 }
             }
-            values = result;
+            values = result.stream().filter(v -> v != null).collect(Collectors.toList());
             valueFromCache = false;
         }
         if (values == null) {
@@ -85,11 +105,24 @@ public class EntityRefList<E extends Entity> {
      * The framework is permitted to load the value from a given local cache.
      * </p>
      *
+     * @param localCache the cache to used when looking up values
+     * @return the value represented by this reference
+     */
+    public List<E> getCachedValue(Cache<String, Object> localCache) {
+        return getCachedValueWithRouting(null, localCache);
+    }
+
+    /**
+     * Returns the entity value represented by this reference.
+     * <p>
+     * The framework is permitted to load the value from a given local cache.
+     * </p>
+     *
      * @param routing    the routing info used to lookup the entities (might be <tt>null</tt> if no routing is required).
      * @param localCache the cache to used when looking up values
      * @return the value represented by this reference
      */
-    public List<E> getCachedValue(String routing, Cache<String, Object> localCache) {
+    public List<E> getCachedValueWithRouting(String routing, Cache<String, Object> localCache) {
         if (isValueLoaded()) {
             if (values == null) {
                 return Collections.emptyList();
@@ -116,10 +149,22 @@ public class EntityRefList<E extends Entity> {
      * The framework is permitted to load the value from the global cache.
      * </p>
      *
+     * @return the value represented by this reference
+     */
+    public List<E> getCachedValue() {
+        return getCachedValueWithRouting(null);
+    }
+
+    /**
+     * Returns the entity value represented by this reference.
+     * <p>
+     * The framework is permitted to load the value from the global cache.
+     * </p>
+     *
      * @param routing the routing info used to lookup the entities (might be <tt>null</tt> if no routing is required).
      * @return the value represented by this reference
      */
-    public List<E> getCachedValue(String routing) {
+    public List<E> getCachedValueWithRouting(String routing) {
         if (isValueLoaded()) {
             if (values == null) {
                 return Collections.emptyList();
