@@ -20,7 +20,6 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.facet.FacetBuilders;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
-import sirius.kernel.Sirius;
 import sirius.kernel.cache.ValueComputer;
 import sirius.kernel.commons.Monoflop;
 import sirius.kernel.commons.Strings;
@@ -62,6 +61,8 @@ public class Query<E extends Entity> {
     private String index;
     private boolean forceFail = false;
     private String routing;
+    // Used to signal that deliberately no routing was given
+    private boolean deliberatelyUnrouted;
 
     /**
      * Used to create a nwe query for entities of the given class
@@ -279,7 +280,6 @@ public class Query<E extends Entity> {
      */
     public Query<E> index(String indexToUse) {
         this.index = Index.getIndexName(indexToUse);
-
         return this;
     }
 
@@ -296,7 +296,18 @@ public class Query<E extends Entity> {
      */
     public Query<E> routing(String value) {
         this.routing = value;
+        return this;
+    }
 
+    /**
+     * Marks the query as deliberately unrouted.
+     * <p>This can be used to signal the system that an entity with a routing
+     * (in {@link sirius.search.annotations.Indexed}) is deliberately queried without any routing</p>
+     *
+     * @return the query itself for fluent method calls
+     */
+    public Query<E> deliberatelyUnrouted() {
+        this.deliberatelyUnrouted = true;
         return this;
     }
 
@@ -528,9 +539,9 @@ public class Query<E extends Entity> {
                         clazz.getName());
             }
             srb.setRouting(routing);
-        } else if (ed.hasRouting() && Sirius.isDev()) {
-            Index.LOG.INFO(
-                    "Performing a search on %s without providing a routing. Consider providing a routing for better performance",
+        } else if (ed.hasRouting() && !deliberatelyUnrouted) {
+            Index.LOG.WARN(
+                    "Performing a search on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
                     clazz.getName());
         }
         if (primary) {
