@@ -87,6 +87,12 @@ public class EntityRefList<E extends Entity> {
                         result.add(Index.select(clazz).eq(Index.ID_FIELD, id).queryFirst());
                     }
                 } else {
+                    if (Strings.isFilled(routing)) {
+                        Index.LOG.WARN(
+                                "Fetching an entity of type %s (%s) with routing (which is not required for this type)!",
+                                clazz.getName(),
+                                id);
+                    }
                     result.add(Index.find(clazz, id));
                 }
             }

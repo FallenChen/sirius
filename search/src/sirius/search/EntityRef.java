@@ -80,6 +80,12 @@ public class EntityRef<E extends Entity> {
                     value = Index.select(clazz).eq(Index.ID_FIELD, id).queryFirst();
                 }
             } else {
+                if (Strings.isFilled(routing)) {
+                    Index.LOG.WARN(
+                            "Fetching an entity of type %s (%s) with routing (which is not required for this type)!",
+                            clazz.getName(),
+                            id);
+                }
                 value = Index.find(clazz, id);
             }
             valueFromCache = false;
