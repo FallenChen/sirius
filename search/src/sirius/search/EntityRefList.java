@@ -27,11 +27,11 @@ import java.util.List;
  * @since 2013/12
  */
 public class EntityRefList<E extends Entity> {
+
     private List<E> values;
     private boolean valueFromCache;
     private Class<E> clazz;
     private List<String> ids = Lists.newArrayList();
-
 
     /**
      * Creates a new reference.
@@ -58,9 +58,10 @@ public class EntityRefList<E extends Entity> {
     /**
      * Returns the entity value represented by this reference.
      *
+     * @param routing the routing info used to lookup the entities (might be <tt>null</tt> if no routing is required).
      * @return the value represented by this reference
      */
-    public List<E> getValues() {
+    public List<E> getValues(String routing) {
         if (!isValueLoaded() || valueFromCache) {
             List<E> result = Lists.newArrayList();
             for (String id : ids) {
@@ -84,10 +85,11 @@ public class EntityRefList<E extends Entity> {
      * The framework is permitted to load the value from a given local cache.
      * </p>
      *
+     * @param routing    the routing info used to lookup the entities (might be <tt>null</tt> if no routing is required).
      * @param localCache the cache to used when looking up values
      * @return the value represented by this reference
      */
-    public List<E> getCachedValue(Cache<String, Object> localCache) {
+    public List<E> getCachedValue(String routing, Cache<String, Object> localCache) {
         if (isValueLoaded()) {
             if (values == null) {
                 return Collections.emptyList();
@@ -98,7 +100,7 @@ public class EntityRefList<E extends Entity> {
         List<E> result = Lists.newArrayList();
         valueFromCache = false;
         for (String id : ids) {
-            Tuple<E, Boolean> tuple = Index.fetch(clazz, id, localCache);
+            Tuple<E, Boolean> tuple = Index.fetch(routing, clazz, id, localCache);
             if (tuple.getFirst() != null) {
                 result.add(tuple.getFirst());
                 valueFromCache |= tuple.getSecond();
@@ -114,9 +116,10 @@ public class EntityRefList<E extends Entity> {
      * The framework is permitted to load the value from the global cache.
      * </p>
      *
+     * @param routing the routing info used to lookup the entities (might be <tt>null</tt> if no routing is required).
      * @return the value represented by this reference
      */
-    public List<E> getCachedValue() {
+    public List<E> getCachedValue(String routing) {
         if (isValueLoaded()) {
             if (values == null) {
                 return Collections.emptyList();
@@ -127,7 +130,7 @@ public class EntityRefList<E extends Entity> {
         List<E> result = Lists.newArrayList();
         valueFromCache = false;
         for (String id : ids) {
-            Tuple<E, Boolean> tuple = Index.fetch(clazz, id);
+            Tuple<E, Boolean> tuple = Index.fetch(routing, clazz, id);
             if (tuple.getFirst() != null) {
                 result.add(tuple.getFirst());
                 valueFromCache |= tuple.getSecond();

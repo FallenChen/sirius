@@ -57,8 +57,31 @@ public class EntityRef<E extends Entity> {
      * @return the value represented by this reference
      */
     public E getValue() {
+        return getValue(null);
+    }
+
+    /**
+     * Returns the entity value represented by this reference.
+     *
+     * @param routing the routing info used to lookup the entity (might be <tt>null</tt> if no routing is required).
+     * @return the value represented by this reference
+     */
+    public E getValue(String routing) {
         if (!isValueLoaded() || valueFromCache) {
-            value = Index.find(clazz, id);
+            EntityDescriptor descriptor = Index.getDescriptor(clazz);
+            if (descriptor.hasRouting()) {
+                if (Strings.isFilled(routing)) {
+                    value = Index.find(routing, clazz, id);
+                } else {
+                    Index.LOG.WARN(
+                            "Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                            clazz.getName(),
+                            id);
+                    value = Index.select(clazz).eq(Index.ID_FIELD, id).queryFirst();
+                }
+            } else {
+                value = Index.find(clazz, id);
+            }
             valueFromCache = false;
         }
         return value;
@@ -74,11 +97,25 @@ public class EntityRef<E extends Entity> {
      * @return the value represented by this reference
      */
     public E getCachedValue(Cache<String, Object> localCache) {
+        return getCachedValueWithRouting(null, localCache);
+    }
+
+    /**
+     * Returns the entity value represented by this reference.
+     * <p>
+     * The framework is permitted to load the value from the given local cache.
+     * </p>
+     *
+     * @param routing    the routing info used to lookup the entity (might be <tt>null</tt> if no routing is required).
+     * @param localCache the cache to used when looking up values
+     * @return the value represented by this reference
+     */
+    public E getCachedValueWithRouting(String routing, Cache<String, Object> localCache) {
         if (isValueLoaded()) {
             return value;
         }
 
-        Tuple<E, Boolean> tuple = Index.fetch(clazz, id, localCache);
+        Tuple<E, Boolean> tuple = Index.fetch(routing, clazz, id, localCache);
         value = tuple.getFirst();
         valueFromCache = tuple.getSecond();
         return value;
@@ -93,11 +130,24 @@ public class EntityRef<E extends Entity> {
      * @return the value represented by this reference
      */
     public E getCachedValue() {
+        return getCachedValueWithRouting(null);
+    }
+
+    /**
+     * Returns the entity value represented by this reference.
+     * <p>
+     * The framework is permitted to load the value from the global cache.
+     * </p>
+     *
+     * @param routing the routing info used to lookup the entity (might be <tt>null</tt> if no routing is required).
+     * @return the value represented by this reference
+     */
+    public E getCachedValueWithRouting(String routing) {
         if (isValueLoaded()) {
             return value;
         }
 
-        Tuple<E, Boolean> tuple = Index.fetch(clazz, id);
+        Tuple<E, Boolean> tuple = Index.fetch(routing, clazz, id);
         value = tuple.getFirst();
         valueFromCache = tuple.getSecond();
         return value;

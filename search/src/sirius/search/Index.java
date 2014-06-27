@@ -102,7 +102,7 @@ public class Index {
     /**
      * Contains a promise which can be waited for
      */
-    private static Promise<Boolean> readyPromise = new Promise<>();
+    private static Promise<Boolean> readyPromise = new Promise<Boolean>();
 
     /**
      * Internal timer which is used to delay some actions. This is necessary, as ES takes up to one second to make a
@@ -138,26 +138,40 @@ public class Index {
      * May use a given cache to load the entity.
      * </p>
      *
-     * @param type  the type of the desired entity
-     * @param id    the id of the desired entity
-     * @param cache the cache to resolve the entity.
+     * @param routing the routing info used to lookup the entity (might be <tt>null</tt> if no routing is required).
+     * @param type    the type of the desired entity
+     * @param id      the id of the desired entity
+     * @param cache   the cache to resolve the entity.
      * @return a tuple containing the resolved entity (or <tt>null</tt> if not found) and a flag which indicates if the
      * value was loaded from cache (<tt>true</tt>) or not.
      */
     @Nonnull
-    public static <E extends Entity> Tuple<E, Boolean> fetch(@Nonnull Class<E> type,
+    public static <E extends Entity> Tuple<E, Boolean> fetch(@Nullable String routing,
+                                                             @Nonnull Class<E> type,
                                                              @Nullable String id,
                                                              @Nonnull com.google.common.cache.Cache<String, Object> cache) {
         if (Strings.isEmpty(id)) {
             return Tuple.create(null, false);
         }
+        EntityDescriptor descriptor = Index.getDescriptor(type);
 
-        @SuppressWarnings("unchecked") E value = (E) cache.getIfPresent(getDescriptor(type).getType() + "-" + id);
+        @SuppressWarnings("unchecked") E value = (E) cache.getIfPresent(descriptor.getType() + "-" + id);
         if (value != null) {
             return Tuple.create(value, true);
         }
-        value = find(type, id);
-        cache.put(Index.getDescriptor(type).getType() + "-" + id, value);
+        if (descriptor.hasRouting()) {
+            if (Strings.isFilled(routing)) {
+                value = find(routing, type, id);
+            } else {
+                LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                         type.getName(),
+                         id);
+                value = select(type).eq(ID_FIELD, id).queryFirst();
+            }
+        } else {
+            value = find(type, id);
+        }
+        cache.put(descriptor.getType() + "-" + id, value);
         return Tuple.create(value, false);
     }
 
@@ -167,16 +181,18 @@ public class Index {
      * May use a given cache to load the entity.
      * </p>
      *
-     * @param type  the type of the desired entity
-     * @param id    the id of the desired entity
-     * @param cache the cache to resolve the entity.
+     * @param routing the routing info used to lookup the entity (might be <tt>null</tt> if no routing is required).
+     * @param type    the type of the desired entity
+     * @param id      the id of the desired entity
+     * @param cache   the cache to resolve the entity.
      * @return the resolved entity (or <tt>null</tt> if not found)
      */
     @Nullable
-    public static <E extends Entity> E fetchFromCache(@Nonnull Class<E> type,
+    public static <E extends Entity> E fetchFromCache(@Nullable String routing,
+                                                      @Nonnull Class<E> type,
                                                       @Nullable String id,
                                                       @Nonnull com.google.common.cache.Cache<String, Object> cache) {
-        return fetch(type, id, cache).getFirst();
+        return fetch(routing, type, id, cache).getFirst();
     }
 
     /**
@@ -185,23 +201,38 @@ public class Index {
      * May use a global cache to load the entity.
      * </p>
      *
-     * @param type the type of the desired entity
-     * @param id   the id of the desired entity
+     * @param routing the routing info used to lookup the entity (might be <tt>null</tt> if no routing is required).
+     * @param type    the type of the desired entity
+     * @param id      the id of the desired entity
      * @return a tuple containing the resolved entity (or <tt>null</tt> if not found) and a flag which indicates if the
      * value was loaded from cache (<tt>true</tt>) or not.
      */
     @Nonnull
-    public static <E extends Entity> Tuple<E, Boolean> fetch(@Nonnull Class<E> type, @Nullable String id) {
+    public static <E extends Entity> Tuple<E, Boolean> fetch(@Nullable String routing,
+                                                             @Nonnull Class<E> type,
+                                                             @Nullable String id) {
         if (Strings.isEmpty(id)) {
             return Tuple.create(null, false);
         }
+        EntityDescriptor descriptor = Index.getDescriptor(type);
 
-        @SuppressWarnings("unchecked") E value = (E) globalCache.get(getDescriptor(type).getType() + "-" + id);
+        @SuppressWarnings("unchecked") E value = (E) globalCache.get(descriptor.getType() + "-" + id);
         if (value != null) {
             return Tuple.create(value, true);
         }
-        value = find(type, id);
-        globalCache.put(Index.getDescriptor(type).getType() + "-" + id, value);
+        if (descriptor.hasRouting()) {
+            if (Strings.isFilled(routing)) {
+                value = find(routing, type, id);
+            } else {
+                LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                         type.getName(),
+                         id);
+                value = select(type).eq(ID_FIELD, id).queryFirst();
+            }
+        } else {
+            value = find(type, id);
+        }
+        globalCache.put(descriptor.getType() + "-" + id, value);
         return Tuple.create(value, false);
     }
 
@@ -211,13 +242,16 @@ public class Index {
      * May use a global cache to load the entity.
      * </p>
      *
-     * @param type the type of the desired entity
-     * @param id   the id of the desired entity
+     * @param routing the routing info used to lookup the entity (might be <tt>null</tt> if no routing is required).
+     * @param type    the type of the desired entity
+     * @param id      the id of the desired entity
      * @return the resolved entity (or <tt>null</tt> if not found)
      */
     @Nullable
-    public static <E extends Entity> E fetchFromCache(@Nonnull Class<E> type, @Nullable String id) {
-        return fetch(type, id).getFirst();
+    public static <E extends Entity> E fetchFromCache(@Nullable String routing,
+                                                      @Nonnull Class<E> type,
+                                                      @Nullable String id) {
+        return fetch(routing, type, id).getFirst();
     }
 
     /**
