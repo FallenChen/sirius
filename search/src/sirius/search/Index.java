@@ -819,7 +819,12 @@ public class Index {
             try {
                 if (descriptor.hasRouting() && routing == null) {
                     LOG.WARN(
-                            "Trying to FIND an entity of type %s (with id %s) without providing a routing! This will must probably FAIL!",
+                            "Trying to FIND an entity of type %s (with id %s) without providing a routing! This will most probably FAIL!",
+                            clazz.getName(),
+                            id);
+                } else if (!descriptor.hasRouting() && routing != null) {
+                    LOG.WARN(
+                            "Trying to FIND an entity of type %s (with id %s) with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
                             clazz.getName(),
                             id);
                 }

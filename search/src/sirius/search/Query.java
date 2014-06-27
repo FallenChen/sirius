@@ -522,6 +522,11 @@ public class Query<E extends Entity> {
                                         .prepareSearch(index != null ? index : Index.getIndexName(ed.getIndex()))
                                         .setTypes(ed.getType());
         if (Strings.isFilled(routing)) {
+            if (!ed.hasRouting()) {
+                Index.LOG.WARN(
+                        "Performing a search on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
+                        clazz.getName());
+            }
             srb.setRouting(routing);
         } else if (ed.hasRouting() && Sirius.isDev()) {
             Index.LOG.INFO(
