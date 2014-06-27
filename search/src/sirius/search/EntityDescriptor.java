@@ -14,7 +14,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import sirius.kernel.commons.Reflection;
 import sirius.kernel.commons.Strings;
-import sirius.kernel.references.ReflectionValueReference;
 import sirius.search.annotations.Indexed;
 import sirius.search.annotations.RefField;
 import sirius.search.annotations.RefType;
@@ -62,6 +61,9 @@ public class EntityDescriptor {
         this.indexName = clazz.getAnnotation(Indexed.class).index();
         this.typeName = clazz.getAnnotation(Indexed.class).type();
         this.routing = clazz.getAnnotation(Indexed.class).routing();
+        if (Strings.isEmpty(routing)) {
+            routing = null;
+        }
         if ("".equals(typeName)) {
             typeName = clazz.getSimpleName();
         }
@@ -132,8 +134,7 @@ public class EntityDescriptor {
      */
     private boolean hasSetter(Field field) {
         try {
-            field.getDeclaringClass()
-                 .getMethod("set" + Reflection.toFirstUpper(field.getName()), field.getType());
+            field.getDeclaringClass().getMethod("set" + Reflection.toFirstUpper(field.getName()), field.getType());
             return true;
         } catch (NoSuchMethodException e) {
             return false;
@@ -251,4 +252,12 @@ public class EntityDescriptor {
         return null;
     }
 
+    /**
+     * Determines if a routing should be specified for this type of entities.
+     *
+     * @return <tt>true</tt> if a routing is required, <tt>false</tt> otherwise
+     */
+    public boolean hasRouting() {
+        return routing != null;
+    }
 }

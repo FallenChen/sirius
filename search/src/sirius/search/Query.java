@@ -20,16 +20,20 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.facet.FacetBuilders;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
+import sirius.kernel.Sirius;
 import sirius.kernel.cache.ValueComputer;
-import sirius.kernel.commons.*;
+import sirius.kernel.commons.Monoflop;
+import sirius.kernel.commons.Strings;
+import sirius.kernel.commons.Tuple;
+import sirius.kernel.commons.Watch;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
 import sirius.search.constraints.*;
 import sirius.search.properties.EnumProperty;
 import sirius.search.properties.Property;
-import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
+import sirius.web.security.UserContext;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -513,11 +517,16 @@ public class Query<E extends Entity> {
     }
 
     private SearchRequestBuilder buildSearch() {
+        EntityDescriptor ed = Index.getDescriptor(clazz);
         SearchRequestBuilder srb = Index.getClient()
-                                        .prepareSearch(index != null ? index : Index.getIndex(clazz))
-                                        .setTypes(Index.getDescriptor(clazz).getType());
+                                        .prepareSearch(index != null ? index : Index.getIndexName(ed.getIndex()))
+                                        .setTypes(ed.getType());
         if (Strings.isFilled(routing)) {
             srb.setRouting(routing);
+        } else if (ed.hasRouting() && Sirius.isDev()) {
+            Index.LOG.INFO(
+                    "Performing a search on %s without providing a routing. Consider providing a routing for better performance",
+                    clazz.getName());
         }
         if (primary) {
             srb.setPreference("_primary");

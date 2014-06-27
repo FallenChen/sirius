@@ -769,7 +769,19 @@ public class Index {
      * @return the entity of the given class with the given id or <tt>null</tt> if no such entity exists
      */
     public static <E extends Entity> E find(final Class<E> clazz, String id) {
-        return find(null, clazz, id);
+        return find(null, null, clazz, id);
+    }
+
+    /**
+     * Tries to find the entity of the given type with the given id and routing.
+     *
+     * @param routing the value used to compute the routing hash
+     * @param clazz   the type of the entity
+     * @param id      the id of the entity
+     * @return the entity of the given class with the given id or <tt>null</tt> if no such entity exists
+     */
+    public static <E extends Entity> E find(String routing, final Class<E> clazz, String id) {
+        return find(null, routing, clazz, id);
     }
 
     /**
@@ -781,8 +793,14 @@ public class Index {
      * @param id    the id of the entity
      * @return the entity of the given class with the given id or <tt>null</tt> if no such entity exists
      */
-    public static <E extends Entity> E find(@Nullable String index, final Class<E> clazz, String id) {
+    public static <E extends Entity> E find(@Nullable String index,
+                                            @Nullable String routing,
+                                            @Nonnull final Class<E> clazz,
+                                            String id) {
         try {
+            if (Strings.isEmpty(id)) {
+                return null;
+            }
             if (NEW.equals(id)) {
                 E e = clazz.newInstance();
                 e.setId(NEW);
@@ -793,18 +811,26 @@ public class Index {
             } else {
                 index = getIndexName(index);
             }
+            EntityDescriptor descriptor = getDescriptor(clazz);
             if (LOG.isFINE()) {
-                LOG.FINE("FIND: %s.%s: %s", index, getDescriptor(clazz).getType(), id);
+                LOG.FINE("FIND: %s.%s: %s", index, descriptor.getType(), id);
             }
             Watch w = Watch.start();
             try {
-                GetResponse res = getClient().prepareGet(index, getDescriptor(clazz).getType(), id)
+                if (descriptor.hasRouting() && routing == null) {
+                    LOG.WARN(
+                            "Trying to FIND an entity of type %s (with id %s) without providing a routing! This will must probably FAIL!",
+                            clazz.getName(),
+                            id);
+                }
+                GetResponse res = getClient().prepareGet(index, descriptor.getType(), id)
                                              .setPreference("_primary")
+                                             .setRouting(routing)
                                              .execute()
                                              .actionGet();
                 if (!res.isExists()) {
                     if (LOG.isFINE()) {
-                        LOG.FINE("FIND: %s.%s: NOT FOUND", index, getDescriptor(clazz).getType());
+                        LOG.FINE("FIND: %s.%s: NOT FOUND", index, descriptor.getType());
                     }
                     return null;
                 } else {
@@ -812,12 +838,9 @@ public class Index {
                     entity.initSourceTracing();
                     entity.setId(res.getId());
                     entity.setVersion(res.getVersion());
-                    getDescriptor(clazz).readSource(entity, res.getSource());
+                    descriptor.readSource(entity, res.getSource());
                     if (LOG.isFINE()) {
-                        LOG.FINE("FIND: %s.%s: FOUND: %s",
-                                 index,
-                                 getDescriptor(clazz).getType(),
-                                 Strings.join(res.getSource()));
+                        LOG.FINE("FIND: %s.%s: FOUND: %s", index, descriptor.getType(), Strings.join(res.getSource()));
                     }
                     return entity;
                 }
