@@ -718,14 +718,15 @@ public class Index {
 
             entity.performSaveChecks();
             entity.beforeSave();
-            getDescriptor(entity.getClass()).writeTo(entity, source);
+            EntityDescriptor descriptor = getDescriptor(entity.getClass());
+            descriptor.writeTo(entity, source);
 
             if (LOG.isFINE()) {
                 LOG.FINE("SAVE[CREATE: %b, LOCK: %b]: %s.%s: %s",
                          forceCreate,
                          performVersionCheck,
                          getIndex(entity),
-                         getDescriptor(entity.getClass()).getType(),
+                         descriptor.getType(),
                          Strings.join(source));
             }
 
@@ -737,18 +738,29 @@ public class Index {
                 id = entity.computePossibleId();
             }
 
-            IndexRequestBuilder irb = getClient().prepareIndex(getIndex(entity),
-                                                               getDescriptor(entity.getClass()).getType(),
-                                                               id).setCreate(forceCreate).setSource(source);
+            IndexRequestBuilder irb = getClient().prepareIndex(getIndex(entity), descriptor.getType(), id)
+                                                 .setCreate(forceCreate)
+                                                 .setSource(source);
             if (!entity.isNew() && performVersionCheck) {
                 irb.setVersion(entity.getVersion());
             }
+            if (descriptor.hasRouting()) {
+                Object routingKey = descriptor.getProperty(descriptor.getRouting()).writeToSource(entity);
+                if (Strings.isEmpty(routingKey)) {
+                    LOG.WARN("Updating an entity of type %s (%s) without routing information!",
+                             entity.getClass().getName(),
+                             entity.getId());
+                } else {
+                    irb.setRouting(String.valueOf(routingKey));
+                }
+            }
+
             Watch w = Watch.start();
             IndexResponse indexResponse = irb.execute().actionGet();
             if (LOG.isFINE()) {
                 LOG.FINE("SAVE: %s.%s: %s (%d) SUCCEEDED",
                          getIndex(entity),
-                         getDescriptor(entity.getClass()).getType(),
+                         descriptor.getType(),
                          indexResponse.getId(),
                          indexResponse.getVersion());
             }
@@ -991,20 +1003,31 @@ public class Index {
             if (entity.isNew()) {
                 return;
             }
+            EntityDescriptor descriptor = getDescriptor(entity.getClass());
             if (LOG.isFINE()) {
                 LOG.FINE("DELETE[FORCE: %b]: %s.%s: %s",
                          force,
                          getIndex(entity.getClass()),
-                         getDescriptor(entity.getClass()).getType(),
+                         descriptor.getType(),
                          entity.getId());
             }
             entity.performDeleteChecks();
             Watch w = Watch.start();
             DeleteRequestBuilder drb = getClient().prepareDelete(getIndex(entity),
-                                                                 getDescriptor(entity.getClass()).getType(),
+                                                                 descriptor.getType(),
                                                                  entity.getId());
             if (!force) {
                 drb.setVersion(entity.getVersion());
+            }
+            if (descriptor.hasRouting()) {
+                Object routingKey = descriptor.getProperty(descriptor.getRouting()).writeToSource(entity);
+                if (Strings.isEmpty(routingKey)) {
+                    LOG.WARN("Deleting an entity of type %s (%s) without routing information!",
+                             entity.getClass().getName(),
+                             entity.getId());
+                } else {
+                    drb.setRouting(String.valueOf(routingKey));
+                }
             }
             drb.execute().actionGet();
             entity.deleted = true;
@@ -1014,7 +1037,7 @@ public class Index {
             if (LOG.isFINE()) {
                 LOG.FINE("DELETE: %s.%s: %s SUCCESS",
                          getIndex(entity.getClass()),
-                         getDescriptor(entity.getClass()).getType(),
+                         descriptor.getType(),
                          entity.getId());
             }
         } catch (VersionConflictEngineException e) {

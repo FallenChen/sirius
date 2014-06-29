@@ -260,4 +260,14 @@ public class EntityDescriptor {
     public boolean hasRouting() {
         return routing != null;
     }
+
+    /**
+     * Returns the field used for routing.
+     *
+     * @return the name of the field used for routing (shard selection) or <tt>null</tt> to indicate that there is
+     * no special routing.
+     */
+    public String getRouting() {
+        return routing;
+    }
 }

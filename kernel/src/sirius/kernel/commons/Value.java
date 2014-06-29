@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -136,6 +137,19 @@ public class Value {
      */
     public boolean isFilled() {
         return !isEmptyString();
+    }
+
+    /**
+     * Calls the given consumer with <tt>this</tt> if the value is filled.
+     *
+     * @param consumer the consumer to call with this object if it is filled
+     * @return the value itself for fluent method calls
+     */
+    public Value ifFilled(Consumer<Value> consumer) {
+        if (isFilled()) {
+            consumer.accept(this);
+        }
+        return this;
     }
 
     /**

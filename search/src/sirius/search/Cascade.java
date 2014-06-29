@@ -15,5 +15,5 @@ package sirius.search;
  * @since 2013/12
  */
 public enum Cascade {
-    REJECT, CASCADE, SET_NULL, IGNORE;
+    REJECT, CASCADE, LAZY_CASCADE, SET_NULL, IGNORE;
 }

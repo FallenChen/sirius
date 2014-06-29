@@ -524,7 +524,7 @@ public class Query<E extends Entity> {
      */
     @Nonnull
     public Optional<E> first() {
-        return Optional.of(queryFirst());
+        return Optional.ofNullable(queryFirst());
     }
 
     private SearchRequestBuilder buildSearch() {
