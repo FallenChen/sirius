@@ -44,11 +44,14 @@ public class IPL {
         if (kill && System.getProperty("port") != null) {
             port = Integer.parseInt(System.getProperty("port"));
         }
+        // When we're started as windows service, the start/stop command and port are passed in
+        // as arguments
         if (args.length == 2) {
             if ("stop".equals(args[0])) {
                 kill = true;
             }
             port = Integer.parseInt(args[1]);
+            // In case of "start", set port as system property so that Sirius will pick it up...
             System.setProperty("port", args[1]);
         }
         if (kill && port > 0) {

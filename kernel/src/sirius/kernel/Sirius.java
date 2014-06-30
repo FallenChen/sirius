@@ -19,13 +19,11 @@ import org.apache.log4j.spi.LoggerRepository;
 import org.junit.BeforeClass;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.Barrier;
-import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Value;
 import sirius.kernel.commons.Watch;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.Lifecycle;
-import sirius.kernel.di.MutableGlobalContext;
 import sirius.kernel.di.PartCollection;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Parts;
@@ -208,7 +206,8 @@ public class Sirius {
                                                                               if (!"test".equals(value.group(1))) {
                                                                                   config = config.withFallback(
                                                                                           ConfigFactory.load(loader,
-                                                                                                             value.group()));
+                                                                                                             value.group())
+                                                                                  );
                                                                               }
                                                                           }
         );
@@ -223,7 +222,7 @@ public class Sirius {
         NLS.init(classpath);
 
         // Initialize dependency injection...
-        Injector.init(ctx ->ctx.registerPart(config, Config.class), classpath);
+        Injector.init(ctx -> ctx.registerPart(config, Config.class), classpath);
 
         start();
 
@@ -456,7 +455,7 @@ public class Sirius {
         repository.resetConfiguration();
         Logger.getRootLogger().setLevel(Level.INFO);
 
-        if (Sirius.isDev()) {
+        if (Sirius.isDev() || Value.of(System.getProperty("console")).asBoolean(false)) {
             ConsoleAppender console = new ConsoleAppender();
             console.setLayout(new PatternLayout("%d{HH:mm:ss.SSS} %-5p [%X{flow}|%t] %c - %m%n"));
             console.setThreshold(Level.DEBUG);
