@@ -8,14 +8,13 @@
 
 package sirius.kernel.di.std;
 
+import sirius.kernel.Sirius;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.di.FieldAnnotationProcessor;
 import sirius.kernel.di.MutableGlobalContext;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 /**
  * Handles the {@link Part} annotation.
@@ -34,9 +33,20 @@ public class PartAnnotationProcessor implements FieldAnnotationProcessor {
 
     @Override
     public void handle(MutableGlobalContext ctx, Object object, Field field) throws Exception {
-        Object part = ctx.getPart(field.getType());
-        if (part != null) {
-            field.set(object, part);
+        Part annotation = field.getAnnotation(Part.class);
+        if (Strings.isFilled(annotation.configPath())) {
+            String value = Sirius.getConfig().getString(annotation.configPath());
+            if (Strings.isFilled(value)) {
+                Object part = ctx.findPart(value, field.getType());
+                if (part != null) {
+                    field.set(object, part);
+                }
+            }
+        } else {
+            Object part = ctx.getPart(field.getType());
+            if (part != null) {
+                field.set(object, part);
+            }
         }
     }
 

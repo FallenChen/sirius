@@ -10,6 +10,10 @@ import java.lang.annotation.Target;
  * <p>
  * This is the most common way to add a dependency to another part.
  * </p>
+ * <p>
+ * If a configPath is set, the system configuration is used to load the value specified for this path. The system
+ * then tries to find the part with that name.
+ * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08
@@ -17,4 +21,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = ElementType.FIELD)
 public @interface Part {
+    String configPath() default "";
 }

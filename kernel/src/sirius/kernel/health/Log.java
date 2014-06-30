@@ -171,13 +171,16 @@ public class Log {
      *
      * @param msg the message to be logged
      */
-    public void INFO(Object msg, Object... params) {
+    public void INFO(Object msg) {
+        if (msg == null) {
+            return;
+        }
         if (logger.isInfoEnabled()) {
             fixMDC();
             if (msg instanceof Throwable) {
                 logger.info(((Throwable) msg).getMessage(), (Throwable) msg);
             } else {
-                logger.info(msg);
+                logger.info(msg.toString());
             }
         }
         tap(msg, logger.isInfoEnabled(), Level.INFO);

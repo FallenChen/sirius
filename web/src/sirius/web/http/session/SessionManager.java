@@ -35,13 +35,13 @@ public class SessionManager implements EveryTenMinutes {
     /*
      * Default implementation which uses heap based maps for session storage
      */
-    protected class DefaultSessionStorage implements SessionStorage {
+    @Register(name="memory")
+    public static class MemorySessionStorage implements SessionStorage {
 
         private Map<String, MemoryServerSession> sessions = Maps.newConcurrentMap();
 
         protected void removeSession(MemoryServerSession serverSession) {
             sessions.remove(serverSession.getId());
-
         }
 
         @Override
@@ -68,8 +68,8 @@ public class SessionManager implements EveryTenMinutes {
         }
     }
 
-    @Part
-    private SessionStorage storage = new DefaultSessionStorage();
+    @Part(configPath = "http.sessionStorage")
+    private SessionStorage storage;
 
     @Parts(SessionListener.class)
     private static PartCollection<SessionListener> listeners;

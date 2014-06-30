@@ -111,6 +111,7 @@ public class ConfigUserManager extends GenericUserManager {
             Extension e = Extensions.getExtension("security.users", userId);
             if (e != null) {
                 roles = transformRoles(e.get("permissions").get(List.class, Collections.emptyList()));
+                roles.add(UserInfo.PERMISSION_LOGGED_IN);
             } else {
                 log("Unknown user: %s - Rejecting all roles!", userId);
                 roles = Collections.emptySet();

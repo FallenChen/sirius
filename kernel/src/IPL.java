@@ -44,6 +44,13 @@ public class IPL {
         if (kill && System.getProperty("port") != null) {
             port = Integer.parseInt(System.getProperty("port"));
         }
+        if (args.length == 2) {
+            if ("stop".equals(args[0])) {
+                kill = true;
+            }
+            port = Integer.parseInt(args[1]);
+            System.setProperty("port", args[1]);
+        }
         if (kill && port > 0) {
             kill(port);
         } else {

@@ -171,11 +171,11 @@ public class RequestAdapter implements HttpServletRequest {
     @Override
     public HttpSession getSession(boolean create) {
         if (session == null) {
-            ServerSession servSess = ctx.getServerSession(create);
-            if (servSess == null) {
+            Optional<ServerSession> servSess = ctx.getServerSession(create);
+            if (!servSess.isPresent()) {
                 return null;
             }
-            session = new SessionAdapter(servSess, container);
+            session = new SessionAdapter(servSess.get(), container);
         }
         return session;
     }

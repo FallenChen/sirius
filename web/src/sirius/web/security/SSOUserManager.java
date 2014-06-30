@@ -46,7 +46,7 @@ public class SSOUserManager extends GenericUserManager {
                     scope.getScopeType());
             sessionStorage = SESSION_STORAGE_TYPE_SERVER;
         }
-        parseRoles = config.get("parse-roles").asBoolean(true);
+        parseRoles = config.get("parseRoles").asBoolean(true);
     }
 
     @Override
@@ -63,6 +63,7 @@ public class SSOUserManager extends GenericUserManager {
                                             .asOptionalString()
                                             .map(this::parseRolesString)
                                             .orElse(Collections.emptySet()) : Collections.emptySet();
+        roles.add(UserInfo.PERMISSION_LOGGED_IN);
         return new UserInfo(null, null, user, user, null, transformRoles(roles), null);
     }
 

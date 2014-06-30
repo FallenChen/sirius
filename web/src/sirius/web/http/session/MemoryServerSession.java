@@ -43,11 +43,11 @@ class MemoryServerSession implements ServerSession {
      *
      * @param sessionStorage the storage which keeps a map of all known session IDs
      */
-    public MemoryServerSession(sirius.web.http.session.SessionManager.DefaultSessionStorage sessionStorage) {
+    public MemoryServerSession(SessionManager.MemorySessionStorage sessionStorage) {
         this.sessionStorage = sessionStorage;
     }
 
-    private SessionManager.DefaultSessionStorage sessionStorage;
+    private SessionManager.MemorySessionStorage sessionStorage;
     private long created = System.currentTimeMillis();
     private Map<String, Object> values = Maps.newHashMap();
     private long lastAccessed = System.currentTimeMillis();
@@ -93,6 +93,11 @@ class MemoryServerSession implements ServerSession {
     @Override
     public List<String> getKeys() {
         return Lists.newArrayList(values.keySet());
+    }
+
+    @Override
+    public boolean hasKey(String key) {
+        return values.containsKey(key);
     }
 
     @Override

@@ -16,7 +16,19 @@ import javax.annotation.Nonnull;
 import java.util.Collections;
 
 /**
- * Created by aha on 20.06.14.
+ * A simple user manager which always returns the same user with a defined set of roles.
+ * <p>
+ * Essentially this user manager make all functionality public accessible by always returning a user which has a
+ * defined set of roles (therefore one can of course disable some functions entirely).
+ * </p>
+ * <p>
+ * This roles granted can be controlled by two config entries. On is <tt>security.publicRoles</tt> which
+ * also affects all other user managers. The other is <tt>defaultRoles</tt> which has to be defined within
+ * the scope.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/06
  */
 public class PublicUserManager extends GenericUserManager {
 

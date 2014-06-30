@@ -15,6 +15,8 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.commons.Value;
 import sirius.kernel.extensions.Extension;
+import sirius.kernel.health.Exceptions;
+import sirius.kernel.health.HandledException;
 import sirius.kernel.nls.NLS;
 import sirius.web.controller.Message;
 import sirius.web.http.WebContext;
@@ -34,8 +36,19 @@ import java.util.*;
  */
 public abstract class GenericUserManager implements UserManager {
 
+    /**
+     * A SSO token might be one hour off and will still be accepted. This is defined by this constant.
+     */
     protected static final long SSO_GRACE_PERIOD_IN_SECONDS = 60 * 60;
+
+    /*
+     * Defines the name used to signal that the user should be stored in the server session
+     */
     protected static final String SESSION_STORAGE_TYPE_SERVER = "server";
+
+    /*
+     * Defines the name used to signal that the user should be stored in the client session (cookie)
+     */
     protected static final String SESSION_STORAGE_TYPE_CLIENT = "client";
 
     protected final ScopeInfo scope;
@@ -51,10 +64,10 @@ public abstract class GenericUserManager implements UserManager {
     protected GenericUserManager(ScopeInfo scope, Extension config) {
         this.scope = scope;
         this.config = config;
-        this.sessionStorage = config.get("session-storage").asString().intern();
-        this.ssoSecret = config.get("sso-secret").asString();
-        this.ssoEnabled = Strings.isFilled(ssoSecret) && config.get("sso-enabled").asBoolean(false);
-        this.defaultRoles = config.get("default-roles").get(List.class, Collections.emptyList());
+        this.sessionStorage = config.get("sessionStorage").asString().intern();
+        this.ssoSecret = config.get("ssoSecret").asString();
+        this.ssoEnabled = Strings.isFilled(ssoSecret) && config.get("ssoEnabled").asBoolean(false);
+        this.defaultRoles = config.get("defaultRoles").get(List.class, Collections.emptyList());
         this.defaultUser = new UserInfo(null,
                                         null,
                                         "(nobody)",
@@ -65,6 +78,12 @@ public abstract class GenericUserManager implements UserManager {
 
     }
 
+    protected abstract UserInfo findUserByName(WebContext ctx, String user);
+
+    protected abstract UserInfo findUserByCredentials(WebContext ctx, String user, String password);
+
+    protected abstract Object getUserObject(UserInfo u);
+
     @Nonnull
     @Override
     public UserInfo bindToRequest(@Nonnull WebContext ctx) {
@@ -73,9 +92,15 @@ public abstract class GenericUserManager implements UserManager {
             return result;
         }
 
-        result = loginViaUsernameAndPassword(ctx);
-        if (result != null) {
-            return result;
+        try {
+            result = loginViaUsernameAndPassword(ctx);
+            if (result != null) {
+                return result;
+            }
+        } catch (HandledException e) {
+            UserContext.message(Message.error(e.getMessage()));
+        } catch (Exception e) {
+            UserContext.message(Message.error(Exceptions.handle(UserContext.LOG, e)));
         }
 
         result = loginViaSSOToken(ctx);
@@ -86,6 +111,9 @@ public abstract class GenericUserManager implements UserManager {
         return defaultUser;
     }
 
+    /*
+     * Tries to perform a login using "user" and "token" (single sign-on)
+     */
     private UserInfo loginViaSSOToken(WebContext ctx) {
         if (!ssoEnabled) {
             return null;
@@ -120,10 +148,24 @@ public abstract class GenericUserManager implements UserManager {
         return null;
     }
 
+    /**
+     * Computes the input for the hash function used to generate the auth hash.
+     *
+     * @param ctx               the current request
+     * @param user              the name of the user
+     * @param challengeResponse the challenge and response pair provided by the client
+     * @return the input string used by the hash function
+     */
     protected String computeSSOHashInput(WebContext ctx, String user, Tuple<String, String> challengeResponse) {
         return ssoSecret + challengeResponse.getFirst() + user;
     }
 
+    /**
+     * Applies profile transformations and adds default roles to the set of given roles.
+     *
+     * @param roles the roles granted to a user
+     * @return a set of permissions which contain the given roles as well as the default roles and profile transformations
+     */
     protected Set<String> transformRoles(Collection<String> roles) {
         Set<String> allRoles = Sets.newTreeSet(roles);
         allRoles.addAll(defaultRoles);
@@ -131,6 +173,15 @@ public abstract class GenericUserManager implements UserManager {
         return Permissions.applyProfilesAndPublicRoles(allRoles);
     }
 
+    /**
+     * Used to write a debug log.
+     * <p>
+     * Automatically contains the name of the user manager and the current scope.
+     * </p>
+     *
+     * @param pattern the pattern used for logging
+     * @param params  the parameters applied to the pattern
+     */
     protected void log(String pattern, Object... params) {
         UserContext.LOG.FINE("UserManager '%s' for scope '%s' (%s) - %s",
                              getClass().getSimpleName(),
@@ -139,8 +190,9 @@ public abstract class GenericUserManager implements UserManager {
                              Strings.apply(pattern, params));
     }
 
-    protected abstract UserInfo findUserByName(WebContext ctx, String user);
-
+    /*
+     * Tries to perform a login using "user" and "password".
+     */
     private UserInfo loginViaUsernameAndPassword(WebContext ctx) {
         if (ctx.get("user").isFilled() && ctx.get("password").isFilled()) {
             String user = ctx.get("user").trim();
@@ -157,8 +209,9 @@ public abstract class GenericUserManager implements UserManager {
         return null;
     }
 
-    protected abstract UserInfo findUserByCredentials(WebContext ctx, String user, String password);
-
+    /*
+     * Tries to find a user in the current session
+     */
     private UserInfo findUserInSession(WebContext ctx) {
         if (sessionStorage == SESSION_STORAGE_TYPE_SERVER) {
             if (ctx.getServerSession(false).isPresent()) {
@@ -189,9 +242,19 @@ public abstract class GenericUserManager implements UserManager {
         return null;
     }
 
+    /**
+     * Tries to compute the roles for the given user and request.
+     * <p>
+     * If a server session is available, we try to load the roles from there.
+     * </p>
+     *
+     * @param ctx    the current request
+     * @param userId the id of the user to fetch roles for
+     * @return a set of roles granted to the user or an empty set if no roles were found
+     */
     @SuppressWarnings("unchecked")
     protected Set<String> computeRoles(WebContext ctx, String userId) {
-        if (sessionStorage == SESSION_STORAGE_TYPE_SERVER) {
+        if (sessionStorage == SESSION_STORAGE_TYPE_SERVER && ctx.getServerSession(false).isPresent()) {
             return ctx.getServerSession()
                       .getValue(scope.getScopeId() + "-user-roles")
                       .get(Set.class, Collections.emptySet());
@@ -200,8 +263,15 @@ public abstract class GenericUserManager implements UserManager {
         }
     }
 
-    protected abstract Object getUserObject(UserInfo u);
-
+    /**
+     * Attaches the given user to the current session.
+     * <p>
+     * This will make the login persistent across requests (if session management is enabled).
+     * </p>
+     *
+     * @param user the user to attach to the session
+     * @param ctx  the current request to attach the user to
+     */
     @Override
     public void attachToSession(@Nonnull UserInfo user, @Nonnull WebContext ctx) {
         if (sessionStorage == SESSION_STORAGE_TYPE_SERVER) {
@@ -221,6 +291,17 @@ public abstract class GenericUserManager implements UserManager {
         storeRolesForUser(user, ctx);
     }
 
+    /**
+     * Stores the roles for the current user.
+     * <p>
+     * This is part of {@link #attachToSession(UserInfo, sirius.web.http.WebContext)}. As each user manager
+     * decide by them self if they want to store the roles in the session or somewhere else (a cache), this
+     * is extracted into its own method.
+     * </p>
+     *
+     * @param user the user which roles should be stored
+     * @param ctx  the current request to store the roles in
+     */
     protected void storeRolesForUser(UserInfo user, WebContext ctx) {
         if (sessionStorage == SESSION_STORAGE_TYPE_SERVER) {
             Optional<ServerSession> sess = ctx.getServerSession(false);
@@ -230,6 +311,12 @@ public abstract class GenericUserManager implements UserManager {
         }
     }
 
+    /**
+     * Removes all stored user information from the current session.
+     *
+     * @param user the current user - passed in, in case a cache etc. has to be cleared
+     * @param ctx  the request to remove all data from
+     */
     @Override
     public void detachFromSession(@Nonnull UserInfo user, @Nonnull WebContext ctx) {
         if (sessionStorage == "server") {
@@ -253,6 +340,16 @@ public abstract class GenericUserManager implements UserManager {
         clearRolesForUser(user, ctx);
     }
 
+    /**
+     * Removes previously stored roles from the session.
+     * <p>
+     * This is part of {@link #detachFromSession(UserInfo, sirius.web.http.WebContext)} and the inverse
+     * {@link #storeRolesForUser(UserInfo, sirius.web.http.WebContext)}.
+     * </p>
+     *
+     * @param user the user to remove its roles from the session
+     * @param ctx  the request to remove role data from
+     */
     protected void clearRolesForUser(UserInfo user, WebContext ctx) {
         if (sessionStorage == "server") {
             Optional<ServerSession> sess = ctx.getServerSession(false);

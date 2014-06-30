@@ -97,6 +97,14 @@ public interface ServerSession {
     List<String> getKeys();
 
     /**
+     * Determines if a key with the given name is already present.
+     *
+     * @param key the name of the key
+     * @return <tt>true</tt> if a value with the given key exists, <tt>false</tt> otherwise
+     */
+    boolean hasKey(String key);
+
+    /**
      * Stores the given name value pair in the session.
      *
      * @param key  the key used to associate the data with

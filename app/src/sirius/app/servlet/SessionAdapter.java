@@ -12,7 +12,10 @@ import sirius.kernel.commons.Callback;
 import sirius.web.http.session.ServerSession;
 
 import javax.servlet.ServletContext;
-import javax.servlet.http.*;
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpSessionAttributeListener;
+import javax.servlet.http.HttpSessionBindingEvent;
+import javax.servlet.http.HttpSessionContext;
 import java.util.Collections;
 import java.util.Enumeration;
 
@@ -82,35 +85,37 @@ public class SessionAdapter implements HttpSession {
 
     @Override
     public Enumeration getAttributeNames() {
-        return Collections.enumeration(session.getValueMap().keySet());
+        return Collections.enumeration(session.getKeys());
     }
 
     @Override
     @Deprecated
     public String[] getValueNames() {
-        return session.getValueMap().keySet().toArray(new String[session.getValueMap().keySet().size()]);
+        return session.getKeys().toArray(new String[session.getKeys().size()]);
     }
 
     @Override
     public void setAttribute(final String s, final Object o) {
-        if (session.getValueMap().containsKey(s)) {
+        if (session.hasKey(s)) {
             ctx.invokeListeners("attributeReplaced",
-                                HttpSessionAttributeListener.class,
-                                new Callback<HttpSessionAttributeListener>() {
-                                    @Override
-                                    public void invoke(HttpSessionAttributeListener value) throws Exception {
-                                        value.attributeReplaced(new HttpSessionBindingEvent(SessionAdapter.this, s, o));
-                                    }
-                                });
+                    HttpSessionAttributeListener.class,
+                    new Callback<HttpSessionAttributeListener>() {
+                        @Override
+                        public void invoke(HttpSessionAttributeListener value) throws Exception {
+                            value.attributeReplaced(new HttpSessionBindingEvent(SessionAdapter.this, s, o));
+                        }
+                    }
+            );
         } else {
             ctx.invokeListeners("attributeAdded",
-                                HttpSessionAttributeListener.class,
-                                new Callback<HttpSessionAttributeListener>() {
-                                    @Override
-                                    public void invoke(HttpSessionAttributeListener value) throws Exception {
-                                        value.attributeAdded(new HttpSessionBindingEvent(SessionAdapter.this, s, o));
-                                    }
-                                });
+                    HttpSessionAttributeListener.class,
+                    new Callback<HttpSessionAttributeListener>() {
+                        @Override
+                        public void invoke(HttpSessionAttributeListener value) throws Exception {
+                            value.attributeAdded(new HttpSessionBindingEvent(SessionAdapter.this, s, o));
+                        }
+                    }
+            );
         }
         session.putValue(s, o);
     }
@@ -124,13 +129,14 @@ public class SessionAdapter implements HttpSession {
     @Override
     public void removeAttribute(final String s) {
         ctx.invokeListeners("attributeRemoved",
-                            HttpSessionAttributeListener.class,
-                            new Callback<HttpSessionAttributeListener>() {
-                                @Override
-                                public void invoke(HttpSessionAttributeListener value) throws Exception {
-                                    value.attributeRemoved(new HttpSessionBindingEvent(SessionAdapter.this, s));
-                                }
-                            });
+                HttpSessionAttributeListener.class,
+                new Callback<HttpSessionAttributeListener>() {
+                    @Override
+                    public void invoke(HttpSessionAttributeListener value) throws Exception {
+                        value.attributeRemoved(new HttpSessionBindingEvent(SessionAdapter.this, s));
+                    }
+                }
+        );
         session.removeValue(s);
     }
 

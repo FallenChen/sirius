@@ -245,6 +245,12 @@
     <!-- Compiles the app module -->
     <!-- =========================================================================================================== -->
     <target name="make-app" unless="no-app">
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="${sirius.dir}/build/unmanaged-app-lib">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+
         <javac compiler="javac1.7"
                includeantruntime="false"
                classpathref="compile.path"

@@ -25,13 +25,13 @@ public class Permissions {
 
     protected static Map<String, Set<String>> profilesCache;
 
-    @ConfigValue("security.public-roles")
+    @ConfigValue("security.publicRoles")
     protected static List<String> publicRoles;
 
     private static Set<String> getProfile(String role) {
         if (profilesCache == null) {
             Map<String, Set<String>> profiles = Maps.newHashMap();
-            Config profilesConfig = Sirius.getConfig().atPath("security.profiles");
+            Config profilesConfig = Sirius.getConfig().getConfig("security.profiles");
             profilesConfig.entrySet()
                           .stream()
                           .map(e -> e.getKey())

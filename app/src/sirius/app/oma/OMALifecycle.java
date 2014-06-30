@@ -1,3 +1,11 @@
+/*
+ * Made with all the love in the world
+ * by scireum in Remshalden, Germany
+ *
+ * Copyright by scireum GmbH
+ * http://www.scireum.de - info@scireum.de
+ */
+
 package sirius.app.oma;
 
 import sirius.app.oma.schema.SchemaUpdateAction;
@@ -14,12 +22,11 @@ import java.sql.SQLException;
  * Time: 00:22
  * To change this template use File | Settings | File Templates.
  */
-@Register
+@Register(framework = "oma")
 public class OMALifecycle implements Lifecycle {
 
     @ConfigValue("jdbc.oma.syncSchemaOnStartup")
     private boolean syncSchemaOnStartup;
-
 
     @Override
     public void started() {
@@ -44,6 +51,11 @@ public class OMALifecycle implements Lifecycle {
     @Override
     public void stopped() {
 
+    }
+
+    @Override
+    public void awaitTermination() {
+        // NOOP
     }
 
     @Override

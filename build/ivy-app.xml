@@ -1,2 +1,17 @@
+<!-- Required by the servlet emulation layer. Contains all interfaces defined by the spec -->
 <dependency org="javax.servlet" name="javax.servlet-api" rev="3.1.0" conf="compile" />
+
+<!-- Used to generate QR codes -->
+<dependency org="com.google.zxing" name="core" rev="2.2" conf="compile"/>
+<dependency org="com.google.zxing" name="javase" rev="2.2" conf="compile"/>
+
+<!-- JDBC drivers for frequently used DBs -->
 <dependency org="mysql" name="mysql-connector-java" rev="5.1.12" conf="compile" />
+<dependency org="postgresql" name="postgresql" rev="9.1-901-1.jdbc4" conf="compile" />
+
+<!-- Used by the redis connector - also used to store session data in redis -->
+<dependency org="redis.clients" name="jedis" rev="2.0.0" conf="compile"/>
+
+<!-- Used by the i5 connector, also provides a JDBC driver -->
+<dependency org="net.sf.jt400" name="jt400-full" rev="6.0" conf="compile" />
+
