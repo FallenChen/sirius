@@ -15,8 +15,8 @@ import sirius.kernel.nls.NLS;
 import sirius.search.Entity;
 import sirius.search.Index;
 import sirius.search.annotations.NotNull;
-import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
+import sirius.web.security.UserContext;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -153,7 +153,19 @@ public class Property {
         builder.field("type", getMappingType());
         builder.field("store", isStored() ? "yes" : "no");
         builder.field("index", "not_analyzed");
+        if (isIgnoreFromAll()) {
+            builder.field("include_in_all", false);
+        }
         builder.endObject();
+    }
+
+    /**
+     * Determines if this value should not be included in the _all field.
+     *
+     * @return <tt>true</tt> if the value should not be included in the all field, <tt>false</tt> otherwise.
+     */
+    protected boolean isIgnoreFromAll() {
+        return true;
     }
 
     /**

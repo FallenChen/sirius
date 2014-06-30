@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 /**
  * Marks a string field as stored.
  * <p>
- * By default all fields, which don't have a {@link Transient} annotation, will be stored. Just {@link Analyzed} fields
+ * By default all fields, which don't have a {@link Transient} annotation, will be stored. Just {@link IndexMode} fields
  * are not stored by default and need to marker annotation to be stored.
  * </p>
  *

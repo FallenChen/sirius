@@ -14,10 +14,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a string field as analyzed.
+ * Changes the index mode of the annotated field.
  * <p>
- * This will cause ElasticSearch to apply an analyzer on the given field and its contents to split it into
- * tokens.
+ * By default, fields are not analysed. However, using this annotation, Elasticsearch can be instructed to apply
+ * an analyzer or to not index the field at all (relevant for large fields, not intended to be searched in).
  * </p>
  *
  * @author Andreas Haufler (aha@scireum.de)
@@ -25,5 +25,11 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface Analyzed {
+public @interface IndexMode {
+
+    public static final String MODE_ANALYZED = "analyzed";
+    public static final String MODE_NOT_ANALYZED = "not_analyzed";
+    public static final String MODE_NO = "no";
+
+    String indexMode();
 }

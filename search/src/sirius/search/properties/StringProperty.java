@@ -9,15 +9,15 @@
 package sirius.search.properties;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import sirius.search.annotations.Analyzed;
-import sirius.search.annotations.Stored;
 import sirius.kernel.di.std.Register;
+import sirius.search.annotations.IndexMode;
+import sirius.search.annotations.Stored;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 
 /**
- * Contains a string property. If the field wears an {@link Analyzed} annotation, the contents of the field will be
+ * Contains a string property. If the field wears an {@link sirius.search.annotations.IndexMode} annotation, the contents of the field will be
  * analyzed and tokenized by ElasticSearch.
  *
  * @author Andreas Haufler (aha@scireum.de)
@@ -25,7 +25,7 @@ import java.lang.reflect.Field;
  */
 public class StringProperty extends Property {
 
-    private final boolean analyzed;
+    private final String indexMode;
 
     /**
      * Factory for generating properties based on their field type
@@ -49,7 +49,8 @@ public class StringProperty extends Property {
      */
     private StringProperty(Field field) {
         super(field);
-        this.analyzed = field.isAnnotationPresent(Analyzed.class);
+        this.indexMode = field.isAnnotationPresent(IndexMode.class) ? field.getAnnotation(IndexMode.class)
+                                                                         .indexMode() : IndexMode.MODE_NOT_ANALYZED;
     }
 
     @Override
@@ -58,11 +59,16 @@ public class StringProperty extends Property {
     }
 
     @Override
+    protected boolean isIgnoreFromAll() {
+        return false;
+    }
+
+    @Override
     public void createMapping(XContentBuilder builder) throws IOException {
         builder.startObject(getName());
         builder.field("type", getMappingType());
         builder.field("store", isStored() ? "yes" : "no");
-        builder.field("index", analyzed ? "analyzed" : "not_analyzed");
+        builder.field("index", indexMode);
         builder.endObject();
     }
 }
