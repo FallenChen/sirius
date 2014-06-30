@@ -46,7 +46,7 @@ public class Row {
     @Nonnull
     public Value getValue(Object key) {
         if (!fields.containsKey(key)) {
-            throw new IllegalArgumentException(Strings.apply("Unknown row: %s in %s", key, this));
+            throw new IllegalArgumentException(Strings.apply("Unknown column: %s in %s", key, this));
         }
         return Value.of(fields.get(key));
     }
