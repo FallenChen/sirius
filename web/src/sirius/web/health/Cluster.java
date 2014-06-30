@@ -175,8 +175,8 @@ public class Cluster implements EveryMinute {
                 HipChat.sendMessage("metric",
                                     Strings.apply("%s is %s (%s)", m.getName(), m.getValueAsString(), m.getState()),
                                     m.getState() == MetricState.YELLOW ? HipChat.Color.YELLOW : HipChat.Color.RED,
-                                    false
-                );
+                                    false);
+                LOG.WARN("NodeState: Metric %s is %s (%s)", m.getName(), m.getValueAsString(), m.getState());
             }
         }
         this.nodeState = newNodeState;
@@ -248,7 +248,6 @@ public class Cluster implements EveryMinute {
             if (inCharge(MetricState.RED)) {
                 LOG.FINE("This node is in charge of action at the bell....fire alert!");
                 alertClusterFailure();
-                HipChat.sendMessage("cluster", "Cluster is RED", HipChat.Color.RED, true);
             }
         } else if (clusterState == MetricState.RED && newClusterState != MetricState.RED) {
             if (inCharge(newClusterState)) {
@@ -296,6 +295,7 @@ public class Cluster implements EveryMinute {
         for (String receiver : alertReceivers) {
             ms.createEmail().useMailTemplate("system-alert", ctx).toEmail(receiver).send();
         }
+        HipChat.sendMessage("cluster", "Cluster is RED", HipChat.Color.RED, true);
         LOG.WARN("NodeState: %s, ClusterState: %s", nodeState, clusterState);
     }
 
