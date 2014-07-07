@@ -346,4 +346,17 @@ public class Strings {
         textToReplace = textToReplace.replace("Ü", "&Uuml;");
         return textToReplace;
     }
+
+
+    /**
+     * Returns a trimmed version of the given object's string representation.
+     * And empty string '' will always be null.
+     */
+    public static String trim(Object object) {
+        if (isEmpty(object)) {
+            return null;
+        }
+        return object.toString().trim();
+    }
+
 }
