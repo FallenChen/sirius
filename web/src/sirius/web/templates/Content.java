@@ -14,6 +14,8 @@ import org.apache.velocity.app.Velocity;
 import org.apache.velocity.runtime.RuntimeConstants;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.cache.Cache;
+import sirius.kernel.cache.CacheManager;
 import sirius.kernel.commons.Context;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.GlobalContext;
@@ -24,12 +26,15 @@ import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Log;
+import sirius.web.security.UserContext;
 
+import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Content generator which generates output based on templates.
@@ -150,8 +155,7 @@ public class Content implements Initializable {
         /**
          * Determines which template file should be used.
          * <p>
-         * The content is resolved by calling {@link Resolver#resolve(String)} or by a classpath lookup if
-         * all resolvers fail.
+         * The content is resolved by calling {@link #resolve(String)}.
          * </p>
          *
          * @param templateName the name of the template to use
@@ -337,6 +341,63 @@ public class Content implements Initializable {
         }
 
         return result;
+    }
+
+    @PriorityParts(Resolver.class)
+    private Collection<Resolver> resolvers;
+
+    /**
+     * Cache used to map a scope name and local uri to an URL pointing to a resolved content.
+     */
+    private Cache<String, Optional<Resource>> resolverCache = CacheManager.createCache("resolver-cache");
+
+    /**
+     * Tries to resolve a template or content-file into a {@link sirius.web.templates.Resource}
+     *
+     * @param uri the local name of the uri to load
+     * @return a {@link sirius.web.templates.Resource} (wrapped as resource) pointing to the requested content
+     * or an empty optional if no resource was found
+     */
+    @Nonnull
+    public Optional<Resource> resolve(@Nonnull String uri) {
+        return resolve(UserContext.getCurrentScope().getScopeId(), uri);
+    }
+
+    /**
+     * Tries to resolve a template or content-file into a {@link sirius.web.templates.Resource}
+     *
+     * @param scopeId the scope to use. Use {@link #resolve(String)} to pick the currently active scope
+     * @param uri     the local name of the uri to load
+     * @return a {@link sirius.web.templates.Resource} (wrapped as resource) pointing to the requested content
+     * or an empty optional if no resource was found
+     */
+    @Nonnull
+    public Optional<Resource> resolve(@Nonnull String scopeId, @Nonnull String uri) {
+        // Bypass cache in dev environments...
+        if (Sirius.isDev()) {
+            return resolveURI(scopeId, uri);
+        }
+        String lookupKey = scopeId + "://" + uri;
+        Optional<Resource> result = resolverCache.get(lookupKey);
+        if (result != null) {
+            return result;
+        }
+        result = resolveURI(scopeId, uri);
+        resolverCache.put(lookupKey, result);
+        return result;
+    }
+
+    /*
+     * Calls all available resolvers to pick the right content for the given scope and uri (without using a cache)
+     */
+    private Optional<Resource> resolveURI(String scopeId, String uri) {
+        for (Resolver res : resolvers) {
+            Resource r = res.resolve(scopeId, uri);
+            if (r != null) {
+                return Optional.of(r);
+            }
+        }
+        return Optional.empty();
     }
 
     @Override

@@ -864,15 +864,21 @@ public class Index {
             Watch w = Watch.start();
             try {
                 if (descriptor.hasRouting() && routing == null) {
-                    LOG.WARN(
-                            "Trying to FIND an entity of type %s (with id %s) without providing a routing! This will most probably FAIL!",
-                            clazz.getName(),
-                            id);
+                    Exceptions.handle()
+                              .to(LOG)
+                              .withSystemErrorMessage(
+                                      "Trying to FIND an entity of type %s (with id %s) without providing a routing! This will most probably FAIL!",
+                                      clazz.getName(),
+                                      id)
+                              .handle();
                 } else if (!descriptor.hasRouting() && routing != null) {
-                    LOG.WARN(
-                            "Trying to FIND an entity of type %s (with id %s) with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
-                            clazz.getName(),
-                            id);
+                    Exceptions.handle()
+                              .to(LOG)
+                              .withSystemErrorMessage(
+                                      "Trying to FIND an entity of type %s (with id %s) with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
+                                      clazz.getName(),
+                                      id)
+                              .handle();
                 }
                 GetResponse res = getClient().prepareGet(index, descriptor.getType(), id)
                                              .setPreference("_primary")

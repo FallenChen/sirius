@@ -185,7 +185,7 @@ public class CallContext {
      * @param value the value to add to the mdc.
      */
     public void addToMDC(String key, @Nullable String value) {
-        mdc.put(key, value);
+        mdc.put(key, value == null ? "" : value);
     }
 
     /**

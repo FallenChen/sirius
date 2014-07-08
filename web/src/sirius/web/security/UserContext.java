@@ -76,7 +76,7 @@ public class UserContext {
         } else {
             currentUser = UserInfo.NOBODY;
         }
-        CallContext.getCurrent().addToMDC("user", currentUser.getUserId());
+        CallContext.getCurrent().addToMDC("userId", currentUser.getUserId());
         CallContext.getCurrent().addToMDC("username", currentUser.getUserName());
         CallContext.getCurrent().addToMDC("scope", currentScope.getScopeId());
     }

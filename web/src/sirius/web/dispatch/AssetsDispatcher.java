@@ -18,6 +18,7 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Part;
+import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
@@ -25,6 +26,7 @@ import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 import sirius.web.http.WebServer;
 import sirius.web.templates.Content;
+import sirius.web.templates.Resolver;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,6 +34,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.List;
 
 /**
  * Dispatches all URLs below <code>/assets</code>.
@@ -63,6 +66,9 @@ public class AssetsDispatcher implements WebDispatcher {
     private String cacheDir;
     private File cacheDirFile;
 
+    @PriorityParts(Resolver.class)
+    private List<Resolver> resolvers;
+
     @Override
     public boolean dispatch(WebContext ctx) throws Exception {
         if (!ctx.getRequest().getUri().startsWith("/assets") || HttpMethod.GET != ctx.getRequest().getMethod()) {
@@ -76,7 +82,7 @@ public class AssetsDispatcher implements WebDispatcher {
         }
         URL url = getClass().getResource(uri);
         if (url == null) {
-            url = getClass().getResource("/assets/defaults" + uri.substring(7));
+            url = getClass().getResource("/default/assets" + uri.substring(7));
         }
         if (url == null) {
             // If the file is not found not is a .css file, check if we need to generate it via a .scss file

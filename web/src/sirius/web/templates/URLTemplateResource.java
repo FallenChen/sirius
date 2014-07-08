@@ -11,8 +11,11 @@ package sirius.web.templates;
 import org.rythmengine.resource.ITemplateResource;
 import org.rythmengine.resource.TemplateResourceBase;
 import org.rythmengine.utils.IO;
+import sirius.kernel.commons.RateLimit;
+import sirius.kernel.di.std.Part;
 
-import java.net.URL;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Used as {@link org.rythmengine.resource.ITemplateResource} implementation created by our
@@ -23,55 +26,55 @@ import java.net.URL;
  */
 class URLTemplateResource extends TemplateResourceBase implements ITemplateResource {
 
-    private String key;
-    private URL url;
+    private Resource resource;
+    private RateLimit checkLimit = RateLimit.timeInterval(10, TimeUnit.SECONDS);
 
-    public URLTemplateResource(String key, URL url) {
-        this.key = key;
-        this.url = url;
+    public URLTemplateResource(Resource resource) {
+        this.resource = resource;
     }
+
+    @Part
+    private static Content content;
 
     @Override
     public String getKey() {
-        return key;
+        return resource.getScopeId() + resource.getPath();
     }
 
     @Override
     public String reload() {
-        return IO.readContentAsString(url);
+        return IO.readContentAsString(resource.getUrl());
     }
 
     @Override
     protected long lastModified() {
-        String fileName;
-        if ("file".equals(url.getProtocol())) {
-            fileName = url.getFile();
-        } else if ("jar".equals(url.getProtocol())) {
-            try {
-                java.net.JarURLConnection jarUrl = (java.net.JarURLConnection) url.openConnection();
-                fileName = jarUrl.getJarFile().getName();
-            } catch (Exception e) {
-                return System.currentTimeMillis() + 1;
-            }
-        } else {
-            return System.currentTimeMillis() + 1;
+        if (checkLimit.check()) {
+            content.resolve(resource.getScopeId(), resource.getPath()).ifPresent(r -> {
+                if (!Objects.equals(r.getUrl(), resource.getUrl())) {
+                    resource = r;
+                }
+            });
         }
 
-        java.io.File file = new java.io.File(fileName);
-        return file.lastModified();
+        return resource.getLastModified();
     }
 
     @Override
     public boolean isValid() {
-        return null != url;
+        return null != resource.getUrl();
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this) return true;
+        if (obj == this) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
         if (obj instanceof URLTemplateResource) {
             URLTemplateResource that = (URLTemplateResource) obj;
-            return that.url.equals(this.url);
+            return that.resource.equals(this.resource);
         }
         return false;
     }
@@ -88,11 +91,15 @@ class URLTemplateResource extends TemplateResourceBase implements ITemplateResou
 
     @Override
     public String getSuggestedClassName() {
-        return path2CN(key);
+        return path2CN(getKey());
     }
 
     @Override
     public String toString() {
-        return key + ": " + url;
+        return resource.toString();
+    }
+
+    public String getUrl() {
+        return String.valueOf(resource.getUrl());
     }
 }

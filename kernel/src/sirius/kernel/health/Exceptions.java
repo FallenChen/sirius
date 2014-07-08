@@ -258,6 +258,7 @@ public class Exceptions {
                 return result;
             } catch (Throwable t) {
                 // We call as few external methods a possible here, since things are really messed up right now
+                t.printStackTrace();
                 return new HandledException("Kernel Panic: Exception-Handling threw another exception: " + t.getMessage() + " (" + t
                         .getClass()
                         .getName() + ")", t);

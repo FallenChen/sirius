@@ -12,6 +12,7 @@ import com.google.common.cache.Cache;
 import com.google.common.collect.Lists;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
+import sirius.kernel.health.Exceptions;
 
 import java.util.Collections;
 import java.util.List;
@@ -80,18 +81,24 @@ public class EntityRefList<E extends Entity> {
                     if (Strings.isFilled(routing)) {
                         result.add(Index.find(routing, clazz, id));
                     } else {
-                        Index.LOG.WARN(
-                                "Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
-                                clazz.getName(),
-                                id);
+                        Exceptions.handle()
+                                  .to(Index.LOG)
+                                  .withSystemErrorMessage(
+                                          "Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                                          clazz.getName(),
+                                          id)
+                                  .handle();
                         result.add(Index.select(clazz).eq(Index.ID_FIELD, id).queryFirst());
                     }
                 } else {
                     if (Strings.isFilled(routing)) {
-                        Index.LOG.WARN(
-                                "Fetching an entity of type %s (%s) with routing (which is not required for this type)!",
-                                clazz.getName(),
-                                id);
+                        Exceptions.handle()
+                                  .to(Index.LOG)
+                                  .withSystemErrorMessage(
+                                          "Fetching an entity of type %s (%s) with routing (which is not required for this type)!",
+                                          clazz.getName(),
+                                          id)
+                                  .handle();
                     }
                     result.add(Index.find(clazz, id));
                 }

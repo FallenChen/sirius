@@ -12,13 +12,12 @@ import org.apache.commons.collections.ExtendedProperties;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.apache.velocity.runtime.resource.Resource;
 import org.apache.velocity.runtime.resource.loader.ResourceLoader;
-import sirius.kernel.di.std.PriorityParts;
+import sirius.kernel.di.std.Part;
 import sirius.kernel.health.Exceptions;
 
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Collection;
 
 /**
  * Adapter to make Velocity use our {@link Resolver} framework.
@@ -29,8 +28,8 @@ import java.util.Collection;
  */
 public class VelocityResourceLoader extends ResourceLoader {
 
-    @PriorityParts(Resolver.class)
-    private static Collection<Resolver> resolvers;
+    @Part
+    private static Content content;
 
     public static final VelocityResourceLoader INSTANCE = new VelocityResourceLoader();
 
@@ -49,13 +48,7 @@ public class VelocityResourceLoader extends ResourceLoader {
         if (name == null) {
             return null;
         }
-        for (Resolver res : resolvers) {
-            URL result = res.resolve(name);
-            if (result != null) {
-                return result;
-            }
-        }
-        return getClass().getResource(name.startsWith("/") ? name : "/" + name);
+        return content.resolve(name).map(r -> r.getUrl()).orElse(null);
     }
 
     /**

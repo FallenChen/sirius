@@ -8,7 +8,6 @@
 
 package sirius.web.templates;
 
-import sirius.kernel.commons.DataCollector;
 import sirius.kernel.commons.Tuple;
 
 import java.util.function.Consumer;

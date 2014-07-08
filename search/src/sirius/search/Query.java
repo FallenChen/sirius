@@ -534,17 +534,21 @@ public class Query<E extends Entity> {
                                         .setTypes(ed.getType());
         if (Strings.isFilled(routing)) {
             if (!ed.hasRouting()) {
-                Index.LOG.WARN(
-                        "Performing a search on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
-                        clazz.getName());
-            }
-            srb.setRouting(routing);
+                Exceptions.handle()
+                          .to(Index.LOG)
+                          .withSystemErrorMessage("Performing a search on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
+                                                  clazz.getName()
+                          )
+                          .handle();
+            } srb.setRouting(routing);
         } else if (ed.hasRouting() && !deliberatelyUnrouted) {
-            Index.LOG.WARN(
-                    "Performing a search on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
-                    clazz.getName());
-        }
-        if (primary) {
+            Exceptions.handle()
+                      .to(Index.LOG)
+                      .withSystemErrorMessage(
+                              "Performing a search on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
+                              clazz.getName())
+                      .handle();
+        } if (primary) {
             srb.setPreference("_primary");
         }
         if (randomize) {

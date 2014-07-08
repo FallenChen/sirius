@@ -21,16 +21,15 @@ import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.di.Initializable;
+import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Parts;
-import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
-import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
+import sirius.web.security.UserContext;
 
 import java.io.File;
-import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -81,13 +80,14 @@ public class RythmConfig implements Initializable {
     @Parts(RythmExtension.class)
     private Collection<RythmExtension> extensions;
 
-    @PriorityParts(Resolver.class)
-    private static Collection<Resolver> resolvers;
+    @Part
+    private Content content;
 
     @Override
     public void initialize() throws Exception {
         Map<String, Object> config = Maps.newTreeMap();
-        config.put("rythm.engine.mode", Sirius.isDev() ? "dev" : "prod");
+        // Keep rythm in dev-mode as we might want to be able to reload templates at runtime
+        config.put("rythm.engine.mode", "dev");
         File tmpDir = new File(System.getProperty("java.io.tmpdir"), CallContext.getCurrent().getNodeName() + "_rythm");
         tmpDir.mkdirs();
         if (Sirius.isDev()) {
@@ -114,18 +114,9 @@ public class RythmConfig implements Initializable {
 
         @Override
         public ITemplateResource load(String path) {
-            for (Resolver res : resolvers) {
-                URL result = res.resolve(path);
-                if (result != null) {
-                    return new URLTemplateResource(path, result);
-                }
-            }
-            URL result = getClass().getResource(path.startsWith("/") ? path : "/" + path);
-            if (result != null) {
-                return new URLTemplateResource(path, result);
-            } else {
-                return null;
-            }
+            return content.resolve(path)
+                          .map(u -> new URLTemplateResource(u))
+                          .orElse(null);
         }
     }
 
@@ -154,6 +145,7 @@ public class RythmConfig implements Initializable {
             map.put("version", String.class);
             map.put("isDev", Boolean.class);
             map.put("call", WebContext.class);
+            map.put("template", String.class);
             for (RythmExtension ext : extensions) {
                 ext.collectExtensionNames(entity -> map.put(entity.getFirst(), entity.getSecond()));
             }
@@ -163,7 +155,8 @@ public class RythmConfig implements Initializable {
         @Override
         public void setRenderArgs(final ITemplate template) {
             CallContext ctx = CallContext.getCurrent();
-            ctx.addToMDC("template", template.__getTemplateClass(true).getKey());
+            String url = ((URLTemplateResource) template.__getTemplateClass(true).templateResource).getUrl();
+            ctx.addToMDC("template", url);
             WebContext wc = ctx.get(WebContext.class);
 
             template.__setRenderArg("ctx", ctx);
@@ -173,6 +166,7 @@ public class RythmConfig implements Initializable {
             template.__setRenderArg("version", Sirius.getProductVersion());
             template.__setRenderArg("isDev", Sirius.isDev());
             template.__setRenderArg("call", wc);
+            template.__setRenderArg("template", url);
             for (RythmExtension ext : extensions) {
                 ext.collectExtensionValues(entity -> template.__setRenderArg(entity.getFirst(), entity.getSecond()));
             }

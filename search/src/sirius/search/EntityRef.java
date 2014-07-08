@@ -11,6 +11,7 @@ package sirius.search;
 import com.google.common.cache.Cache;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
+import sirius.kernel.health.Exceptions;
 
 /**
  * Used as field type which references other entities.
@@ -73,18 +74,24 @@ public class EntityRef<E extends Entity> {
                 if (Strings.isFilled(routing)) {
                     value = Index.find(routing, clazz, id);
                 } else {
-                    Index.LOG.WARN(
-                            "Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
-                            clazz.getName(),
-                            id);
+                    Exceptions.handle()
+                              .to(Index.LOG)
+                              .withSystemErrorMessage(
+                                      "Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                                      clazz.getName(),
+                                      id)
+                              .handle();
                     value = Index.select(clazz).eq(Index.ID_FIELD, id).queryFirst();
                 }
             } else {
                 if (Strings.isFilled(routing)) {
-                    Index.LOG.WARN(
-                            "Fetching an entity of type %s (%s) with routing (which is not required for this type)!",
-                            clazz.getName(),
-                            id);
+                    Exceptions.handle()
+                              .to(Index.LOG)
+                              .withSystemErrorMessage(
+                                      "Fetching an entity of type %s (%s) with routing (which is not required for this type)!",
+                                      clazz.getName(),
+                                      id)
+                              .handle();
                 }
                 value = Index.find(clazz, id);
             }
