@@ -99,6 +99,7 @@ public class VelocityResourceLoader extends ResourceLoader {
         try {
             return resolve(source).openStream();
         } catch (Throwable e) {
+            e.printStackTrace();
             throw new ResourceNotFoundException(e);
         }
     }

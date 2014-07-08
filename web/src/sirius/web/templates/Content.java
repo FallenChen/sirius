@@ -46,7 +46,7 @@ import java.util.Optional;
  * http://velocity.apache.org/engine/devel/vtl-reference-guide.html
  * </p>
  * <p>
- * The template sources are loaded via {@link Resolver#resolve(String)}. If no resolver is available or none of the
+ * The template sources are loaded via {@link #resolve(String)}. If no resolver is available or none of the
  * available ones can load the template, it is tried to load the template from the classpath.
  * </p>
  * <p>

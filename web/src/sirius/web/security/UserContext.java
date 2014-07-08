@@ -65,12 +65,12 @@ public class UserContext {
      * Loads the current user and scope from the given web context.
      */
     private void bindToRequest(WebContext ctx) {
-        if (ctx != null && detector != null) {
+        if (ctx != null && ctx.isValid() && detector != null) {
             currentScope = detector.detectScope(ctx);
         } else {
             currentScope = ScopeInfo.DEFAULT_SCOPE;
         }
-        if (ctx != null) {
+        if (ctx != null && ctx.isValid()) {
             UserManager manager = getUserManager();
             currentUser = manager.bindToRequest(ctx);
         } else {
@@ -176,7 +176,7 @@ public class UserContext {
 
     public void attachUserToSession() {
         WebContext ctx = CallContext.getCurrent().get(WebContext.class);
-        if (ctx == null) {
+        if (ctx == null || !ctx.isValid()) {
             return;
         }
         if (!getCurrentUser().isLoggedIn()) {
@@ -197,7 +197,7 @@ public class UserContext {
 
     public void detachUserFromSession() {
         WebContext ctx = CallContext.getCurrent().get(WebContext.class);
-        if (ctx == null) {
+        if (ctx == null || !ctx.isValid()) {
             return;
         }
         UserManager manager = getUserManager();

@@ -38,7 +38,7 @@ class URLTemplateResource extends TemplateResourceBase implements ITemplateResou
 
     @Override
     public String getKey() {
-        return resource.getScopeId() + resource.getPath();
+        return resource.getScopeId() + "://" + resource.getPath();
     }
 
     @Override
@@ -91,7 +91,7 @@ class URLTemplateResource extends TemplateResourceBase implements ITemplateResou
 
     @Override
     public String getSuggestedClassName() {
-        return path2CN(getKey());
+        return path2CN(resource.getScopeId() + resource.getPath());
     }
 
     @Override

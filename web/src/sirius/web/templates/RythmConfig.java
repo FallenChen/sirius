@@ -20,6 +20,7 @@ import org.rythmengine.resource.ResourceLoaderBase;
 import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.di.Initializable;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Parts;
@@ -114,6 +115,9 @@ public class RythmConfig implements Initializable {
 
         @Override
         public ITemplateResource load(String path) {
+            if (path.contains("://")) {
+                path = Strings.split(path,"://").getSecond();
+            }
             return content.resolve(path)
                           .map(u -> new URLTemplateResource(u))
                           .orElse(null);

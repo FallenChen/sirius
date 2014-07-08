@@ -278,6 +278,15 @@ public class WebContext {
     }
 
     /**
+     * Determines if this context is attached to a request or not.
+     *
+     * @return <tt>true</tt> if this context is attached to a request, <tt>false</tt> otherwise
+     */
+    public boolean isValid() {
+        return request != null;
+    }
+
+    /**
      * Used to provide a handle which is invoked once the call is completely handled.
      * <p>
      * Note that calling this method, removes the last completion handler.
@@ -793,10 +802,12 @@ public class WebContext {
     private void fillCookies() {
         if (cookiesIn == null) {
             cookiesIn = Maps.newHashMap();
-            String cookieHeader = request.headers().get(HttpHeaders.Names.COOKIE);
-            if (Strings.isFilled(cookieHeader)) {
-                for (Cookie cookie : CookieDecoder.decode(cookieHeader)) {
-                    this.cookiesIn.put(cookie.getName(), cookie);
+            if (request != null) {
+                String cookieHeader = request.headers().get(HttpHeaders.Names.COOKIE);
+                if (Strings.isFilled(cookieHeader)) {
+                    for (Cookie cookie : CookieDecoder.decode(cookieHeader)) {
+                        this.cookiesIn.put(cookie.getName(), cookie);
+                    }
                 }
             }
         }

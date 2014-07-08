@@ -16,7 +16,6 @@ import sirius.kernel.commons.Tuple;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.Supplier;
@@ -115,19 +114,22 @@ class PartRegistry implements MutableGlobalContext {
         for (Field field : clazz.getDeclaredFields()) {
             if ((!Modifier.isFinal(field.getModifiers())) && (object != null || Modifier.isStatic(field.getModifiers()))) {
                 field.setAccessible(true);
-                getParts(FieldAnnotationProcessor.class).stream().filter(p -> field.isAnnotationPresent(p.getTrigger())).forEach(
-                        p -> {
-                            try {
-                                p.handle(this, object, field);
-                            } catch (Throwable e) {
-                                Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
-                                                  p.getTrigger().getName(),
-                                                  field.getDeclaringClass().getName(),
-                                                  field.getName(),
-                                                  e.getMessage(),
-                                                  e.getClass().getName());
-                            }
-                        });
+                getParts(FieldAnnotationProcessor.class).stream()
+                                                        .filter(p -> field.isAnnotationPresent(p.getTrigger()))
+                                                        .forEach(p -> {
+                                                                     try {
+                                                                         p.handle(this, object, field);
+                                                                     } catch (Throwable e) {
+                                                                         Injector.LOG.WARN(
+                                                                                 "Cannot process annotation %s on %s.%s: %s (%s)",
+                                                                                 p.getTrigger().getName(),
+                                                                                 field.getDeclaringClass().getName(),
+                                                                                 field.getName(),
+                                                                                 e.getMessage(),
+                                                                                 e.getClass().getName());
+                                                                     }
+                                                                 }
+                                                        );
             }
         }
     }
@@ -236,21 +238,27 @@ class PartRegistry implements MutableGlobalContext {
      * Processes all annotations of all known parts.
      */
     void processAnnotations() {
+        parts.getUnderlyingMap().values().stream().flatMap(e -> e.stream()).forEach(this::wire);
+        initializeParts();
+    }
+
+    private void initializeParts() {
         Set<Object> initializedObjects = Sets.newHashSet();
-        for (Collection<?> val : parts.getUnderlyingMap().values()) {
-            for (Object part : val) {
-                wire(part);
-                if (part instanceof Initializable && !initializedObjects.contains(part)) {
-                    try {
-                        initializedObjects.add(part);
-                        ((Initializable) part).initialize();
-                    } catch (Exception e) {
-                        Injector.LOG.WARN("Error initializing %s (%s)", part, part.getClass().getName());
-                        Injector.LOG.WARN(e);
-                    }
-                }
-            }
-        }
+        parts.getUnderlyingMap()
+             .values()
+             .stream()
+             .flatMap(e -> e.stream())
+             .filter(part -> part instanceof Initializable && !initializedObjects.contains(part))
+             .forEach(part -> {
+                          try {
+                              initializedObjects.add(part);
+                              ((Initializable) part).initialize();
+                          } catch (Exception e) {
+                              Injector.LOG.WARN("Error initializing %s (%s)", part, part.getClass().getName());
+                              Injector.LOG.WARN(e);
+                          }
+                      }
+             );
     }
 
 }
