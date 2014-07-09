@@ -25,16 +25,15 @@ import sirius.kernel.health.Log;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebDispatcher;
 import sirius.web.http.WebServer;
+import sirius.web.security.UserContext;
 import sirius.web.templates.Content;
 import sirius.web.templates.Resolver;
+import sirius.web.templates.Resource;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Dispatches all URLs below <code>/assets</code>.
@@ -80,35 +79,33 @@ public class AssetsDispatcher implements WebDispatcher {
             Tuple<String, String> pair = Strings.split(uri, "/");
             uri = "/assets/" + pair.getSecond();
         }
-        URL url = getClass().getResource(uri);
-        if (url == null) {
-            url = getClass().getResource("/default/assets" + uri.substring(7));
-        }
-        if (url == null) {
-            // If the file is not found not is a .css file, check if we need to generate it via a .scss file
-            if (uri.endsWith(".css")) {
-                String scssUri = uri.substring(0, uri.length() - 4) + ".scss";
-                url = getClass().getResource(scssUri);
-                if (url != null) {
-                    handleSASS(ctx, uri, scssUri, url);
-                    return true;
-                }
+        Optional<Resource> res = content.resolve(uri);
+        if (res.isPresent()) {
+            URL url = res.get().getUrl();
+            if ("file".equals(url.getProtocol())) {
+                ctx.respondWith().file(new File(url.toURI()));
+            } else {
+                ctx.respondWith().resource(url.openConnection());
             }
-            // If the file is non existent, check if we can generate it by using a velocity template
-            url = getClass().getResource(uri + ".vm");
-            if (url != null) {
-                handleVM(ctx, uri, url);
+            return true;
+        }
+
+        String scopeId = UserContext.getCurrentScope().getScopeId();
+
+        // If the file is not found not is a .css file, check if we need to generate it via a .scss file
+        if (uri.endsWith(".css")) {
+            String scssUri = uri.substring(0, uri.length() - 4) + ".scss";
+            if (content.resolve(scssUri).isPresent()) {
+                handleSASS(ctx, uri, scssUri, scopeId);
                 return true;
             }
         }
-        if (url == null) {
-            return false;
-        } else if ("file".equals(url.getProtocol())) {
-            ctx.respondWith().file(new File(url.toURI()));
-        } else {
-            ctx.respondWith().resource(url.openConnection());
+        // If the file is non existent, check if we can generate it by using a velocity template
+        if (content.resolve(uri + ".vm").isPresent()) {
+            handleVM(ctx, uri, scopeId);
+            return true;
         }
-        return true;
+        return false;
     }
 
     private static final Log SASS_LOG = Log.get("sass");
@@ -116,7 +113,7 @@ public class AssetsDispatcher implements WebDispatcher {
     /*
      * Subclass of generator which takes care of proper logging
      */
-    private static class SIRIUSGenerator extends Generator {
+    private class SIRIUSGenerator extends Generator {
         @Override
         public void debug(String message) {
             SASS_LOG.FINE(message);
@@ -126,6 +123,17 @@ public class AssetsDispatcher implements WebDispatcher {
         public void warn(String message) {
             SASS_LOG.WARN(message);
         }
+
+
+        @Override
+        protected InputStream resolveIntoStream(String sheet) throws IOException {
+            Optional<Resource> res = content.resolve(sheet);
+            if (res.isPresent()) {
+                return res.get().getUrl().openStream();
+            }
+            return null;
+        }
+
     }
 
     @Part
@@ -134,12 +142,11 @@ public class AssetsDispatcher implements WebDispatcher {
     /*
      * Uses Velocity (via the content generator) to generate the desired file
      */
-    private void handleVM(WebContext ctx, String uri, URL url) throws IOException {
-        URLConnection connection = url.openConnection();
-        String cacheKey = uri.substring(1).replaceAll("[^a-zA-Z0-9\\-_\\.]", "_");
+    private void handleVM(WebContext ctx, String uri, String scopeId) throws IOException {
+        String cacheKey = scopeId + "-" + uri.substring(1).replaceAll("[^a-zA-Z0-9_\\.]", "_");
         File file = new File(getCacheDirFile(), cacheKey);
 
-        if (!file.exists() || file.lastModified() < connection.getLastModified()) {
+        if (!file.exists() || file.lastModified() < content.resolve(uri).get().getLastModified()) {
             try {
                 if (Sirius.isDev()) {
                     Content.LOG.INFO("Compiling: " + uri + ".vm");
@@ -159,12 +166,11 @@ public class AssetsDispatcher implements WebDispatcher {
     /*
      * Uses server-sass to compile a SASS file (.scss) into a .css file
      */
-    private void handleSASS(WebContext ctx, String cssUri, String scssUri, URL url) throws IOException {
-        URLConnection connection = url.openConnection();
-        String cacheKey = cssUri.substring(1).replaceAll("[^a-zA-Z0-9\\-_\\.]", "_");
+    private void handleSASS(WebContext ctx, String cssUri, String scssUri, String scopeId) throws IOException {
+        String cacheKey = scopeId + "-" + cssUri.substring(1).replaceAll("[^a-zA-Z0-9_\\.]", "_");
         File file = new File(getCacheDirFile(), cacheKey);
 
-        if (!file.exists() || file.lastModified() < connection.getLastModified()) {
+        if (!file.exists() || content.resolve(scssUri).get().getLastModified() - file.lastModified() > 5000) {
             if (Sirius.isDev()) {
                 SASS_LOG.INFO("Compiling: " + scssUri);
             }

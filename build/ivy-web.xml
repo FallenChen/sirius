@@ -1,7 +1,7 @@
 <!-- Netty is the foundation of the built in web server -->
 <dependency org="io.netty" name="netty-all" rev="4.0.14.Final" />
 <!-- Used to compile SCSS (SASS) files into CSS file -->
-<dependency org="com.scireum" name="server-sass" rev="1.3" conf="compile" />
+<dependency org="com.scireum" name="server-sass" rev="1.3.3" conf="compile" />
 
 <!-- Rythm is the template engine used to create dynamic web pages -->
 <dependency org="org.rythmengine" name="rythm-engine" rev="1.0" conf="compile" />

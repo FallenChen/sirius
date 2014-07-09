@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -373,13 +374,20 @@ public class Content implements Initializable {
      */
     @Nonnull
     public Optional<Resource> resolve(@Nonnull String scopeId, @Nonnull String uri) {
-        // Bypass cache in dev environments...
-        if (Sirius.isDev()) {
-            return resolveURI(scopeId, uri);
-        }
         String lookupKey = scopeId + "://" + uri;
         Optional<Resource> result = resolverCache.get(lookupKey);
         if (result != null) {
+            if (Sirius.isDev()) {
+                // In dev environments, we always perform a lookup in case something changed
+                Optional<Resource> currentResult = resolveURI(scopeId, uri);
+                if (!result.isPresent()) {
+                    return currentResult;
+                }
+                if (!currentResult.isPresent() || !Objects.equals(result.get().getUrl(),
+                                                                  currentResult.get().getUrl())) {
+                    return currentResult;
+                }
+            }
             return result;
         }
         result = resolveURI(scopeId, uri);
