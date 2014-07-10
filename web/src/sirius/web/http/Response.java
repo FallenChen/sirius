@@ -1268,7 +1268,7 @@ public class Response {
      * one go. Otherwise a chunked response will be sent.
      * </p>
      */
-    public StructuredOutput json() {
+    public JSONStructuredOutput json() {
         String callback = wc.get("callback").getString();
         String encoding = wc.get("encoding")
                             .asString(Strings.isEmpty(callback) ? Charsets.UTF_8.name() : Charsets.ISO_8859_1.name());
@@ -1284,7 +1284,7 @@ public class Response {
      * one go. Otherwise a chunked response will be sent.
      * </p>
      */
-    public StructuredOutput xml() {
+    public XMLStructuredOutput xml() {
         return new XMLStructuredOutput(outputStream(HttpResponseStatus.OK, MimeHelper.TEXT_XML));
     }
 
