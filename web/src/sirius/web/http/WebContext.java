@@ -373,6 +373,9 @@ public class WebContext {
         if (attribute != null && attribute.containsKey(key)) {
             return Value.of(attribute.get(key));
         }
+        if (queryString == null) {
+            decodeQueryString();
+        }
         if (queryString.containsKey(key)) {
             List<String> val = getParameters(key);
             if (val.size() == 1) {
@@ -407,9 +410,6 @@ public class WebContext {
         if (attribute != null && attribute.containsKey(key)) {
             return true;
         }
-        if (queryString.containsKey(key)) {
-            return true;
-        }
         if (postDecoder != null) {
             try {
                 InterfaceHttpData data = postDecoder.getBodyHttpData(key);
@@ -419,6 +419,12 @@ public class WebContext {
             } catch (Throwable e) {
                 Exceptions.handle(WebServer.LOG, e);
             }
+        }
+        if (queryString == null) {
+            decodeQueryString();
+        }
+        if (queryString.containsKey(key)) {
+            return true;
         }
 
         return false;

@@ -101,7 +101,7 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         }
         if (e instanceof ClosedChannelException) {
             WebServer.LOG.FINE(e);
-        } else if (e instanceof IOException && "Connection reset by peer".equals(e.getMessage())) {
+        } else if (e instanceof IOException) {
             WebServer.LOG.FINE(e);
         } else {
             Exceptions.handle(WebServer.LOG, e);
