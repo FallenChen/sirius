@@ -35,6 +35,7 @@ import sirius.web.http.session.ServerSession;
 import sirius.web.http.session.SessionManager;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -491,9 +492,8 @@ public class WebContext {
         if (Strings.isFilled(encodedSession)) {
             Tuple<String, String> sessionInfo = Strings.split(encodedSession, ":");
             if (Strings.areEqual(sessionInfo.getFirst(),
-                                 Hashing.sha512()
-                                        .hashString(sessionInfo.getSecond() + getSessionSecret())
-                                        .toString())) {
+                                 Hashing.sha512().hashString(sessionInfo.getSecond() + getSessionSecret()).toString()
+            )) {
                 QueryStringDecoder qsd = new QueryStringDecoder(encodedSession);
                 for (Map.Entry<String, List<String>> entry : qsd.parameters().entrySet()) {
                     session.put(entry.getKey(), Iterables.getFirst(entry.getValue(), null));
@@ -1019,6 +1019,36 @@ public class WebContext {
         } catch (ParseException e) {
             return 0;
         }
+    }
+
+    /**
+     * Tries to perform a HTTP Basic authentication by parsing the <dd>Authorization</dd> header.
+     * <p>
+     * If no such header is found or if the contents are malformed, an 401 UNAUTHORIZED response will be generated
+     * ({@link Response#unauthorized(String)}) and <tt>null</tt> will be returned.
+     * </p>
+     * <p>
+     * In case the username and password returned by this method are invalid, use
+     * {@link Response#unauthorized(String)} to notify the client.
+     * </p>
+     *
+     * @param realm the realm to report to the client in case of missing or malformed credentials
+     * @return a tuple containing username and password or <tt>null</tt> to indicate that a 401 UNAUTHORIZED response
+     * was sent in order to make the client send credentials.
+     */
+    @Nullable
+    public Tuple<String, String> tryBasicAuthentication(String realm) {
+        String header = getHeaderValue("Authorization").asString();
+        if (Strings.isFilled(header) && header.startsWith("Basic ")) {
+            header = header.substring(6);
+            String nameAndPassword = new String(Base64.getDecoder().decode(header), Charsets.UTF_8);
+            Tuple<String, String> result = Strings.split(nameAndPassword, ":");
+            if (Strings.isFilled(result.getFirst()) && Strings.isFilled(result.getSecond())) {
+                return result;
+            }
+        }
+        respondWith().unauthorized(realm);
+        return null;
     }
 
     /**

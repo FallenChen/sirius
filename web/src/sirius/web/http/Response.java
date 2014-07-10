@@ -35,7 +35,6 @@ import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
-import sirius.kernel.xml.StructuredOutput;
 import sirius.kernel.xml.XMLStructuredOutput;
 import sirius.web.services.JSONStructuredOutput;
 import sirius.web.templates.RythmConfig;
@@ -834,6 +833,20 @@ public class Response {
     }
 
     /**
+     * Sends an 401 UNAUTHORIZED response with a WWW-Authenticate header for the given realm.
+     * <p>
+     * This will generally force the client to perform a HTTP Basic authentication.
+     * </p>
+     *
+     * @param realm the realm to report to the client. This will be used to select an appropriate username
+     *              and password
+     */
+    public void unauthorized(String realm) {
+        addHeader("WWW-Authenticate", "Basic realm=\"" + realm + "\"");
+        error(HttpResponseStatus.UNAUTHORIZED, "Please specify username and password");
+    }
+
+    /**
      * Sends the given HTTP status as error.
      * <p>
      * If possible a specific template /view/errors/ERRORCODE.html. If not available, /view/errors/default.html
@@ -1462,5 +1475,4 @@ public class Response {
     public String toString() {
         return "Response for: " + wc.toString();
     }
-
 }
