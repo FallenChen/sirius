@@ -36,6 +36,7 @@ import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.StructuredOutput;
+import sirius.kernel.xml.XMLStructuredOutput;
 import sirius.web.services.JSONStructuredOutput;
 import sirius.web.templates.RythmConfig;
 
@@ -1274,6 +1275,17 @@ public class Response {
         return new JSONStructuredOutput(outputStream(HttpResponseStatus.OK, "application/json;charset=" + encoding),
                                         callback,
                                         encoding);
+    }
+
+    /**
+     * Creates a XML output which can be used to generate well formed XML.
+     * <p>
+     * By default, caching will be disabled. If the generated XML is small enough, it will be transmitted in
+     * one go. Otherwise a chunked response will be sent.
+     * </p>
+     */
+    public StructuredOutput xml() {
+        return new XMLStructuredOutput(outputStream(HttpResponseStatus.OK, MimeHelper.TEXT_XML));
     }
 
     /**
