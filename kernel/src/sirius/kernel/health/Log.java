@@ -245,7 +245,7 @@ public class Log {
      * @param params the parameters used to format the resulting log message
      */
     public void INFO(String msg, Object... params) {
-        msg = (params.length == 0) ? msg : Strings.apply(msg, params);
+        msg = Strings.apply(msg, params);
         if (logger.isInfoEnabled()) {
             fixMDC();
             logger.info(msg);
@@ -286,7 +286,7 @@ public class Log {
      * @param params the parameters used to format the resulting log message
      */
     public void FINE(String msg, Object... params) {
-        msg = (params.length == 0) ? msg : Strings.apply(msg, params);
+        msg = Strings.apply(msg, params);
         if (logger.isDebugEnabled()) {
             fixMDC();
             logger.debug(msg);
@@ -323,7 +323,7 @@ public class Log {
      * @param params the parameters used to format the resulting log message
      */
     public void WARN(String msg, Object... params) {
-        msg = (params.length == 0) ? msg : Strings.apply(msg, params);
+        msg = Strings.apply(msg, params);
 
         fixMDC();
         logger.warn(msg);

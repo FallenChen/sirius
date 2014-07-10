@@ -78,7 +78,7 @@ public class Strings {
      * @param left  the first string to be compared
      * @param right the second string to be compared with
      * @return <tt>true</tt> if both values are empty or if both strings are equal
-     *         while ignoring their case - <tt>false</tt> otherwise
+     * while ignoring their case - <tt>false</tt> otherwise
      */
     public static boolean equalIgnoreCase(@Nullable String left, @Nullable String right) {
         if (isEmpty(left)) {
@@ -138,7 +138,7 @@ public class Strings {
      * @see sirius.kernel.nls.NLS#fmtr(String)
      */
     public static String apply(String format, Object... arguments) {
-        return String.format(format, arguments);
+        return arguments.length == 0 ? format : String.format(format, arguments);
     }
 
     /**
@@ -154,7 +154,7 @@ public class Strings {
      *
      * @param values an array of string values to be scanned
      * @return the first value of values which is filled.
-     *         Returns <tt>null</tt> if all are empty or if no values where passed in
+     * Returns <tt>null</tt> if all are empty or if no values where passed in
      */
     public static String firstFilled(String... values) {
         if (values != null) {
@@ -192,7 +192,7 @@ public class Strings {
      * @param input     the input to be split
      * @param separator the separator used to split at
      * @return a <tt>Tuple</tt> containing the part before the separator as first
-     *         and the part after the separator as second component
+     * and the part after the separator as second component
      */
     public static Tuple<String, String> split(String input, String separator) {
         Tuple<String, String> result = Tuple.create();
@@ -217,7 +217,7 @@ public class Strings {
      * @param input     the input to be split
      * @param separator the separator used to split at
      * @return a <tt>Tuple</tt> containing the part before the separator as first
-     *         and the part after the separator as second component
+     * and the part after the separator as second component
      */
     public static Tuple<String, String> splitAtLast(String input, String separator) {
         Tuple<String, String> result = Tuple.create();
@@ -240,7 +240,7 @@ public class Strings {
      * @param input  the object which string representation should be limited to the given length
      * @param length the max. number of characters to return
      * @return a part of the string representation of the given <tt>input</tt>. If input is shorter
-     *         than <tt>length</tt>, the full value is returned. If input is <tt>null</tt>, "" is returned.
+     * than <tt>length</tt>, the full value is returned. If input is <tt>null</tt>, "" is returned.
      */
     public static String limit(@Nullable Object input, int length) {
         if (isEmpty(input)) {
@@ -284,7 +284,7 @@ public class Strings {
      * @param list      the list items to join
      * @param separator the separator to place between the items
      * @return a string of all items joined together and separated by the given separator. Returns "" is the list was
-     *         <tt>null</tt> or empty.
+     * <tt>null</tt> or empty.
      */
     @Nonnull
     public static String join(@Nullable Iterable<?> list, @Nonnull String separator) {
