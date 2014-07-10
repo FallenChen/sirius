@@ -74,7 +74,7 @@ public class SAPConnector {
         }
         try {
             return JCoDestinationManager
-                    .getDestination("UNI");
+                    .getDestination(name);
         } catch (Throwable e) {
             throw Exceptions.handle().to(LOG).withSystemErrorMessage("Error establishing SAP connection to %s: %s (%s)", name).error(e).handle();
         }
