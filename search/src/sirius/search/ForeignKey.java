@@ -161,7 +161,10 @@ public class ForeignKey {
      */
     public void checkDelete(final Entity entity) {
         if (refType.cascade() == Cascade.REJECT) {
-            if (Index.select(getLocalClass()).eq(field.getName(), entity.getId()).exists()) {
+            if (Index.select(getLocalClass())
+                     .eq(field.getName(), entity.getId())
+                     .autoRoute(field.getName(), entity.getId())
+                     .exists()) {
                 throw Exceptions.createHandled()
                                 .withNLSKey(Strings.isFilled(refType.onDeleteErrorMsg()) ? refType.onDeleteErrorMsg() : "ForeignKey.restricted")
                                 .handle();
@@ -179,51 +182,44 @@ public class ForeignKey {
         if (refType.cascade() == Cascade.IGNORE) {
             return;
         } else if (refType.cascade() == Cascade.REJECT) {
-            if (Index.select(getLocalClass()).eq(getName(), entity.getId()).exists()) {
+            if (Index.select(getLocalClass())
+                     .eq(getName(), entity.getId())
+                     .autoRoute(field.getName(), entity.getId())
+                     .exists()) {
                 throw Exceptions.createHandled()
                                 .withNLSKey(Strings.isFilled(refType.onDeleteErrorMsg()) ? refType.onDeleteErrorMsg() : "ForeignKey.restricted")
                                 .handle();
             }
         } else if (refType.cascade() == Cascade.SET_NULL) {
-            Async.executor(Index.ASYNC_CATEGORY_INDEX_INTEGRITY).fork(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Index.select((Class<Entity>) getLocalClass())
-                             .eq(getName(), entity.getId())
-                             .iterate(new ResultHandler<Entity>() {
-                                 @Override
-                                 public boolean handleRow(Entity row) throws Exception {
-                                     updateReferencedFields(entity, row);
-                                     return true;
-                                 }
-                             });
-                    } catch (Throwable e) {
-                        Exceptions.handle(Index.LOG, e);
-                    }
+            Async.executor(Index.ASYNC_CATEGORY_INDEX_INTEGRITY).fork(() -> {
+                try {
+                    Index.select((Class<Entity>) getLocalClass())
+                         .eq(getName(), entity.getId())
+                         .autoRoute(field.getName(), entity.getId())
+                         .iterate(row -> {
+                             updateReferencedFields(entity, (Entity) row);
+                             return true;
+                         });
+                } catch (Throwable e) {
+                    Exceptions.handle(Index.LOG, e);
                 }
             }).execute();
         } else if (refType.cascade() == Cascade.CASCADE) {
-            Async.executor(Index.ASYNC_CATEGORY_INDEX_INTEGRITY).fork(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Index.select((Class<Entity>) getLocalClass())
-                             .eq(getName(), entity.getId())
-                             .iterate(new ResultHandler<Entity>() {
-                                 @Override
-                                 public boolean handleRow(Entity row) throws Exception {
-                                     try {
-                                         Index.delete(row, true);
-                                     } catch (Throwable e) {
-                                         Exceptions.handle(Index.LOG, e);
-                                     }
-                                     return true;
-                                 }
-                             });
-                    } catch (Throwable e) {
-                        Exceptions.handle(Index.LOG, e);
-                    }
+            Async.executor(Index.ASYNC_CATEGORY_INDEX_INTEGRITY).fork(() -> {
+                try {
+                    Index.select((Class<Entity>) getLocalClass())
+                         .eq(getName(), entity.getId())
+                         .autoRoute(field.getName(), entity.getId())
+                         .iterate(row -> {
+                             try {
+                                 Index.delete((Entity) row, true);
+                             } catch (Throwable e) {
+                                 Exceptions.handle(Index.LOG, e);
+                             }
+                             return true;
+                         });
+                } catch (Throwable e) {
+                    Exceptions.handle(Index.LOG, e);
                 }
             }).execute();
         }
@@ -254,22 +250,17 @@ public class ForeignKey {
             }
         }
         if (referenceChanged) {
-            Async.executor(Index.ASYNC_CATEGORY_INDEX_INTEGRITY).fork(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Index.select((Class<Entity>) getLocalClass())
-                             .eq(getName(), entity.getId())
-                             .iterate(new ResultHandler<Entity>() {
-                                 @Override
-                                 public boolean handleRow(Entity row) throws Exception {
-                                     updateReferencedFields(entity, row);
-                                     return true;
-                                 }
-                             });
-                    } catch (Throwable e) {
-                        Exceptions.handle(Index.LOG, e);
-                    }
+            Async.executor(Index.ASYNC_CATEGORY_INDEX_INTEGRITY).fork(() -> {
+                try {
+                    Index.select((Class<Entity>) getLocalClass())
+                         .eq(getName(), entity.getId())
+                         .autoRoute(field.getName(), entity.getId())
+                         .iterate(row -> {
+                             updateReferencedFields(entity, (Entity) row);
+                             return true;
+                         });
+                } catch (Throwable e) {
+                    Exceptions.handle(Index.LOG, e);
                 }
             }).execute();
         }
@@ -282,6 +273,17 @@ public class ForeignKey {
                                         .setIndex(Index.getIndex(getLocalClass()))
                                         .setType(getLocalType())
                                         .setId(child.getId());
+        EntityDescriptor descriptor = Index.getDescriptor(getLocalClass());
+        if (descriptor.hasRouting()) {
+            Object routingKey = descriptor.getProperty(descriptor.getRouting()).writeToSource(child);
+            if (Strings.isEmpty(routingKey)) {
+                Index.LOG.WARN("Updating an entity of type %s (%s) without routing information!",
+                               child.getClass().getName(),
+                               child.getId());
+            } else {
+                urb.setRouting(String.valueOf(routingKey));
+            }
+        }
         for (Reference ref : references) {
             sb.append("ctx._source.");
             sb.append(ref.getLocalProperty().getName());

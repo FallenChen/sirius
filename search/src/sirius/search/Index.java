@@ -347,7 +347,7 @@ public class Index {
                                          "ES-OptimisticLock-Errors",
                                          optimisticLockErrors.getCount(),
                                          "/min");
-            collector.metric("index-queryDuration", "ES-QueryDuration", queryDuration.getAvg(), "ms");
+            collector.metric("index-queryDuration", "ES-QueryDuration", queryDuration.getAndClearAverage(), "ms");
             collector.differentialMetric("index-queries",
                                          "index-queries",
                                          "ES-Queries",

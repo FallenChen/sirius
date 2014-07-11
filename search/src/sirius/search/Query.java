@@ -299,6 +299,32 @@ public class Query<E extends Entity> {
         return this;
     }
 
+
+    /**
+     * If the entity being queries is routed, we try to preset the correct routing value or to disable routing.
+     * <p>
+     *     This is used by {@link sirius.search.ForeignKey} as if cannot know if and how an entity is routed.
+     *     Therefore this method checks if by coincidence the given field and value (which is used by the foreign key
+     *     to filter entities) is also used to route those entities. If this is true, the routing is applied,
+     *     otherwise {@link #deliberatelyUnrouted()} is called.
+     * </p>
+     * @param field the field for which a filter value is available
+     * @param value the value of the field
+     * @return the query itself for fluent method calls
+     */
+    protected Query autoRoute(String field, String value) {
+        EntityDescriptor descriptor = Index.getDescriptor(clazz);
+        if (!descriptor.hasRouting()) {
+            return this;
+        }
+        if (Strings.areEqual(descriptor.getRouting(), field)) {
+            routing(value);
+        } else {
+            deliberatelyUnrouted();
+        }
+        return this;
+    }
+
     /**
      * Marks the query as deliberately unrouted.
      * <p>This can be used to signal the system that an entity with a routing
@@ -536,11 +562,12 @@ public class Query<E extends Entity> {
             if (!ed.hasRouting()) {
                 Exceptions.handle()
                           .to(Index.LOG)
-                          .withSystemErrorMessage("Performing a search on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
-                                                  clazz.getName()
-                          )
+                          .withSystemErrorMessage(
+                                  "Performing a search on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
+                                  clazz.getName())
                           .handle();
-            } srb.setRouting(routing);
+            }
+            srb.setRouting(routing);
         } else if (ed.hasRouting() && !deliberatelyUnrouted) {
             Exceptions.handle()
                       .to(Index.LOG)
@@ -548,7 +575,8 @@ public class Query<E extends Entity> {
                               "Performing a search on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
                               clazz.getName())
                       .handle();
-        } if (primary) {
+        }
+        if (primary) {
             srb.setPreference("_primary");
         }
         if (randomize) {
@@ -630,9 +658,28 @@ public class Query<E extends Entity> {
             if (forceFail) {
                 return 0;
             }
+            EntityDescriptor ed = Index.getDescriptor(clazz);
             CountRequestBuilder crb = Index.getClient()
                                            .prepareCount(index != null ? index : Index.getIndex(clazz))
-                                           .setTypes(Index.getDescriptor(clazz).getType());
+                                           .setTypes(ed.getType());
+            if (Strings.isFilled(routing)) {
+                if (!ed.hasRouting()) {
+                    Exceptions.handle()
+                              .to(Index.LOG)
+                              .withSystemErrorMessage(
+                                      "Performing a search on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
+                                      clazz.getName())
+                              .handle();
+                }
+                crb.setRouting(routing);
+            } else if (ed.hasRouting() && !deliberatelyUnrouted) {
+                Exceptions.handle()
+                          .to(Index.LOG)
+                          .withSystemErrorMessage(
+                                  "Performing a search on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
+                                  clazz.getName())
+                          .handle();
+            }
             QueryBuilder qb = buildQuery();
             if (qb != null) {
                 crb.setQuery(qb);
@@ -642,10 +689,7 @@ public class Query<E extends Entity> {
                 crb.setQuery(QueryBuilders.filteredQuery(qb, sb));
             }
             if (Index.LOG.isFINE()) {
-                Index.LOG.FINE("COUNT: %s.%s: %s",
-                               Index.getIndex(clazz),
-                               Index.getDescriptor(clazz).getType(),
-                               buildQuery());
+                Index.LOG.FINE("COUNT: %s.%s: %s", Index.getIndex(clazz), ed.getType(), buildQuery());
             }
             return transformCount(crb);
         } catch (Throwable t) {
@@ -951,19 +995,35 @@ public class Query<E extends Entity> {
                 return;
             }
             Watch w = Watch.start();
+            EntityDescriptor ed = Index.getDescriptor(clazz);
             DeleteByQueryRequestBuilder builder = Index.getClient()
                                                        .prepareDeleteByQuery(index != null ? index : Index.getIndex(
                                                                clazz))
-                                                       .setTypes(Index.getDescriptor(clazz).getType());
+                                                       .setTypes(ed.getType());
+            if (Strings.isFilled(routing)) {
+                if (!ed.hasRouting()) {
+                    Exceptions.handle()
+                              .to(Index.LOG)
+                              .withSystemErrorMessage(
+                                      "Performing a delete on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
+                                      clazz.getName())
+                              .handle();
+                }
+                builder.setRouting(routing);
+            } else if (ed.hasRouting() && !deliberatelyUnrouted) {
+                Exceptions.handle()
+                          .to(Index.LOG)
+                          .withSystemErrorMessage(
+                                  "Performing a delete on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
+                                  clazz.getName())
+                          .handle();
+            }
             QueryBuilder qb = buildQuery();
             if (qb != null) {
                 builder.setQuery(qb);
             }
             if (Index.LOG.isFINE()) {
-                Index.LOG.FINE("DELETE: %s.%s: %s",
-                               Index.getIndex(clazz),
-                               Index.getDescriptor(clazz).getType(),
-                               buildQuery());
+                Index.LOG.FINE("DELETE: %s.%s: %s", Index.getIndex(clazz), ed.getType(), buildQuery());
             }
             builder.execute().actionGet();
             if (Microtiming.isEnabled()) {
