@@ -12,19 +12,19 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
+import sirius.kernel.commons.Reflection;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
+import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
+import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
-import sirius.search.annotations.RefField;
-import sirius.search.annotations.RefType;
-import sirius.search.annotations.Transient;
-import sirius.search.annotations.Unique;
+import sirius.search.annotations.*;
 import sirius.search.properties.Property;
-import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
+import sirius.web.security.UserContext;
 
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -231,6 +231,29 @@ public abstract class Entity {
                 Unique unique = p.getField().getAnnotation(Unique.class);
                 if (Strings.isFilled(unique.within())) {
                     qry.eq(unique.within(), descriptor.getProperty(unique.within()).writeToSource(this));
+
+
+                    try {
+                        Indexed[] annotationsByType = getClass().getAnnotationsByType(Indexed.class);
+                        if (annotationsByType.length > 0) {
+                            Indexed indexAnnotation = annotationsByType[0];
+                            Value routing = Value.of(indexAnnotation.routing());
+                            if (routing.isFilled()) {
+                                Object o = Reflection.getter(getClass(), routing.asString()).invoke(this);
+                                if (o instanceof EntityRef) {
+                                    qry.routing(((EntityRef) o).getId());
+                                } else {
+                                    qry.routing(Value.of(o).asString());
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.get(getClass().getName()).INFO("Error checking uniqueness with routing, doing it unrouted.");
+                        Log.get(getClass().getName()).INFO(e);
+                        qry.deliberatelyUnrouted();
+                    }
+                } else {
+                    qry.deliberatelyUnrouted();
                 }
                 if (qry.exists()) {
                     UserContext.setFieldError(p.getName(), NLS.toUserString(value));
