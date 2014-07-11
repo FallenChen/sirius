@@ -37,7 +37,7 @@ public class RedisConnector {
 
         @Override
         public void gather(MetricsCollector collector) {
-            collector.metric("redis-connection-duration", "Redis-ConnectionDuration", redisConnections.getAvg(), "ms");
+            collector.metric("redis-connection-duration", "Redis-ConnectionDuration", redisConnections.getAndClearAverage(), "ms");
             collector.differentialMetric("redis-connections", "redis-connections", "Redis-Connections", redisConnections.getCount(), "/min");
         }
     }
