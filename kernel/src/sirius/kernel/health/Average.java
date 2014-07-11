@@ -23,7 +23,7 @@ public class Average {
 
     /**
      * Adds the given value to the set of values on which the average is based.
-     * <p/>
+     * <p>
      * If the sum of all values is greater as <tt>Long.MAX_VALUE</tt> or the count of all values is greater as
      * <tt>Long.Max_VALUE</tt>, the value is ignored.
      *
@@ -55,13 +55,44 @@ public class Average {
      */
     public double getAvg() {
         if (filled == 0) {
-            return 0.0D;
+            return 0.0d;
         }
         double result = 0.0d;
+        double min = Double.NaN;
+        double max = Double.NaN;
         for (int i = 0; i <= filled; i++) {
             result += values[i];
+            if (filled >= 5) {
+                if (Double.isNaN(min) || values[i] < min) {
+                    min = values[i];
+                }
+                if (Double.isNaN(max) || values[i] > max) {
+                    max = values[i];
+                }
+            }
+        }
+
+        // If we have five or more samples, we smooth the result by dropping the lowest and highest value
+        if (filled >= 5) {
+            result -= min + max;
+            return result / (filled - 2.0d);
         }
         return result / (double) filled;
+    }
+
+    /**
+     * Returns the average just like {@link #getAvg()} but then resets the internal buffer to zero.
+     * <p>
+     * Note that the internal value counter won't be reset. Only the buffer containing the last 100
+     * measurements will be reset.
+     * </p>
+     *
+     * @return the average of the last 100 values
+     */
+    public double getAndClearAverage() {
+        double avg = getAvg();
+        filled = 0;
+        return avg;
     }
 
     /**

@@ -124,7 +124,7 @@ public class Microtiming {
      * Adds the average to the "live set" which will be output on the next call to {@link #getTimings()}
      * </p>
      * <p>
-     * A convenient way to call this method is to use {@link sirius.kernel.commons.Watch#submitMicroTiming(String)}
+     * A convenient way to call this method is to use {@link sirius.kernel.commons.Watch#submitMicroTiming(String, String)}
      * </p>
      *
      * @param key             the key for which the value should be submitted
@@ -156,7 +156,7 @@ public class Microtiming {
      * @param enabled determines whether the framework should be enabled or disabled
      */
     public static void setEnabled(boolean enabled) {
-        if (enabled && !Microtiming.enabled) {
+        if (enabled != Microtiming.enabled) {
             timings.clear();
             lastReset = System.currentTimeMillis();
         }

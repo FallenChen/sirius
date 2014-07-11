@@ -529,7 +529,7 @@ public class WebServer implements Lifecycle, MetricProvider {
                                      serverErrors,
                                      "/min");
         collector.metric("http-open-connections", "HTTP Open Connections", openConnections.size(), null);
-        collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAvg(), "ms");
+        collector.metric("http-response-time", "HTTP Avg. Reponse Time", responseTime.getAndClearAverage(), "ms");
         collector.metric("http-sessions", "HTTP Sessions", sessionManager.getNumberOfSessions(), null);
     }
 

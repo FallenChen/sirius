@@ -76,7 +76,7 @@ public class Database {
             if (!datasources.isEmpty()) {
                 collector.differentialMetric("jdbc-use", "db-uses", "JDBC Uses", numUses.getCount(), null);
                 collector.differentialMetric("jdbc-queries", "db-queries", "JDBC Queries", numQueries.getCount(), null);
-                collector.metric("db-query-duration", "JDBC Query Duration", queryDuration.getAvg(), "ms");
+                collector.metric("db-query-duration", "JDBC Query Duration", queryDuration.getAndClearAverage(), "ms");
             }
         }
     }
