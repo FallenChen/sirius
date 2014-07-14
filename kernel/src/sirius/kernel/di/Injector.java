@@ -8,6 +8,7 @@
 
 package sirius.kernel.di;
 
+import com.google.common.collect.Lists;
 import sirius.kernel.Classpath;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.health.Exceptions;
@@ -18,6 +19,7 @@ import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -38,10 +40,10 @@ import java.util.regex.Pattern;
  * <p>
  * Accessing parts can be done in two ways. First, one can access the current {@link GlobalContext} via
  * {@link #context()}. This can be used to retrieve parts by class or by class and name. The second way
- * to access parts is to used marker annotations like {@link sirius.kernel.di.std.Part},
+ * to access parts is to use marker annotations like {@link sirius.kernel.di.std.Part},
  * {@link sirius.kernel.di.std.Parts} or {@link sirius.kernel.di.std.Context}. Again,
  * these annotations are not processed by the micro kernel itself, but by subclasses of {@link FieldAnnotationProcessor}.
- * To process all annotations of a given java object, {@link GlobalContext#wire(Object)} can be used. This will
+ * To process all annotations of a given Java object, {@link GlobalContext#wire(Object)} can be used. This will
  * be automatically called for each part which is auto-instantiated by a <tt>ClassLoadAction</tt>.
  * </p>
  * <p>
@@ -61,6 +63,7 @@ public class Injector {
     public static final Log LOG = Log.get("di");
 
     private static PartRegistry ctx = new PartRegistry();
+    private static List<Class<?>> loadedClasses;
 
     /**
      * Initializes the framework. Must be only called once on system startup.
@@ -72,7 +75,7 @@ public class Injector {
     public static void init(@Nullable Callback<MutableGlobalContext> callback, @Nonnull final Classpath classpath) {
         ctx = new PartRegistry();
 
-        final List<Class<?>> classes = new ArrayList<Class<?>>();
+        loadedClasses = Lists.newArrayList();
         final List<ClassLoadAction> actions = new ArrayList<ClassLoadAction>();
         LOG.INFO("Initializing the MicroKernel....");
 
@@ -88,31 +91,31 @@ public class Injector {
                         actions.add((ClassLoadAction) clazz.newInstance());
                     } catch (Throwable e) {
                         Exceptions.handle()
-                                  .error(e)
-                                  .to(LOG)
-                                  .withSystemErrorMessage("Failed to instantiate ClassLoadAction: %s - %s (%s)",
-                                                          className)
-                                  .handle();
+                                .error(e)
+                                .to(LOG)
+                                .withSystemErrorMessage("Failed to instantiate ClassLoadAction: %s - %s (%s)",
+                                        className)
+                                .handle();
                     }
                 }
-                classes.add(clazz);
+                loadedClasses.add(clazz);
             } catch (NoClassDefFoundError e) {
                 Exceptions.handle()
-                          .error(e)
-                          .to(LOG)
-                          .withSystemErrorMessage("Failed to load dependent class: %s", className)
-                          .handle();
+                        .error(e)
+                        .to(LOG)
+                        .withSystemErrorMessage("Failed to load dependent class: %s", className)
+                        .handle();
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .error(e)
-                          .to(LOG)
-                          .withSystemErrorMessage("Failed to load class %s: %s (%s)", className)
-                          .handle();
+                        .error(e)
+                        .to(LOG)
+                        .withSystemErrorMessage("Failed to load class %s: %s (%s)", className)
+                        .handle();
             }
         });
 
-        LOG.INFO("~ Applying %d class load actions on %d classes...", actions.size(), classes.size());
-        for (Class<?> clazz : classes) {
+        LOG.INFO("~ Applying %d class load actions on %d classes...", actions.size(), loadedClasses.size());
+        for (Class<?> clazz : loadedClasses) {
             for (ClassLoadAction action : actions) {
                 if (action.getTrigger() == null || clazz.isAnnotationPresent(action.getTrigger())) {
                     LOG.FINE("Auto-installing class: %s based on %s", clazz.getName(), action.getClass().getName());
@@ -120,12 +123,12 @@ public class Injector {
                         action.handle(ctx, clazz);
                     } catch (Throwable e) {
                         Exceptions.handle()
-                                  .error(e)
-                                  .to(LOG)
-                                  .withSystemErrorMessage("Failed to auto-load: %s with ClassLoadAction: %s: %s (%s)",
-                                                          clazz.getName(),
-                                                          action.getClass().getSimpleName())
-                                  .handle();
+                                .error(e)
+                                .to(LOG)
+                                .withSystemErrorMessage("Failed to auto-load: %s with ClassLoadAction: %s: %s (%s)",
+                                        clazz.getName(),
+                                        action.getClass().getSimpleName())
+                                .handle();
                     }
                 }
             }
@@ -133,8 +136,8 @@ public class Injector {
 
         Collection<MethodAnnotationProcessor> methodAnnotations = ctx.getParts(MethodAnnotationProcessor.class);
         if (!methodAnnotations.isEmpty()) {
-            LOG.INFO("~ Applying %d factory load actions on %d classes...", methodAnnotations.size(), classes.size());
-            for (Class<?> clazz : classes) {
+            LOG.INFO("~ Applying %d factory load actions on %d classes...", methodAnnotations.size(), loadedClasses.size());
+            for (Class<?> clazz : loadedClasses) {
                 for (MethodAnnotationProcessor p : methodAnnotations) {
                     for (Method method : clazz.getDeclaredMethods()) {
                         if (method.isAnnotationPresent(p.getTrigger())) {
@@ -142,11 +145,11 @@ public class Injector {
                                 p.handle(ctx, method);
                             } catch (Throwable e) {
                                 Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
-                                                  p.getTrigger().getName(),
-                                                  method.getDeclaringClass().getName(),
-                                                  method.getName(),
-                                                  e.getMessage(),
-                                                  e.getClass().getName());
+                                        p.getTrigger().getName(),
+                                        method.getDeclaringClass().getName(),
+                                        method.getName(),
+                                        e.getMessage(),
+                                        e.getClass().getName());
                             }
                         }
                     }
@@ -164,7 +167,7 @@ public class Injector {
         }
 
         LOG.INFO("~ Initializing static parts-references...");
-        for (Class<?> clazz : classes) {
+        for (Class<?> clazz : loadedClasses) {
             ctx.wireClass(clazz);
         }
 
@@ -182,6 +185,15 @@ public class Injector {
      */
     public static GlobalContext context() {
         return ctx;
+    }
+
+    /**
+     * Returns a list of all loaded classes.
+     *
+     * @return a list of all classes detected at system startup
+     */
+    public static List<Class<?>> getAllLoadedClasses() {
+        return Collections.unmodifiableList(loadedClasses);
     }
 
 }

@@ -209,6 +209,7 @@ class PartRegistry implements MutableGlobalContext {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <P> Optional<P> make(Class<P> type, String factoryName) {
         return (Optional<P>) Optional.ofNullable(factories.get(type))
                                      .map(m -> m.get(factoryName))
@@ -219,6 +220,7 @@ class PartRegistry implements MutableGlobalContext {
     private static final Supplier<Optional<?>> EMPTY_FACTORY = () -> Optional.empty();
 
     @Override
+    @SuppressWarnings("unchecked")
     public <P> Supplier<Optional<P>> getFactory(Class<P> type, String factoryName) {
         return (Supplier<Optional<P>>) (Object) Optional.ofNullable(factories.get(type))
                                                         .map(m -> m.get(factoryName))

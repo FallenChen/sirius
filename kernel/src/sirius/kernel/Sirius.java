@@ -138,15 +138,15 @@ public class Sirius {
         for (Map.Entry<String, com.typesafe.config.ConfigValue> entry : frameworkConfig.entrySet()) {
             String framework = entry.getKey();
             try {
-                boolean enabled = (boolean) entry.getValue().unwrapped();
+                boolean enabled = Value.of(entry.getValue().unwrapped()).asBoolean(false);
                 frameworkStatus.put(framework, enabled);
                 total++;
                 numEnabled += enabled ? 1 : 0;
                 LOG.DEBUG_INFO(Strings.apply("  * %s: %b", framework, enabled));
             } catch (Exception e) {
                 LOG.WARN("Cannot convert status '%s' of framework '%s' to a boolean! Framework will be disabled.",
-                         entry.getValue().render(),
-                         framework);
+                        entry.getValue().render(),
+                        framework);
                 frameworkStatus.put(framework, false);
             }
         }
@@ -173,10 +173,10 @@ public class Sirius {
                         lifecycle.started();
                     } catch (Throwable e) {
                         Exceptions.handle()
-                                  .error(e)
-                                  .to(LOG)
-                                  .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
-                                  .handle();
+                                .error(e)
+                                .to(LOG)
+                                .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
+                                .handle();
                     }
                 }
             }).execute());
@@ -198,18 +198,18 @@ public class Sirius {
         if (startedAsTest) {
             // Load test configurations (will override component configs)
             classpath.find(Pattern.compile("component-test\\.conf"))
-                     .forEach(value -> config = config.withFallback(ConfigFactory.load(loader, value.group())));
+                    .forEach(value -> config = config.withFallback(ConfigFactory.load(loader, value.group())));
         }
 
         // Load component configurations
         classpath.find(Pattern.compile("component-(.*?)\\.conf")).forEach(value -> {
-                                                                              if (!"test".equals(value.group(1))) {
-                                                                                  config = config.withFallback(
-                                                                                          ConfigFactory.load(loader,
-                                                                                                             value.group())
-                                                                                  );
-                                                                              }
-                                                                          }
+                    if (!"test".equals(value.group(1))) {
+                        config = config.withFallback(
+                                ConfigFactory.load(loader,
+                                        value.group())
+                        );
+                    }
+                }
         );
 
         // Setup log-system based on configuration
@@ -254,10 +254,10 @@ public class Sirius {
                 lifecycle.stopped();
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .error(e)
-                          .to(LOG)
-                          .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
-                          .handle();
+                        .error(e)
+                        .to(LOG)
+                        .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
+                        .handle();
             }
         }
         LOG.INFO("---------------------------------------------------------");
@@ -270,10 +270,10 @@ public class Sirius {
                 LOG.INFO("Terminated: %s (Took: %s)", lifecycle.getName(), w.duration());
             } catch (Throwable e) {
                 Exceptions.handle()
-                          .error(e)
-                          .to(LOG)
-                          .withSystemErrorMessage("Termination of: %s failed!", lifecycle.getName())
-                          .handle();
+                        .error(e)
+                        .to(LOG)
+                        .withSystemErrorMessage("Termination of: %s failed!", lifecycle.getName())
+                        .handle();
             }
         }
         if (Sirius.isDev()) {
@@ -392,10 +392,10 @@ public class Sirius {
             }
         } catch (Exception e) {
             Exceptions.handle()
-                      .to(LOG)
-                      .error(e)
-                      .withSystemErrorMessage("Error while waiting for shutdown-ping: %s (%s)")
-                      .handle();
+                    .to(LOG)
+                    .error(e)
+                    .withSystemErrorMessage("Error while waiting for shutdown-ping: %s (%s)")
+                    .handle();
         }
     }
 
@@ -490,9 +490,9 @@ public class Sirius {
             @Override
             public void publish(LogRecord record) {
                 repository.getLogger(record.getLoggerName())
-                          .log(Log.convertJuliLevel(record.getLevel()),
-                               formatter.formatMessage(record),
-                               record.getThrown());
+                        .log(Log.convertJuliLevel(record.getLevel()),
+                                formatter.formatMessage(record),
+                                record.getThrown());
             }
 
             @Override
