@@ -9,6 +9,7 @@
 package sirius.web.scripting;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Maps;
 import sirius.kernel.Sirius;
 import sirius.kernel.di.Initializable;
 import sirius.kernel.di.Injector;
@@ -20,8 +21,13 @@ import sirius.kernel.health.Log;
 import sirius.kernel.timer.TimerService;
 import sirius.web.templates.VelocityResourceLoader;
 
-import javax.script.*;
+import javax.script.Invocable;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Proxy;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -33,7 +39,7 @@ public class ServerScriptEngine implements Initializable {
     @ConfigValue("content.script-engine")
     private String scriptEngine;
     private ScriptEngine engine;
-    private SimpleScriptContext context;
+    private Map<String, LocalEnvironment> activeScripts = Maps.newConcurrentMap();
 
     public static final Log LOG = Log.get("script");
 
@@ -43,24 +49,25 @@ public class ServerScriptEngine implements Initializable {
     public void register(String uniqueName, Object object, String iFace) {
         try {
             Class<?> lookupClass = Class.forName(iFace);
+//            Proxy.newProxyInstance(getClass().getClassLoader(), )
 
             Invocable inv = (Invocable) engine;
             Object part = inv.getInterface(object, lookupClass);
             if (part == null) {
                 throw Exceptions.handle()
-                                .withSystemErrorMessage("Cannot convert JavaScript-Object '%s' into '%s'!",
-                                                        object,
-                                                        lookupClass)
-                                .to(LOG)
-                                .handle();
+                        .withSystemErrorMessage("Cannot convert JavaScript-Object '%s' into '%s'!",
+                                object,
+                                lookupClass)
+                        .to(LOG)
+                        .handle();
             }
             Injector.context().registerDynamicPart(uniqueName, part, lookupClass);
         } catch (ClassNotFoundException e) {
             throw Exceptions.handle()
-                            .withSystemErrorMessage("Cannot find class: %s as dynamic part: %s (%s)", iFace)
-                            .to(LOG)
-                            .error(e)
-                            .handle();
+                    .withSystemErrorMessage("Cannot find class: %s as dynamic part: %s (%s)", iFace)
+                    .to(LOG)
+                    .error(e)
+                    .handle();
         }
     }
 
@@ -68,11 +75,6 @@ public class ServerScriptEngine implements Initializable {
     public void initialize() throws Exception {
         ScriptEngineManager manager = new ScriptEngineManager();
         engine = manager.getEngineByName(scriptEngine);
-        context = new SimpleScriptContext();
-
-        context.setAttribute("logger", LOG, ScriptContext.ENGINE_SCOPE);
-        context.setAttribute("ctx", Injector.context(), ScriptContext.ENGINE_SCOPE);
-        context.setAttribute("scriptEngine", this, ScriptContext.ENGINE_SCOPE);
 
         Sirius.getClasspath().find(Pattern.compile("scripts/(.*?\\.js)")).map(m -> m.group(0)).forEach(m -> {
             LOG.INFO("Loading: %s", m);
@@ -82,12 +84,14 @@ public class ServerScriptEngine implements Initializable {
     }
 
     private void evalLibraryScript(String relativePath) {
+        LocalEnvironment env = new LocalEnvironment(relativePath);
         try {
+            activeScripts.put(relativePath, env);
             engine.put(ScriptEngine.FILENAME, relativePath);
             engine.eval(new InputStreamReader(VelocityResourceLoader.INSTANCE.getResourceStream(relativePath),
-                                              Charsets.UTF_8), context);
+                    Charsets.UTF_8), env.getContext());
         } catch (ScriptException e) {
-            Exceptions.handle(e);
+            env.logException(Exceptions.handle(LOG, e));
         }
     }
 }

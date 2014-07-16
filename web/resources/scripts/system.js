@@ -5,6 +5,7 @@
  * Copyright by scireum GmbH
  * http://www.scireum.de - info@scireum.de
  */
+/*
 logger.INFO("Test")
 
 function registerCommand(name, description, callback) {
@@ -38,3 +39,4 @@ registerService('test', function(c, o) {
     o.property('test','111a');
     o.endResult();
 });
+*/
