@@ -171,7 +171,9 @@ public class Index {
         } else {
             value = find(type, id);
         }
-        cache.put(descriptor.getType() + "-" + id, value);
+        if (value != null) {
+            cache.put(descriptor.getType() + "-" + id, value);
+        }
         return Tuple.create(value, false);
     }
 
