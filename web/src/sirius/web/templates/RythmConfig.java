@@ -70,11 +70,7 @@ public class RythmConfig implements Initializable {
 
         @Override
         public String getMessage(ITemplate template, String key, Object... args) {
-            if (Sirius.isDev()) {
-                return "<span title=\"" + key + "\">" + NLS.apply(key, args) + "</span>";
-            } else {
-                return NLS.apply(key, args);
-            }
+            return NLS.apply(key, args);
         }
     }
 
