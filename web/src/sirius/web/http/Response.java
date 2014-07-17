@@ -37,6 +37,8 @@ import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
 import sirius.kernel.xml.XMLStructuredOutput;
 import sirius.web.services.JSONStructuredOutput;
+import sirius.web.templates.Content;
+import sirius.web.templates.Resource;
 import sirius.web.templates.RythmConfig;
 
 import javax.annotation.Nullable;
@@ -129,6 +131,9 @@ public class Response {
      * Determines if the response is chunked
      */
     private boolean responseChunked = false;
+
+    @sirius.kernel.di.std.Part
+    private static Content content;
 
     /**
      * Creates a new response for the given request.
@@ -420,6 +425,18 @@ public class Response {
     public Response privateCached() {
         this.isPrivate = true;
         this.cacheSeconds = HTTP_CACHE;
+        return this;
+    }
+
+    /**
+     * Marks this response as cachable for the given amount of time.
+     *
+     * @param numberOfSeconds the number of seconds the response might be cached
+     * @return <tt>this</tt> to fluently create the response
+     */
+    public Response cachedForSeconds(int numberOfSeconds) {
+        this.isPrivate = false;
+        this.cacheSeconds = numberOfSeconds;
         return this;
     }
 
@@ -795,6 +812,32 @@ public class Response {
     }
 
     /**
+     * Tries to resolve the given name into a {@link sirius.web.templates.Resource} using
+     * the {@link sirius.web.templates.Content} lookup framework.
+     * <p>
+     * Sends the resource found or a 404 NOT_FOUND otherwise.
+     * </p>
+     *
+     * @param name the path of the resource to lookup
+     */
+    public void sendContent(String name) {
+        Optional<Resource> res = content.resolve(name);
+        if (res.isPresent()) {
+            try {
+                if ("file".equals(res.get().getUrl().getProtocol())) {
+                    file(new File(res.get().getUrl().toURI()));
+                } else {
+                    resource(res.get().getUrl().openConnection());
+                }
+            } catch (Exception e) {
+                error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(e));
+            }
+        } else {
+            error(HttpResponseStatus.NOT_FOUND);
+        }
+    }
+
+    /**
      * Sends the given resource (potentially from classpath) as result.
      * <p>
      * This will support HTTP caching if enabled (default).
@@ -1054,7 +1097,9 @@ public class Response {
 
     private static final Set<String> NON_TUNNELLED_HEADERS = Sets.newHashSet(HttpHeaders.Names.TRANSFER_ENCODING,
                                                                              HttpHeaders.Names.SERVER,
-                                                                             HttpHeaders.Names.CONTENT_ENCODING);
+                                                                             HttpHeaders.Names.CONTENT_ENCODING,
+                                                                             HttpHeaders.Names.EXPIRES,
+                                                                             HttpHeaders.Names.CACHE_CONTROL);
 
     /**
      * Tunnels the contents retrieved from the given URL as result of this response.
