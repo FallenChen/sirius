@@ -47,6 +47,7 @@ public class Async {
     protected static final Log LOG = Log.get("async");
     public static final String DEFAULT = "default";
     protected static final Map<String, AsyncExecutor> executors = Maps.newConcurrentMap();
+    private static volatile boolean running = false;
 
     /**
      * Returns the executor for the given category.
@@ -244,6 +245,20 @@ public class Async {
         return Collections.unmodifiableCollection(executors.values());
     }
 
+
+    /**
+     * Determines if the application is still running.
+     * <p>
+     * Can be used for long loops in async tasks to determine if a computation should be interrupted.
+     * </p>
+     *
+     * @return <tt>true</tt> if the system is running, <tt>false</tt> if a shutdown is in progress
+     */
+    public static boolean isRunning() {
+        return running;
+    }
+
+
     /**
      * Ensures that all thread pools are halted, when the system shuts down.
      */
@@ -252,10 +267,12 @@ public class Async {
 
         @Override
         public void started() {
+            running = true;
         }
 
         @Override
         public void stopped() {
+            running = false;
             // Try an ordered (fair) shutdown...
             for (AsyncExecutor exec : executors.values()) {
                 exec.shutdown();
@@ -270,10 +287,12 @@ public class Async {
                     LOG.INFO("Waiting for async executor '%s' to terminate...", e.getKey());
                     try {
                         if (!exec.awaitTermination(60, TimeUnit.SECONDS)) {
-                            LOG.SEVERE(Strings.apply("Executor '%s' did not terminate within 60s. Interrupting tasks...", e.getKey()));
+                            LOG.SEVERE(Strings.apply("Executor '%s' did not terminate within 60s. Interrupting tasks...",
+                                                     e.getKey()));
                             exec.shutdownNow();
                             if (!exec.awaitTermination(30, TimeUnit.SECONDS)) {
-                                LOG.SEVERE(Strings.apply("Executor '%s' did not terminate after another 30s!", e.getKey()));
+                                LOG.SEVERE(Strings.apply("Executor '%s' did not terminate after another 30s!",
+                                                         e.getKey()));
                             }
                         }
                     } catch (InterruptedException ex) {

@@ -65,8 +65,9 @@ public class Sirius {
     private static Config config;
     private static Map<String, Boolean> frameworks = Maps.newHashMap();
     private static Classpath classpath;
-    private static boolean started = false;
-    private static boolean initialized = false;
+    private static volatile boolean started = false;
+    private static volatile boolean running = false;
+    private static volatile boolean initialized = false;
     private static final long startTimestamp = System.currentTimeMillis();
 
     protected static final Log LOG = Log.get("sirius");
@@ -163,6 +164,7 @@ public class Sirius {
             stop();
         }
         started = true;
+        running = true;
         Barrier barrier = Barrier.create();
         for (final Lifecycle lifecycle : lifecycleParticipants.getParts()) {
             barrier.add(Async.defaultExecutor().fork(new Runnable() {
@@ -246,6 +248,7 @@ public class Sirius {
         if (!started) {
             return;
         }
+        running = false;
         LOG.INFO("Stopping Sirius");
         LOG.INFO("---------------------------------------------------------");
         for (Lifecycle lifecycle : lifecycleParticipants.getParts()) {

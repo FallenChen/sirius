@@ -12,16 +12,16 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
-import sirius.kernel.commons.Reflection;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
-import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
-import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
-import sirius.search.annotations.*;
+import sirius.search.annotations.RefField;
+import sirius.search.annotations.RefType;
+import sirius.search.annotations.Transient;
+import sirius.search.annotations.Unique;
 import sirius.search.properties.Property;
 import sirius.web.http.WebContext;
 import sirius.web.security.UserContext;
@@ -231,25 +231,29 @@ public abstract class Entity {
                 Unique unique = p.getField().getAnnotation(Unique.class);
                 if (Strings.isFilled(unique.within())) {
                     qry.eq(unique.within(), descriptor.getProperty(unique.within()).writeToSource(this));
-
-
                     try {
-                        Indexed[] annotationsByType = getClass().getAnnotationsByType(Indexed.class);
-                        if (annotationsByType.length > 0) {
-                            Indexed indexAnnotation = annotationsByType[0];
-                            Value routing = Value.of(indexAnnotation.routing());
-                            if (routing.isFilled()) {
-                                Object o = Reflection.getter(getClass(), routing.asString()).invoke(this);
-                                if (o instanceof EntityRef) {
-                                    qry.routing(((EntityRef) o).getId());
-                                } else {
-                                    qry.routing(Value.of(o).asString());
-                                }
+                        if (descriptor.hasRouting()) {
+                            Object routingKey = descriptor.getProperty(descriptor.getRouting()).writeToSource(this);
+                            if (routingKey != null) {
+                                qry.routing(routingKey.toString());
+                            } else {
+                                qry.deliberatelyUnrouted();
+                                Exceptions.handle()
+                                          .to(Index.LOG)
+                                          .withSystemErrorMessage(
+                                                  "Performing a unique check on %s without any routing. This will be slow!",
+                                                  this.getClass().getName())
+                                          .handle();
                             }
                         }
                     } catch (Exception e) {
-                        Log.get(getClass().getName()).INFO("Error checking uniqueness with routing, doing it unrouted.");
-                        Log.get(getClass().getName()).INFO(e);
+                        Exceptions.handle()
+                                  .to(Index.LOG)
+                                  .error(e)
+                                  .withSystemErrorMessage("Cannot determine routing key for '%s' of type %s",
+                                                          this,
+                                                          this.getClass().getName())
+                                  .handle();
                         qry.deliberatelyUnrouted();
                     }
                 } else {
@@ -482,7 +486,7 @@ public abstract class Entity {
             case BASE32HEX:
                 byte[] rndBytes = new byte[16];
                 idGenerator.nextBytes(rndBytes);
-                return BaseEncoding.base32Hex().encode(rndBytes).replace("=","");
+                return BaseEncoding.base32Hex().encode(rndBytes).replace("=", "");
             default:
                 return null;
         }
