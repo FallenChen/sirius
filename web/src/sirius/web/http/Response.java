@@ -386,12 +386,15 @@ public class Response {
     /**
      * Instructs the browser to treat the response as download with the given file name.
      *
-     * @param name the file name to send to the browser
+     * @param name the file name to send to the browser. If the given name is <tt>null</tt> nothing happens (We
+     *             won't force a download).
      * @return <tt>this</tt> to fluently create the response
      */
-    public Response download(String name) {
-        this.name = name;
-        this.download = true;
+    public Response download(@Nullable String name) {
+        if (Strings.isFilled(name)) {
+            this.name = name;
+            this.download = true;
+        }
         return this;
     }
 
