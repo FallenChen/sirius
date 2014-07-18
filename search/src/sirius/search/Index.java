@@ -46,6 +46,7 @@ import sirius.web.health.MetricsCollector;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -593,35 +594,67 @@ public class Index {
     /**
      * Writes the given mapping to the given index.
      *
-     * @param index the name of the index. The index prefix of the current system will be added automatically
+     * @param index the full name of the index.
+     *              Note: The index prefix of the current system will NOT be added automatically
      * @param type  the entity class which mapping should be written to the given index.
+     * @param force will drop the mapping forcefully if the mapping already exists but cannot be changed as requested
      */
-    public static <E extends Entity> void addMapping(String index, Class<E> type) {
+    public static <E extends Entity> void addMapping(String index, Class<E> type, boolean force) {
         try {
             EntityDescriptor desc = schema.getDescriptor(type);
-            PutMappingResponse putRes = Index.getClient()
-                                             .admin()
-                                             .indices()
-                                             .preparePutMapping(getIndexName(index))
-                                             .setType(desc.getType())
-                                             .setSource(desc.createMapping())
-                                             .execute()
-                                             .get(10, TimeUnit.SECONDS);
-            if (!putRes.isAcknowledged()) {
-                throw Exceptions.handle()
-                                .to(LOG)
-                                .withSystemErrorMessage("Cannot create mapping %s in index: %s",
-                                                        type.getSimpleName(),
-                                                        getIndexName(index))
-                                .handle();
+            PutMappingResponse putRes = null;
+            try {
+                putRes = Index.getClient()
+                              .admin()
+                              .indices()
+                              .preparePutMapping(index)
+                              .setType(desc.getType())
+                              .setSource(desc.createMapping())
+                              .execute()
+                              .get(10, TimeUnit.SECONDS);
+            } catch (ExecutionException e) {
+                // If we force the mapping, swallow this exception...
+                if (!force) {
+                    throw e;
+                }
+            }
+            if (putRes == null || !putRes.isAcknowledged()) {
+                if (force) {
+                    Index.getClient()
+                         .admin()
+                         .indices()
+                         .prepareDeleteMapping(index)
+                         .setType(desc.getType())
+                         .execute()
+                         .get(10, TimeUnit.SECONDS);
+                    putRes = Index.getClient()
+                                  .admin()
+                                  .indices()
+                                  .preparePutMapping(index)
+                                  .setType(desc.getType())
+                                  .setSource(desc.createMapping())
+                                  .execute()
+                                  .get(10, TimeUnit.SECONDS);
+                }
+                if (!putRes.isAcknowledged()) {
+                    throw Exceptions.handle()
+                                    .to(LOG)
+                                    .withSystemErrorMessage("Cannot create mapping %s in index: %s",
+                                                            type.getSimpleName(),
+                                                            index)
+                                    .handle();
+                }
             }
         } catch (Throwable ex) {
+            while (ex.getCause() != null && ex.getCause() != ex) {
+                ex = ex.getCause();
+            }
             throw Exceptions.handle()
                             .to(LOG)
                             .error(ex)
                             .withSystemErrorMessage("Cannot create mapping %s in index: %s - %s (%s)",
                                                     type.getSimpleName(),
-                                                    getIndexName(index))
+                                                    index)
                             .handle();
         }
     }

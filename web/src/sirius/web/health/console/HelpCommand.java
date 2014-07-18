@@ -29,10 +29,10 @@ public class HelpCommand implements Command {
         output.blankLine();
         output.apply("C O N S O L E  -  %s / %s", Sirius.getProductName(), Sirius.getProductVersion());
         output.blankLine();
-        output.apply("%-10s %s", "CMD", "DESCRIPTION");
+        output.apply("%-20s %s", "CMD", "DESCRIPTION");
         output.separator();
         for (Command cmd : ctx.getParts(Command.class)) {
-            output.apply("%-10s %s", cmd.getName(), cmd.getDescription());
+            output.apply("%-20s %s", cmd.getName(), cmd.getDescription());
         }
         output.separator();
     }

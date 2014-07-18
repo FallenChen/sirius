@@ -9,6 +9,7 @@
 package sirius.search.properties;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import sirius.kernel.commons.Strings;
 import sirius.kernel.di.std.Register;
 import sirius.search.annotations.IndexMode;
 import sirius.search.annotations.Stored;
@@ -26,6 +27,9 @@ import java.lang.reflect.Field;
 public class StringProperty extends Property {
 
     private final String indexMode;
+    private final String norms;
+    private final String options;
+    private final String analyzer;
 
     /**
      * Factory for generating properties based on their field type
@@ -50,7 +54,13 @@ public class StringProperty extends Property {
     private StringProperty(Field field) {
         super(field);
         this.indexMode = field.isAnnotationPresent(IndexMode.class) ? field.getAnnotation(IndexMode.class)
-                                                                         .indexMode() : IndexMode.MODE_NOT_ANALYZED;
+                                                                           .indexMode() : IndexMode.MODE_NOT_ANALYZED;
+        this.norms = field.isAnnotationPresent(IndexMode.class) ? field.getAnnotation(IndexMode.class)
+                                                                       .normEnabled() : "";
+        this.options = field.isAnnotationPresent(IndexMode.class) ? field.getAnnotation(IndexMode.class)
+                                                                         .indexOptions() : "";
+        this.analyzer = field.isAnnotationPresent(IndexMode.class) ? field.getAnnotation(IndexMode.class)
+                                                                         .analyzer() : "";
     }
 
     @Override
@@ -69,6 +79,20 @@ public class StringProperty extends Property {
         builder.field("type", getMappingType());
         builder.field("store", isStored() ? "yes" : "no");
         builder.field("index", indexMode);
+        if (Strings.isFilled(options)) {
+            builder.field("index_options", options);
+        }
+        if (Strings.isFilled(options)) {
+            builder.field("index_options", options);
+        }
+        if (Strings.isFilled(analyzer)) {
+            builder.field("analyzer", analyzer);
+        }
+        if (Strings.isFilled(norms)) {
+            builder.startObject("norms");
+            builder.field("enabled", norms);
+            builder.endObject();
+        }
         builder.endObject();
     }
 }

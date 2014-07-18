@@ -10,7 +10,6 @@ package sirius.search;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
-import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -27,6 +26,7 @@ import sirius.kernel.di.Injector;
 import sirius.kernel.di.PartCollection;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.health.Exceptions;
+import sirius.kernel.health.HandledException;
 import sirius.search.properties.PropertyFactory;
 
 import javax.annotation.Nullable;
@@ -103,6 +103,15 @@ public class Schema {
     }
 
     /**
+     * Returns a collection of all known type names.
+     *
+     * @return a collection of all known type names
+     */
+    public Collection<String> getTypeNames() {
+        return nameTable.keySet();
+    }
+
+    /**
      * Creates and executes all required mapping changes.
      *
      * @return a list of mapping change actions which were performed
@@ -131,37 +140,29 @@ public class Schema {
                                                               .execute()
                                                               .get(10, TimeUnit.SECONDS);
                     if (createResponse.isAcknowledged()) {
-                        changes.add("CREATE " + index + " SUCCEEDED!");
+                        changes.add("Created index " + index + " successfully!");
                     } else {
-                        changes.add("CREATE " + index + " FAILED!");
+                        changes.add("Failed to create index " + index + "!");
                     }
                 }
             } catch (Throwable e) {
                 Index.LOG.WARN(e);
-                changes.add("CREATE " + index + " FAILED: " + e.getMessage());
+                changes.add("Cannot create index " + index + ": " + e.getMessage());
             }
         }
-        for (EntityDescriptor e : descriptorTable.values()) {
+        for (Map.Entry<Class<? extends Entity>, EntityDescriptor> e : descriptorTable.entrySet()) {
             try {
                 if (Index.LOG.isFINE()) {
-                    Index.LOG.FINE("MAPPING OF %s : %s", e.getType(), e.createMapping().prettyPrint().string());
+                    Index.LOG.FINE("MAPPING OF %s : %s",
+                                   e.getValue().getType(),
+                                   e.getValue().createMapping().prettyPrint().string());
                 }
-                PutMappingResponse putRes = Index.getClient()
-                                                 .admin()
-                                                 .indices()
-                                                 .preparePutMapping(indexPrefix + e.getIndex())
-                                                 .setType(e.getType())
-                                                 .setSource(e.createMapping())
-                                                 .execute()
-                                                 .get(10, TimeUnit.SECONDS);
-                if (putRes.isAcknowledged()) {
-                    changes.add("MAPPING OF " + e.getType() + " SUCCEEDED!");
-                } else {
-                    changes.add("MAPPING OF " + e.getType() + " FAILED!");
-                }
+                Index.addMapping(indexPrefix + e.getValue().getIndex(), e.getKey(), false);
+                changes.add("Created mapping for " + e.getValue().getType() + " in " + e.getValue().getIndex());
+            } catch (HandledException ex) {
+                changes.add(ex.getMessage());
             } catch (Throwable ex) {
-                Index.LOG.WARN(ex);
-                changes.add("MAPPING OF " + e.getType() + " FAILED" + ex.getMessage());
+                changes.add(Exceptions.handle(Index.LOG, ex).getMessage());
             }
         }
 
@@ -219,6 +220,12 @@ public class Schema {
         linkSchema();
     }
 
+    /**
+     * Performs a re-index of all indices into new ones starting with the given index prefix instead of the
+     * currently active one.
+     *
+     * @param prefix the new index prefix to use
+     */
     public void reIndex(String prefix) {
         if (!prefix.endsWith("-")) {
             prefix = prefix + "-";

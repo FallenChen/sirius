@@ -758,7 +758,7 @@ public class Query<E extends Entity> {
     protected ResultList<E> transform(SearchRequestBuilder builder) throws Exception {
         Watch w = Watch.start();
         SearchResponse searchResponse = builder.execute().actionGet();
-        ResultList<E> result = new ResultList<E>(termFacets, searchResponse);
+        ResultList<E> result = new ResultList<>(termFacets, searchResponse);
         EntityDescriptor descriptor = Index.getDescriptor(clazz);
         for (SearchHit hit : searchResponse.getHits()) {
             E entity = clazz.newInstance();
