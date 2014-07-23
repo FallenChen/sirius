@@ -74,6 +74,11 @@ public class Cluster implements EveryMinute {
     private MetricState clusterState = MetricState.GRAY;
 
     /*
+     * Used to lower message levels for ongoing failures
+     */
+    private boolean currentlyNotifying = false;
+
+    /*
      * Contains a list of all cluster members.
      */
     private List<NodeInfo> nodes = null;
@@ -247,8 +252,9 @@ public class Cluster implements EveryMinute {
             LOG.FINE("Cluster was RED and remained RED - ensuring alert...");
             if (inCharge(MetricState.RED)) {
                 LOG.FINE("This node is in charge of action at the bell....fire alert!");
-                alertClusterFailure();
+                alertClusterFailure(!currentlyNotifying);
             }
+            currentlyNotifying = true;
         } else if (clusterState == MetricState.RED && newClusterState != MetricState.RED) {
             if (inCharge(newClusterState)) {
                 LOG.FINE("Cluster recovered");
@@ -257,6 +263,7 @@ public class Cluster implements EveryMinute {
                                     HipChat.Color.GREEN,
                                     true);
             }
+            currentlyNotifying = false;
         }
         LOG.FINE("Cluster check complete. Status was %s and is now %s", clusterState, newClusterState);
         clusterState = newClusterState;
@@ -270,7 +277,7 @@ public class Cluster implements EveryMinute {
             return true;
         }
         for (NodeInfo info : getNodeInfos()) {
-            if (info.getPriority() < getNodePriority() &&
+            if (isBetter(info) &&
                     info.getClusterState() == clusterStateToBroadcast &&
                     info.getNodeState() == MetricState.GREEN) {
                 // Another node took care of it...
@@ -281,10 +288,23 @@ public class Cluster implements EveryMinute {
         return true;
     }
 
+    /*
+     * Determines if the given node has a better priority than the current node
+     */
+    private boolean isBetter(NodeInfo info) {
+        if (info.getPriority() > getNodePriority()) {
+            return false;
+        }
+        if (info.getPriority() < getNodePriority()) {
+            return true;
+        }
+        return info.getName().compareTo(CallContext.getNodeName()) < 0;
+    }
+
     @Part
     private MailService ms;
 
-    private void alertClusterFailure() {
+    private void alertClusterFailure(boolean firstAlert) {
         Context ctx = Context.create()
                              .set("app", Sirius.getProductName())
                              .set("node", CallContext.getNodeName())
@@ -295,7 +315,7 @@ public class Cluster implements EveryMinute {
         for (String receiver : alertReceivers) {
             ms.createEmail().useMailTemplate("system-alert", ctx).toEmail(receiver).send();
         }
-        HipChat.sendMessage("cluster", "Cluster is RED", HipChat.Color.RED, true);
+        HipChat.sendMessage("cluster", "Cluster is RED", HipChat.Color.RED, firstAlert);
         LOG.WARN("NodeState: %s, ClusterState: %s", nodeState, clusterState);
     }
 
