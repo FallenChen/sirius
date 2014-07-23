@@ -199,7 +199,7 @@ public class Exceptions {
          * </p>
          *
          * @return a <tt>HandledException</tt> which notifies surrounding calls that an error occurred, which has
-         *         already been taken care of.
+         * already been taken care of.
          */
         public HandledException handle() {
             if (ex != null && ex instanceof HandledException) {
@@ -230,8 +230,11 @@ public class Exceptions {
                             if (ex != null && ex.getStackTrace().length > 0) {
                                 location = formatStackTraceElement(ex.getStackTrace()[0]);
                             } else if (result.getStackTrace().length > 0) {
-                                location = formatStackTraceElement(result.getStackTrace().length > 1 ? result.getStackTrace()[1] : result
-                                        .getStackTrace()[0]);
+                                StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+                                int index = 0;
+                                while ((location == null || location.startsWith("sirius.kernel.health.Exceptions")) && index < trace.length) {
+                                    location = formatStackTraceElement(trace[index]);
+                                }
                             }
                             for (ExceptionHandler handler : handlers) {
                                 try {
@@ -315,7 +318,7 @@ public class Exceptions {
      *
      * @param e the exception to handle
      * @return a <tt>HandledException</tt> which notifies surrounding calls that an error occurred, which has
-     *         already been taken care of.
+     * already been taken care of.
      */
     public static HandledException handle(Throwable e) {
         return handle().error(e).handle();
@@ -327,7 +330,7 @@ public class Exceptions {
      * @param log the logger used to log the exception
      * @param e   the exception to handle
      * @return a <tt>HandledException</tt> which notifies surrounding calls that an error occurred, which has
-     *         already been taken care of.
+     * already been taken care of.
      */
     public static HandledException handle(Log log, Throwable e) {
         return handle().error(e).to(log).handle();
