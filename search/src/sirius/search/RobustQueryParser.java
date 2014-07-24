@@ -9,20 +9,16 @@
 package sirius.search;
 
 import com.google.common.collect.Lists;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import parsii.tokenizer.LookaheadReader;
-import sirius.kernel.health.Exceptions;
 import sirius.search.constraints.Wrapper;
 
-import java.io.IOException;
 import java.io.StringReader;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Used to parse user queries.
@@ -40,19 +36,19 @@ class RobustQueryParser {
 
     private String defaultField;
     private String input;
-    private Analyzer analyzer;
+    private Function<String, Iterable<String>> tokenizer;
 
     /**
      * Creates a parser using the given query, defaultField and analyer.
      *
      * @param defaultField the default field to search in, if no field is given.
      * @param input        the query to parse
-     * @param analyzer     the analyzer to used for tokenization of the input
+     * @param tokenizer    the function to used for tokenization of the input
      */
-    RobustQueryParser(String defaultField, String input, Analyzer analyzer) {
+    RobustQueryParser(String defaultField, String input, Function<String, Iterable<String>> tokenizer) {
         this.defaultField = defaultField;
         this.input = input;
-        this.analyzer = analyzer;
+        this.tokenizer = tokenizer;
     }
 
     /**
@@ -215,46 +211,36 @@ class RobustQueryParser {
             }
         }
         if (sb.length() > 0) {
-            try {
-                String value = sb.toString();
-                if (value.length() > 3 && value.endsWith("*")) {
-                    if (negate) {
-                        BoolQueryBuilder qry = QueryBuilders.boolQuery();
-                        qry.mustNot(QueryBuilders.prefixQuery(field, value.substring(0, value.length() - 2)));
-                        return Collections.singletonList(qry);
-                    } else {
-                        return Collections.singletonList(QueryBuilders.prefixQuery(field,
-                                                                                   value.substring(0,
-                                                                                                   value.length() - 2)
-                        ));
-                    }
-                }
-
-                TokenStream stream = analyzer.tokenStream(field, value);
-                stream.reset();
-                List<QueryBuilder> result = Lists.newArrayList();
-                BoolQueryBuilder qry = QueryBuilders.boolQuery();
-                while (stream.incrementToken()) {
-                    CharTermAttribute attribute = stream.getAttribute(CharTermAttribute.class);
-                    value = new String(attribute.buffer(), 0, attribute.length());
-                    if (negate) {
-                        qry.mustNot(QueryBuilders.termQuery(field, value));
-                    } else {
-                        result.add(QueryBuilders.termQuery(field, value));
-                    }
-                }
-                stream.close();
+            String value = sb.toString();
+            if (value.length() > 3 && value.endsWith("*")) {
                 if (negate) {
-                    if (qry.hasClauses()) {
-                        return Collections.singletonList(qry);
-                    } else {
-                        return Collections.emptyList();
-                    }
+                    BoolQueryBuilder qry = QueryBuilders.boolQuery();
+                    qry.mustNot(QueryBuilders.prefixQuery(field, value.substring(0, value.length() - 2)));
+                    return Collections.singletonList(qry);
                 } else {
-                    return result;
+                    return Collections.singletonList(QueryBuilders.prefixQuery(field,
+                                                                               value.substring(0, value.length() - 2)
+                    ));
                 }
-            } catch (IOException e) {
-                Exceptions.handle(Index.LOG, e);
+            }
+
+            List<QueryBuilder> result = Lists.newArrayList();
+            BoolQueryBuilder qry = QueryBuilders.boolQuery();
+            for (String token : tokenizer.apply(value)) {
+                if (negate) {
+                    qry.mustNot(QueryBuilders.termQuery(field, token));
+                } else {
+                    result.add(QueryBuilders.termQuery(field, token));
+                }
+            }
+            if (negate) {
+                if (qry.hasClauses()) {
+                    return Collections.singletonList(qry);
+                } else {
+                    return Collections.emptyList();
+                }
+            } else {
+                return result;
             }
         }
 

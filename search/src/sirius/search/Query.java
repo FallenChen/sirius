@@ -9,9 +9,6 @@
 package sirius.search;
 
 import com.google.common.collect.Lists;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.util.Version;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
@@ -39,10 +36,8 @@ import sirius.web.security.UserContext;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * Represents a query against the database which are created via {@link Index#select(Class)}.
@@ -53,14 +48,8 @@ import java.util.Optional;
 public class Query<E extends Entity> {
 
     /**
-     * Specifies the default analyzer used by {@link #query(String)}. Use
-     * {@link #query(String, String, org.apache.lucene.analysis.Analyzer)} to specify a custom analyzer
-     */
-    private static Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_46);
-
-    /**
      * Specifies tbe default field to search in used by {@link #query(String)}. Use
-     * {@link #query(String, String, org.apache.lucene.analysis.Analyzer)} to specify a custom field.
+     * {@link #query(String, String, java.util.function.Function)} to specify a custom field.
      */
     private static String DEFAULT_FIELD = "_all";
 
@@ -277,13 +266,13 @@ public class Query<E extends Entity> {
      *
      * @param query        the query to search for
      * @param defaultField the default field to search in
-     * @param analyzer     the analyzer to use for tokenization
+     * @param tokenizer    the function to use for tokenization
      * @return the query itself for fluent method calls
      */
-    public Query<E> query(String query, String defaultField, Analyzer analyzer) {
+    public Query<E> query(String query, String defaultField, Function<String, Iterable<String>> tokenizer) {
         if (Strings.isFilled(query)) {
             this.query = query;
-            RobustQueryParser rqp = new RobustQueryParser(defaultField, query, analyzer);
+            RobustQueryParser rqp = new RobustQueryParser(defaultField, query, tokenizer);
             rqp.compileAndApply(this);
         }
 
@@ -293,14 +282,14 @@ public class Query<E extends Entity> {
     /**
      * Adds a textual query across all searchable fields.
      * <p>
-     * Uses the DEFAULT_FIELD and DEFAULT_ANALYZER while calling {@link #query(String, String, org.apache.lucene.analysis.Analyzer)}.
+     * Uses the DEFAULT_FIELD and DEFAULT_ANALYZER while calling {@link #query(String, String, java.util.function.Function)}.
      * </p>
      *
      * @param query the query to search for
      * @return the query itself for fluent method calls
      */
     public Query<E> query(String query) {
-        return query(query, DEFAULT_FIELD, DEFAULT_ANALYZER);
+        return query(query, DEFAULT_FIELD, s -> Collections.singletonList(s));
     }
 
     /**
