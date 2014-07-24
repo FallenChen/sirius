@@ -85,7 +85,7 @@ class Route {
                     finalPattern.append("/[^/]+");
                 } else if ("**".equals(element)) {
                     finalPattern.append("/?(.*)");
-                    result.expressions.add(Tuple.create("\\*\\*".intern(), params++));
+                    result.expressions.add(Tuple.create("**".intern(), params++));
                 } else {
                     finalPattern.append("/");
                     finalPattern.append(Pattern.quote(element));
@@ -156,7 +156,7 @@ class Route {
                         result.add(Arrays.asList(value.split("/")));
                     }
                 }
-                if (parameterTypes.length > result.size() && parameterTypes[parameterTypes.length - 1] == List.class) {
+                if (parameterTypes.length - 1 > result.size() && parameterTypes[parameterTypes.length - 1] == List.class) {
                     result.add(Collections.emptyList());
                 }
                 CallContext.getCurrent().addToMDC("route", format);
