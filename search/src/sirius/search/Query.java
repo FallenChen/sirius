@@ -9,6 +9,9 @@
 package sirius.search;
 
 import com.google.common.collect.Lists;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.util.Version;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
@@ -48,6 +51,19 @@ import java.util.Optional;
  * @since 2013/12
  */
 public class Query<E extends Entity> {
+
+    /**
+     * Specifies the default analyzer used by {@link #query(String)}. Use
+     * {@link #query(String, String, org.apache.lucene.analysis.Analyzer)} to specify a custom analyzer
+     */
+    private static Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_46);
+
+    /**
+     * Specifies tbe default field to search in used by {@link #query(String)}. Use
+     * {@link #query(String, String, org.apache.lucene.analysis.Analyzer)} to specify a custom field.
+     */
+    private static String DEFAULT_FIELD = "_all";
+
     private Class<E> clazz;
     private List<Constraint> constraints = Lists.newArrayList();
     private List<Tuple<String, Boolean>> orderBys = Lists.newArrayList();
@@ -253,20 +269,59 @@ public class Query<E extends Entity> {
     }
 
     /**
+     * Adds a textual query using the given field.
+     * <p>
+     * It will try to parse queries in Lucene syntax (+token, -token, AND, OR and brackets are supported) but it
+     * will never fail for a malformed query. If such a case, the valid tokens are sent to the server.
+     * </p>
+     *
+     * @param query        the query to search for
+     * @param defaultField the default field to search in
+     * @param analyzer     the analyzer to use for tokenization
+     * @return the query itself for fluent method calls
+     */
+    public Query<E> query(String query, String defaultField, Analyzer analyzer) {
+        if (Strings.isFilled(query)) {
+            this.query = query;
+            RobustQueryParser rqp = new RobustQueryParser(defaultField, query, analyzer);
+            rqp.compileAndApply(this);
+        }
+
+        return this;
+    }
+
+    /**
      * Adds a textual query across all searchable fields.
+     * <p>
+     * Uses the DEFAULT_FIELD and DEFAULT_ANALYZER while calling {@link #query(String, String, org.apache.lucene.analysis.Analyzer)}.
+     * </p>
+     *
+     * @param query the query to search for
+     * @return the query itself for fluent method calls
+     */
+    public Query<E> query(String query) {
+        return query(query, DEFAULT_FIELD, DEFAULT_ANALYZER);
+    }
+
+    /**
+     * Adds a textual query across all searchable fields using Lucene syntax.
+     * <p>
+     * Consider using {@link #query(String)} which supports most of the Lucene syntax but will never fail for
+     * a query.
+     * </p>
      *
      * @param query the query to search for. Does actually support the complete Lucene query syntax like
      *              <code>field:value OR field2:value1</code>
      * @return the query itself for fluent method calls
      */
-    public Query<E> query(String query) {
+    public Query<E> directQuery(String query) {
         if (Strings.isFilled(query)) {
-            this.query = query;
             where(QueryString.query(query));
         }
 
         return this;
     }
+
 
     /**
      * Sets the index to use.
@@ -303,11 +358,12 @@ public class Query<E extends Entity> {
     /**
      * If the entity being queries is routed, we try to preset the correct routing value or to disable routing.
      * <p>
-     *     This is used by {@link sirius.search.ForeignKey} as if cannot know if and how an entity is routed.
-     *     Therefore this method checks if by coincidence the given field and value (which is used by the foreign key
-     *     to filter entities) is also used to route those entities. If this is true, the routing is applied,
-     *     otherwise {@link #deliberatelyUnrouted()} is called.
+     * This is used by {@link sirius.search.ForeignKey} as if cannot know if and how an entity is routed.
+     * Therefore this method checks if by coincidence the given field and value (which is used by the foreign key
+     * to filter entities) is also used to route those entities. If this is true, the routing is applied,
+     * otherwise {@link #deliberatelyUnrouted()} is called.
      * </p>
+     *
      * @param field the field for which a filter value is available
      * @param value the value of the field
      * @return the query itself for fluent method calls
