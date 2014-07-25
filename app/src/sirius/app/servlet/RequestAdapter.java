@@ -14,9 +14,9 @@ import io.netty.handler.codec.http.HttpHeaders;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 import sirius.web.http.MimeHelper;
-import sirius.web.http.session.ServerSession;
 import sirius.web.http.WebContext;
 import sirius.web.http.WebServer;
+import sirius.web.http.session.ServerSession;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -43,12 +43,17 @@ public class RequestAdapter implements HttpServletRequest {
     private Map<String, Object> attributes = Maps.newTreeMap();
     private SessionAdapter session;
     private List<Cookie> cookies;
+    private String uri;
 
     public RequestAdapter(WebContext ctx, String servletPath, ServletContainer container, ResponseAdapter res) {
         this.ctx = ctx;
         this.servletPath = servletPath;
         this.container = container;
         this.res = res;
+    }
+
+    protected void setUri(String uri) {
+        this.uri = uri;
     }
 
     @Override
@@ -108,7 +113,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        String result = ctx.getRequestedURI().substring(getServletPath().length());
+        String result = getRequestURI().substring(getServletPath().length());
         if (!result.startsWith("/")) {
             result = "/" + result;
         }
@@ -152,7 +157,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String getRequestURI() {
-        return ctx.getRequestedURI();
+        return uri != null ? uri : ctx.getRequestedURI();
     }
 
     @Override
@@ -188,7 +193,7 @@ public class RequestAdapter implements HttpServletRequest {
     @Override
     public boolean isRequestedSessionIdValid() {
         return ctx.getServerSession(false) != null && !ctx.getServerSession()
-                .isNew() && ctx.getServerSessionSource() != null;
+                                                          .isNew() && ctx.getServerSessionSource() != null;
     }
 
     @Override
@@ -235,8 +240,8 @@ public class RequestAdapter implements HttpServletRequest {
     @Override
     public String getContentType() {
         return ctx.getHeaderValue(HttpHeaders.Names.CONTENT_TYPE)
-                .replaceEmptyWith(MimeHelper.guessMimeType(ctx.getRequestedURI()))
-                .asString();
+                  .replaceEmptyWith(MimeHelper.guessMimeType(ctx.getRequestedURI()))
+                  .asString();
     }
 
     @Override
@@ -288,20 +293,20 @@ public class RequestAdapter implements HttpServletRequest {
                 return is.markSupported();
             }
 
-            @Override
-            public boolean isFinished() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public boolean isReady() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void setReadListener(ReadListener readListener) {
-                throw new UnsupportedOperationException();
-            }
+//            @Override
+//            public boolean isFinished() {
+//                throw new UnsupportedOperationException();
+//            }
+//
+//            @Override
+//            public boolean isReady() {
+//                throw new UnsupportedOperationException();
+//            }
+//
+//            @Override
+//            public void setReadListener(ReadListener readListener) {
+//                throw new UnsupportedOperationException();
+//            }
         };
     }
 
@@ -317,7 +322,11 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public String[] getParameterValues(String s) {
-        return ctx.getParameters(s).toArray(new String[ctx.getParameters(s).size()]);
+        List<String> parameters = ctx.getParameters(s);
+        if (parameters.isEmpty()) {
+            return null;
+        }
+        return parameters.toArray(new String[parameters.size()]);
     }
 
     @Override
@@ -401,7 +410,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public RequestDispatcher getRequestDispatcher(String s) {
-        throw new UnsupportedOperationException();
+        return container.getRequestDispatcher(s);
     }
 
     @Override
@@ -435,10 +444,10 @@ public class RequestAdapter implements HttpServletRequest {
         return "HttpServletRequest: " + ctx.toString();
     }
 
-    @Override
-    public String changeSessionId() {
-        throw new UnsupportedOperationException();
-    }
+//    @Override
+//    public String changeSessionId() {
+//        throw new UnsupportedOperationException();
+//    }
 
     @Override
     public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
@@ -465,15 +474,15 @@ public class RequestAdapter implements HttpServletRequest {
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long getContentLengthLong() {
-        return ctx.getContentSize();
-    }
+//    @Override
+//    public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException {
+//        throw new UnsupportedOperationException();
+//    }
+//
+//    @Override
+//    public long getContentLengthLong() {
+//        return ctx.getContentSize();
+//    }
 
     @Override
     public ServletContext getServletContext() {
@@ -499,7 +508,8 @@ public class RequestAdapter implements HttpServletRequest {
     }
 
     @Override
-    public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse) throws IllegalStateException {
+    public AsyncContext startAsync(ServletRequest servletRequest,
+                                   ServletResponse servletResponse) throws IllegalStateException {
         AsyncContextAdapter newCtx = new AsyncContextAdapter(this, res, servletRequest, servletResponse);
         if (async != null) {
             for (AsyncListener listener : async.listeners) {
@@ -521,7 +531,7 @@ public class RequestAdapter implements HttpServletRequest {
 
     @Override
     public boolean isAsyncSupported() {
-        return true;
+        return false;
     }
 
     @Override
@@ -534,4 +544,13 @@ public class RequestAdapter implements HttpServletRequest {
         throw new UnsupportedOperationException();
     }
 
+    public void setServletPath(String servletPath) {
+        if (Strings.isEmpty(servletPath) || servletPath.startsWith("*")) {
+            this.servletPath = "";
+        } else if (servletPath.endsWith("*")) {
+            this.servletPath = servletPath.substring(0, servletPath.length() - 1);
+        } else {
+            this.servletPath = servletPath;
+        }
+    }
 }

@@ -173,7 +173,11 @@ public class Extensions {
         for (Map.Entry<String, ConfigValue> entry : cfg.entrySet()) {
             String key = entry.getKey();
             if (!DEFAULT.equals(key) && !key.contains(".")) {
-                list.add(new BasicExtension(type, key, (ConfigObject) entry.getValue(), def));
+                if (entry.getValue() instanceof ConfigObject) {
+                    list.add(new BasicExtension(type, key, (ConfigObject) entry.getValue(), def));
+                } else {
+                    LOG.WARN("Malformed extension within '%s'. Expected a config object but found: %s", type, entry.getValue());
+                }
             }
         }
         Collections.sort(list);

@@ -15,6 +15,7 @@ import sirius.kernel.Sirius;
 import sirius.kernel.async.Async;
 import sirius.kernel.commons.Callback;
 import sirius.kernel.commons.PriorityCollector;
+import sirius.kernel.commons.Tuple;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Register;
@@ -47,10 +48,11 @@ import java.util.*;
 @Register(framework = "servlets", classes = {Lifecycle.class, WebDispatcher.class, SessionListener.class})
 public class ServletContainer implements Lifecycle, ServletContext, WebDispatcher, SessionListener {
 
-    private Map<String, Servlet> servlets = Maps.newHashMap();
-    private List<Object> listeners = Lists.newArrayList();
-    private Map<String, String> contextParams = Maps.newTreeMap();
-    private Map<String, Object> attributes = Maps.newTreeMap();
+    protected List<Tuple<String, Servlet>> servlets = Lists.newArrayList();
+    protected List<Tuple<String, Filter>> filters = Lists.newArrayList();
+    protected List<Object> listeners = Lists.newArrayList();
+    protected Map<String, String> contextParams = Maps.newTreeMap();
+    protected Map<String, Object> attributes = Maps.newTreeMap();
     protected static final Log LOG = Log.get("servlets");
 
     @ConfigValue("servlet.majorVersion")
@@ -66,13 +68,13 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
                     callback.invoke((L) l);
                 } catch (Exception e) {
                     Exceptions.handle()
-                            .error(e)
-                            .to(LOG)
-                            .withSystemErrorMessage("Cannot send %s to listener: %s (%s) - %s (%s)",
-                                    message,
-                                    l,
-                                    l.getClass())
-                            .handle();
+                              .error(e)
+                              .to(LOG)
+                              .withSystemErrorMessage("Cannot send %s to listener: %s (%s) - %s (%s)",
+                                                      message,
+                                                      l,
+                                                      l.getClass())
+                              .handle();
                 }
             }
         }
@@ -80,60 +82,67 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public void started() {
-        // Load context-params...
+        loadContextParams();
+        loadListeners();
+        invokeListeners("contextInitialized",
+                        ServletContextListener.class,
+                        value -> value.contextInitialized(new ServletContextEvent(ServletContainer.this)));
+        loadAndInitializeFilters();
+        loadAndInitializeServlets();
+    }
+
+    private void loadContextParams() {
         for (Map.Entry<String, com.typesafe.config.ConfigValue> entry : Sirius.getConfig()
-                .getConfig("servlet.params")
-                .entrySet()) {
+                                                                              .getConfig("servlet.params")
+                                                                              .entrySet()) {
             try {
                 contextParams.put(entry.getKey(), (String) entry.getValue().unwrapped());
             } catch (Exception e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Cannot read context-param: %s - %s (%s)", entry.getKey())
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot read context-param: %s - %s (%s)", entry.getKey())
+                          .handle();
             }
         }
+    }
 
-        // Load listeners...
+    private void loadListeners() {
         for (Extension listenerDescriptor : Extensions.getExtensions("servlet.listeners")) {
             try {
                 LOG.INFO("Loading listener: %s", listenerDescriptor.getId());
                 listeners.add(listenerDescriptor.make("class"));
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Cannot load listener: %s - %s (%s)", listenerDescriptor.getId())
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot load listener: %s - %s (%s)", listenerDescriptor.getId())
+                          .handle();
             }
         }
+    }
 
-        // Notify listeners
-        invokeListeners("contextInitialized", ServletContextListener.class, value ->
-                value.contextInitialized(new ServletContextEvent(ServletContainer.this)));
-
-        // Load servlets...
+    private void loadAndInitializeServlets() {
         for (Extension servletDescriptor : Extensions.getExtensions("servlet.servlets")) {
             try {
                 LOG.INFO("Loading servlet: %s", servletDescriptor.getId());
-                servlets.put(servletDescriptor.require("path").asString(), (Servlet) servletDescriptor.make("class"));
+                servlets.add(Tuple.create(servletDescriptor.require("path").asString(),
+                                          (Servlet) servletDescriptor.make("class")));
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Cannot load servlet: %s - %s (%s)", servletDescriptor.getId())
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot load servlet: %s - %s (%s)", servletDescriptor.getId())
+                          .handle();
             }
         }
 
-        // Initialize servlets...
-        for (final Servlet s : servlets.values()) {
+        for (final Tuple<String, Servlet> s : servlets) {
             try {
-                s.init(new ServletConfig() {
+                s.getSecond().init(new ServletConfig() {
                     @Override
                     public String getServletName() {
-                        return s.getClass().getSimpleName();
+                        return s.getFirst();
                     }
 
                     @Override
@@ -153,33 +162,97 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
                 });
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Cannot initialize servlet: %s - %s (%s)", s)
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot initialize servlet: %s - %s (%s)", s)
+                          .handle();
+            }
+        }
+    }
+
+    private void loadAndInitializeFilters() {
+        for (Extension filterDescriptor : Extensions.getExtensions("servlet.filters")) {
+            try {
+                LOG.INFO("Loading filter: %s", filterDescriptor.getId());
+                filters.add(Tuple.create(filterDescriptor.require("path").asString(),
+                                         (Filter) filterDescriptor.make("class")));
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot load filter: %s - %s (%s)", filterDescriptor.getId())
+                          .handle();
+            }
+        }
+
+        for (final Tuple<String, Filter> f : filters) {
+            try {
+                f.getSecond().init(new FilterConfig() {
+                    @Override
+                    public String getFilterName() {
+                        return f.getFirst();
+                    }
+
+                    @Override
+                    public ServletContext getServletContext() {
+                        return ServletContainer.this;
+                    }
+
+                    @Override
+                    public String getInitParameter(String s) {
+                        return ServletContainer.this.getInitParameter(s);
+                    }
+
+                    @Override
+                    public Enumeration getInitParameterNames() {
+                        return ServletContainer.this.getInitParameterNames();
+                    }
+                });
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot initialize filter: %s - %s (%s)", f)
+                          .handle();
             }
         }
     }
 
     @Override
     public void stopped() {
-        // Destroy servlets...
-        for (final Servlet s : servlets.values()) {
+        invokeListeners("contextDestroyed",
+                        ServletContextListener.class,
+                        value -> value.contextDestroyed(new ServletContextEvent(ServletContainer.this)));
+        destroyServlets();
+        destroyFilters();
+    }
+
+    private void destroyFilters() {
+        for (final Tuple<String, Filter> f : filters) {
             try {
-                s.destroy();
+                f.getSecond().destroy();
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Cannot destroy servlet: %s - %s (%s)", s)
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot destroy filter: %s - %s (%s)", f)
+                          .handle();
             }
         }
+    }
 
-        // Notify listeners
-        invokeListeners("contextDestroyed", ServletContextListener.class, value ->
-                        value.contextDestroyed(new ServletContextEvent(ServletContainer.this))
-        );
+    private void destroyServlets() {
+        for (final Tuple<String, Servlet> s : servlets) {
+            try {
+                s.getSecond().destroy();
+            } catch (Throwable e) {
+                Exceptions.handle()
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Cannot destroy servlet: %s - %s (%s)", s)
+                          .handle();
+            }
+        }
     }
 
     @Override
@@ -194,7 +267,7 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public String getContextPath() {
-        return getServletContextName();
+        return "/".equals(getServletContextName()) ? "" : getServletContextName();
     }
 
     @Override
@@ -244,7 +317,7 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public RequestDispatcher getRequestDispatcher(String s) {
-        throw new UnsupportedOperationException();
+        return new RequestDispatcherAdapter(this, s, false);
     }
 
     @Override
@@ -325,16 +398,17 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     public void setAttribute(final String s, final Object o) {
         if (attributes.containsKey(s)) {
             invokeListeners("attributeReplaced",
-                    ServletContextAttributeListener.class, value ->
-                            value.attributeReplaced(new ServletContextAttributeEvent(ServletContainer.this,
-                                    s,
-                                    o))
+                            ServletContextAttributeListener.class,
+                            value -> value.attributeReplaced(new ServletContextAttributeEvent(ServletContainer.this,
+                                                                                              s,
+                                                                                              o))
             );
         } else {
             invokeListeners("attributeAdded",
-                    ServletContextAttributeListener.class, value ->
-                            value.attributeAdded(new ServletContextAttributeEvent(ServletContainer.this, s, o))
-            );
+                            ServletContextAttributeListener.class,
+                            value -> value.attributeAdded(new ServletContextAttributeEvent(ServletContainer.this,
+                                                                                           s,
+                                                                                           o)));
         }
         attributes.put(s, o);
     }
@@ -342,10 +416,10 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     @Override
     public void removeAttribute(final String s) {
         invokeListeners("attributeRemoved",
-                ServletContextAttributeListener.class, value ->
-                        value.attributeRemoved(new ServletContextAttributeEvent(ServletContainer.this,
-                                s,
-                                null))
+                        ServletContextAttributeListener.class,
+                        value -> value.attributeRemoved(new ServletContextAttributeEvent(ServletContainer.this,
+                                                                                         s,
+                                                                                         null))
         );
         attributes.remove(s);
     }
@@ -367,41 +441,34 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
 
     @Override
     public boolean dispatch(final WebContext ctx) throws Exception {
-        LOG.INFO(ctx.getRequestedURI());
-        for (final Map.Entry<String, Servlet> s : servlets.entrySet()) {
-            if (ctx.getRequestedURI().startsWith(s.getKey())) {
-                final ResponseAdapter res = new ResponseAdapter(ctx);
-                final RequestAdapter req = new RequestAdapter(ctx, s.getKey(), this, res);
-                Async.executor("servlets").start(() -> {
-                    try {
-                        invokeListeners("requestInitialized",
-                                ServletRequestListener.class, (value) ->
-                                        value.requestInitialized(new ServletRequestEvent(ServletContainer.this,
-                                                req))
-                        );
-                        try {
-                            s.getValue().service(req, res);
-                            if (!req.isAsyncStarted()) {
-                                res.complete();
-                            }
-                        } finally {
-                            invokeListeners("requestDestroyed",
+        RequestDispatcherAdapter dispatcher = new RequestDispatcherAdapter(this, ctx.getRequestedURI(), true);
+        final ResponseAdapter res = new ResponseAdapter(ctx);
+        final RequestAdapter req = new RequestAdapter(ctx, "", this, res);
+        Async.executor("servlets").start(() -> {
+            try {
+                invokeListeners("requestInitialized",
+                                ServletRequestListener.class,
+                                (value) -> value.requestInitialized(new ServletRequestEvent(ServletContainer.this,
+                                                                                            req)));
+                try {
+                    dispatcher.forward(req, res);
+                    if (!req.isAsyncStarted()) {
+                        res.complete();
+                    }
+                } finally {
+                    invokeListeners("requestDestroyed",
                                     ServletRequestListener.class,
                                     value -> value.requestDestroyed(new ServletRequestEvent(ServletContainer.this,
-                                            req))
-                            );
-                        }
-                    } catch (Throwable t) {
-                        LOG.SEVERE(t);
-                        if (!res.isCommitted()) {
-                            ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(LOG, t));
-                        }
-                    }
-                }).execute();
-                return true;
+                                                                                            req)));
+                }
+            } catch (Throwable t) {
+                LOG.SEVERE(t);
+                if (!res.isCommitted()) {
+                    ctx.respondWith().error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(LOG, t));
+                }
             }
-        }
-        return false;
+        }).execute();
+        return true;
     }
 
     @Override
@@ -539,8 +606,8 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public String getVirtualServerName() {
-        return "Sirius";
-    }
+//    @Override
+//    public String getVirtualServerName() {
+//        return "Sirius";
+//    }
 }

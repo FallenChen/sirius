@@ -58,7 +58,7 @@ public class SessionAdapter implements HttpSession {
 
     @Override
     public void setMaxInactiveInterval(int i) {
-        throw new UnsupportedOperationException();
+        // IGNORE
     }
 
     @Override

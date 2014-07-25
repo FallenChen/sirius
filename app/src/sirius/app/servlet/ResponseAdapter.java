@@ -71,24 +71,24 @@ public class ResponseAdapter implements HttpServletResponse {
 
     @Override
     public String encodeURL(String s) {
-        return Strings.urlEncode(s);
+        return s;
     }
 
     @Override
     public String encodeRedirectURL(String s) {
-        return Strings.urlEncode(s);
+        return s;
     }
 
     @Override
     @Deprecated
     public String encodeUrl(String s) {
-        return Strings.urlEncode(s);
+        return s;
     }
 
     @Override
     @Deprecated
     public String encodeRedirectUrl(String s) {
-        return Strings.urlEncode(s);
+        return s;
     }
 
     @Override
@@ -246,16 +246,16 @@ public class ResponseAdapter implements HttpServletResponse {
                 os.close();
             }
 
-
-            @Override
-            public boolean isReady() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void setWriteListener(WriteListener writeListener) {
-                throw new UnsupportedOperationException();
-            }
+//
+//            @Override
+//            public boolean isReady() {
+//                throw new UnsupportedOperationException();
+//            }
+//
+//            @Override
+//            public void setWriteListener(WriteListener writeListener) {
+//                throw new UnsupportedOperationException();
+//            }
         };
 
         return stream;
@@ -376,8 +376,8 @@ public class ResponseAdapter implements HttpServletResponse {
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public void setContentLengthLong(long len) {
-        throw new UnsupportedOperationException();
-    }
+//    @Override
+//    public void setContentLengthLong(long len) {
+//        throw new UnsupportedOperationException();
+//    }
 }
