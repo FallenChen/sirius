@@ -226,6 +226,7 @@ class RobustQueryParser {
 
             List<QueryBuilder> result = Lists.newArrayList();
             BoolQueryBuilder qry = QueryBuilders.boolQuery();
+
             for (String token : tokenizer.apply(value)) {
                 if (negate) {
                     qry.mustNot(QueryBuilders.termQuery(field, token));

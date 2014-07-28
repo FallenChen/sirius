@@ -9,6 +9,10 @@
 package sirius.search;
 
 import com.google.common.collect.Lists;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.util.Version;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
@@ -36,7 +40,11 @@ import sirius.web.security.UserContext;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -289,7 +297,22 @@ public class Query<E extends Entity> {
      * @return the query itself for fluent method calls
      */
     public Query<E> query(String query) {
-        return query(query, DEFAULT_FIELD, s -> Collections.singletonList(s));
+        return query(query, DEFAULT_FIELD, s -> {
+            List<String> result = Lists.newArrayList();
+            StandardAnalyzer std = new StandardAnalyzer(Version.LUCENE_46);
+            try {
+                TokenStream stream = std.tokenStream("std", s);
+                stream.reset();
+                while (stream.incrementToken()) {
+                    CharTermAttribute attr = stream.getAttribute(CharTermAttribute.class);
+                    result.add(new String(attr.buffer(), 0, attr.length()));
+                }
+            } catch (IOException e) {
+                Exceptions.handle(Index.LOG, e);
+            }
+
+            return result;
+        });
     }
 
     /**
