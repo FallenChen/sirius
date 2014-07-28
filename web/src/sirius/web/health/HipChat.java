@@ -59,7 +59,6 @@ public class HipChat implements ExceptionHandler, Lifecycle {
     public void handle(Incident incident) throws Exception {
         sendMessage("incident",
                     Strings.apply("%s [%s]",
-
                                   incident.getException().getMessage(), incident.getLocation()),
                     Color.RED,
                     true
