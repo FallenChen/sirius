@@ -8,19 +8,25 @@
 
 package sirius.kernel.xml;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.w3c.dom.Node;
 import org.xml.sax.Attributes;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
+import sirius.kernel.async.CallContext;
+import sirius.kernel.async.TaskContext;
+import sirius.kernel.health.Exceptions;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
+import javax.xml.parsers.*;
 import java.io.*;
 import java.net.URL;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * A combination of DOM and SAX parser which permits to parse very large XML files while conveniently handling sub tree
@@ -35,6 +41,17 @@ import java.util.*;
  * @since 2013/08
  */
 public class XMLReader extends DefaultHandler {
+
+    private TaskContext taskContext;
+
+    public XMLReader() {
+        try {
+            documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            taskContext = CallContext.getCurrent().get(TaskContext.class);
+        } catch (ParserConfigurationException e) {
+            throw Exceptions.handle(e);
+        }
+    }
 
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
@@ -79,26 +96,22 @@ public class XMLReader extends DefaultHandler {
             handler.startElement(uri, name, attributes);
         }
         // Start a new handler is necessary
-        try {
-            // QName qualifiedName = new QName(uri, localName);
-            NodeHandler handler = handlers.get(name);
-            if (handler != null) {
-                activeHandlers.add(new SAX2DOMHandler(handler, uri, name, attributes));
-            }
-        } catch (ParserConfigurationException e) {
-            throw new SAXException(e);
+        NodeHandler handler = handlers.get(name);
+        if (handler != null) {
+            SAX2DOMHandler saxHandler = new SAX2DOMHandler(handler, documentBuilder.newDocument());
+            saxHandler.startElement(uri, name, attributes);
+            activeHandlers.add(saxHandler);
         }
-        /**
-         * Check if the user tried to interrupt parsing....
-         */
-        if (interrupt != null && interrupt.isInterrupted()) {
+        // Check if the user tried to interrupt parsing....
+        if (!taskContext.isActive()) {
             throw new UserInterruptException();
         }
     }
 
-    private Map<String, NodeHandler> handlers = new TreeMap<String, NodeHandler>();
-    private List<SAX2DOMHandler> activeHandlers = new ArrayList<SAX2DOMHandler>();
-    private InterruptSignal interrupt;
+    private Map<String, NodeHandler> handlers = Maps.newTreeMap();
+    private List<SAX2DOMHandler> activeHandlers = Lists.newArrayList();
+    private DocumentBuilder documentBuilder;
+
 
     /**
      * Registers a new handler for a qualified name of a node.
@@ -122,7 +135,7 @@ public class XMLReader extends DefaultHandler {
      *                     processing a malformed XML).
      */
     public void parse(InputStream stream) throws IOException {
-        parse(stream, null, null);
+        parse(stream, null);
     }
 
     /**
@@ -136,24 +149,23 @@ public class XMLReader extends DefaultHandler {
     }
 
     /*
-     * Used to handle the InterruptSignal
+     * Used to handle the an abort via {@link TaskContext}
      */
     class UserInterruptException extends RuntimeException {
 
         private static final long serialVersionUID = -7454219131982518216L;
+
     }
 
     /**
      * Parses the given stream using the given locator and interrupt signal.
      *
-     * @param stream    the stream containing the XML data
-     * @param locator   the resource locator used to discover dependent resources
-     * @param interrupt an InterruptSignal which can be used to cancel XML parsing
+     * @param stream          the stream containing the XML data
+     * @param resourceLocator the resource locator used to discover dependent resources
      * @throws IOException if parsing the XML fails either due to an IO error or due to an SAXException (when
      *                     processing a malformed XML).
      */
-    public void parse(InputStream stream, final ResourceLocator locator, InterruptSignal interrupt) throws IOException {
-        this.interrupt = interrupt;
+    public void parse(InputStream stream, Function<String, InputStream> resourceLocator) throws IOException {
         try {
             SAXParserFactory factory = SAXParserFactory.newInstance();
             SAXParser saxParser = factory.newSAXParser();
@@ -171,9 +183,9 @@ public class XMLReader extends DefaultHandler {
                         }
                         // File not existent -> try to resolve via
                         // classloaders...
-                        if (locator != null) {
+                        if (resourceLocator != null) {
                             String name = file.getName();
-                            InputStream stream = locator.find(name);
+                            InputStream stream = resourceLocator.apply(name);
                             if (stream != null) {
                                 return new InputSource(stream);
                             }

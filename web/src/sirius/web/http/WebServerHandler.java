@@ -16,9 +16,9 @@ import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.timeout.IdleStateEvent;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.async.TaskContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
-import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
 
 import java.io.File;
@@ -125,6 +125,7 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         WebContext wc = currentCall.get(WebContext.class);
         wc.setCtx(ctx);
         wc.setRequest(req);
+        currentCall.get(TaskContext.class).setSystem("HTTP").setJob(req.getUri());
         return wc;
     }
 
@@ -346,7 +347,8 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
                     currentContext.respondWith()
                                   .error(HttpResponseStatus.BAD_REQUEST,
                                          Strings.apply("Cannot %s as method. Use GET, POST, PUT, HEAD, DELETE",
-                                                       req.getMethod().name()));
+                                                       req.getMethod().name())
+                                  );
                     currentRequest = null;
                 }
             } catch (Throwable t) {
@@ -398,16 +400,14 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
 
             if (currentContext.getPostDecoder() != null) {
                 if (WebServer.LOG.isFINE()) {
-                    WebServer.LOG
-                             .FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
-                                                                                                    .readableBytes() + " bytes");
+                    WebServer.LOG.FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                                                                                        .readableBytes() + " bytes");
                 }
                 currentContext.getPostDecoder().offer(chunk);
             } else if (currentContext.content != null) {
                 if (WebServer.LOG.isFINE()) {
-                    WebServer.LOG
-                             .FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
-                                                                                                    .readableBytes() + " bytes");
+                    WebServer.LOG.FINE("DATA-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
+                                                                                                        .readableBytes() + " bytes");
                 }
                 currentContext.content.addContent(chunk.content().retain(), chunk instanceof LastHttpContent);
 
@@ -437,7 +437,8 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
                                            .withSystemErrorMessage(
                                                    "The web server is running out of temporary space to store the upload")
                                            .to(WebServer.LOG)
-                                           .handle());
+                                           .handle()
+                          );
             currentRequest = null;
         }
         if (file.length() > WebServer.getMaxUploadSize() && WebServer.getMaxUploadSize() > 0) {
@@ -451,7 +452,8 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
                                                    "The uploaded file exceeds the maximal upload size of %d bytes",
                                                    WebServer.getMaxUploadSize())
                                            .to(WebServer.LOG)
-                                           .handle());
+                                           .handle()
+                          );
             currentRequest = null;
         }
     }
@@ -467,6 +469,7 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
 
         for (WebDispatcher wd : sortedDispatchers) {
             try {
+                currentCall.get(TaskContext.class).setSubSystem(wd.getClass().getSimpleName());
                 if (wd.preDispatch(currentContext)) {
                     if (WebServer.LOG.isFINE()) {
                         WebServer.LOG.FINE("PRE-DISPATCHED: " + currentContext.getRequestedURI() + " to " + wd);
@@ -492,6 +495,7 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
         dispatched = true;
         for (WebDispatcher wd : sortedDispatchers) {
             try {
+                currentCall.get(TaskContext.class).setSubSystem(wd.getClass().getSimpleName());
                 if (wd.dispatch(currentContext)) {
                     if (WebServer.LOG.isFINE()) {
                         WebServer.LOG.FINE("DISPATCHED: " + currentContext.getRequestedURI() + " to " + wd);

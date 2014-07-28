@@ -231,9 +231,10 @@ public class Exceptions {
                                 location = formatStackTraceElement(ex.getStackTrace()[0]);
                             } else if (result.getStackTrace().length > 0) {
                                 StackTraceElement[] trace = Thread.currentThread().getStackTrace();
-                                int index = 0;
+                                int index = 1;
                                 while ((location == null || location.startsWith("sirius.kernel.health.Exceptions")) && index < trace.length) {
                                     location = formatStackTraceElement(trace[index]);
+                                    index++;
                                 }
                             }
                             for (ExceptionHandler handler : handlers) {

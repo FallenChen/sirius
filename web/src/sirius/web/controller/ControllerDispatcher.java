@@ -11,6 +11,7 @@ package sirius.web.controller;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.CallContext;
+import sirius.kernel.async.TaskContext;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.std.Parts;
@@ -87,6 +88,7 @@ public class ControllerDispatcher implements WebDispatcher {
                     Async.executor("web-mvc")
                          .fork(() -> {
                              try {
+                                 TaskContext.get().setSubSystem(route.getController().getClass().getSimpleName());
                                  params.add(0, ctx);
                                  // Check if we're allowed to call this route...
                                  String missingPermission = route.checkAuth();
@@ -150,8 +152,8 @@ public class ControllerDispatcher implements WebDispatcher {
         try {
             CallContext.getCurrent()
                        .addToMDC("controller",
-                                 route.getController().getClass().getName() + "." + route.getSuccessCallback().getName()
-                       );
+                                 route.getController().getClass().getName() + "." + route.getSuccessCallback()
+                                                                                         .getName());
             route.getController().onError(ctx, Exceptions.handle(ControllerDispatcher.LOG, ex));
         } catch (Throwable t) {
             ctx.respondWith()

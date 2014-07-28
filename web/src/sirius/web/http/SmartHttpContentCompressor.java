@@ -27,7 +27,7 @@ import java.util.List;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2014/01
  */
-public class SmartHttpContentCompressor extends HttpContentCompressor {
+class SmartHttpContentCompressor extends HttpContentCompressor {
 
     private boolean passThrough;
 

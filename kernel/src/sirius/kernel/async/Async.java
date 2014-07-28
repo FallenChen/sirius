@@ -47,7 +47,9 @@ public class Async {
     protected static final Log LOG = Log.get("async");
     public static final String DEFAULT = "default";
     protected static final Map<String, AsyncExecutor> executors = Maps.newConcurrentMap();
-    private static volatile boolean running = false;
+
+    // If sirius is not started yet, we still consider it running already...
+    private static volatile boolean running = true;
 
     /**
      * Returns the executor for the given category.

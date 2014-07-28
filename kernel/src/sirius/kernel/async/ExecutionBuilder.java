@@ -65,6 +65,7 @@ public class ExecutionBuilder<R> {
                     } else {
                         CallContext.setCurrent(callContext);
                     }
+                    TaskContext.get().setSystem(category).setSubSystem(runnable.getClass().getSimpleName());
                     runnable.run();
                     promise.success(null);
                 } finally {

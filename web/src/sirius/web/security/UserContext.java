@@ -37,7 +37,11 @@ import java.util.Map;
  */
 public class UserContext {
 
-    public static Log LOG = Log.get("user");
+    public static final String MDC_SCOPE = "scope";
+    public static final String MDC_USER_ID = "userId";
+    public static final String MDC_USER_NAME = "username";
+
+    public static final Log LOG = Log.get("user");
 
     @Part
     private static ScopeDetector detector;
@@ -66,19 +70,43 @@ public class UserContext {
      */
     private void bindToRequest(WebContext ctx) {
         if (ctx != null && ctx.isValid() && detector != null) {
-            currentScope = detector.detectScope(ctx);
+            setCurrentScope(detector.detectScope(ctx));
         } else {
-            currentScope = ScopeInfo.DEFAULT_SCOPE;
+            setCurrentScope(ScopeInfo.DEFAULT_SCOPE);
         }
         if (ctx != null && ctx.isValid()) {
             UserManager manager = getUserManager();
-            currentUser = manager.bindToRequest(ctx);
+            setCurrentUser(manager.bindToRequest(ctx));
         } else {
-            currentUser = UserInfo.NOBODY;
+            setCurrentUser(UserInfo.NOBODY);
         }
-        CallContext.getCurrent().addToMDC("userId", currentUser.getUserId());
-        CallContext.getCurrent().addToMDC("username", currentUser.getUserName());
-        CallContext.getCurrent().addToMDC("scope", currentScope.getScopeId());
+    }
+
+    /**
+     * Installs the given scope as current scope.
+     * <p>
+     * For generic web requests, this is not necessary, as the scope is auto-detected.
+     * </p>
+     *
+     * @param scope the scope to set
+     */
+    public void setCurrentScope(ScopeInfo scope) {
+        this.currentScope = scope == null ? ScopeInfo.DEFAULT_SCOPE : scope;
+        CallContext.getCurrent().addToMDC(MDC_SCOPE, currentScope.getScopeId());
+    }
+
+    /**
+     * Installs the given user as current user.
+     * <p>
+     * For generic web requests, this is not necessary, as the user is auto-detected.
+     * </p>
+     *
+     * @param user the user to set
+     */
+    public void setCurrentUser(UserInfo user) {
+        this.currentUser = user == null ? UserInfo.NOBODY : user;
+        CallContext.getCurrent().addToMDC(MDC_USER_ID, currentUser.getUserId());
+        CallContext.getCurrent().addToMDC(MDC_USER_NAME, currentUser.getUserName());
     }
 
     /**

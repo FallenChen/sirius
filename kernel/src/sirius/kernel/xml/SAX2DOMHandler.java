@@ -12,10 +12,6 @@ import org.w3c.dom.*;
 import org.xml.sax.Attributes;
 import sirius.kernel.commons.Strings;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
 
 /**
  * Internal adapter used to forward SAX events
@@ -30,15 +26,9 @@ class SAX2DOMHandler {
     private Node currentNode;
     private NodeHandler nodeHandler;
 
-    protected SAX2DOMHandler(NodeHandler handler,
-                             String uri,
-                             String name,
-                             Attributes attributes) throws ParserConfigurationException {
+    protected SAX2DOMHandler(NodeHandler handler, Document document) {
         this.nodeHandler = handler;
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder loader = factory.newDocumentBuilder();
-        document = loader.newDocument();
-        createElement(name, attributes);
+        this.document = document;
     }
 
     private boolean nodeUp() {
