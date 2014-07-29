@@ -8,6 +8,7 @@
 
 package sirius.web.health.console;
 
+import sirius.kernel.async.CallContext;
 import sirius.kernel.di.std.Register;
 
 import java.lang.management.ManagementFactory;
@@ -43,6 +44,14 @@ public class ThreadsCommand implements Command {
                                      e.getFileName() + ":" + e.getLineNumber());
                     }
                     output.separator();
+                    Map<String, String> mdc = CallContext.getMDC(thread.getKey().getId());
+                    if (!mdc.isEmpty()) {
+                        output.line("Mapped Diagnostic Context");
+                        output.separator();
+                        for (Map.Entry<String, String> e : mdc.entrySet()) {
+                            output.apply("%-20s %59s", e.getKey(), e.getValue());
+                        }
+                    }
                     output.blankLine();
                 }
             }

@@ -8,6 +8,7 @@
 
 package sirius.kernel.async;
 
+import com.google.common.collect.Maps;
 import org.apache.log4j.MDC;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
@@ -51,6 +52,7 @@ public class CallContext {
      */
     public static final String MDC_FLOW = "flow";
     private static ThreadLocal<CallContext> currentContext = new ThreadLocal<>();
+    private static Map<Long, Map<String, String>> mdcMap = Maps.newConcurrentMap();
     private static String nodeName = null;
     private static Counter interactionCounter = new Counter();
 
@@ -84,6 +86,9 @@ public class CallContext {
 
     /**
      * Returns the context for the current thread.
+     * <p>
+     * If no context is available, a new one will be initialized.
+     * </p>
      *
      * @return the <tt>CallContext</tt> of the current thread.
      */
@@ -97,6 +102,19 @@ public class CallContext {
         return result;
     }
 
+    /**
+     * Returns the context for the current thread.
+     * <p>
+     * Returns <tt>null</tt> if no context was installed yet.
+     * </p>
+     *
+     * @return the current context or <tt>null</tt> if no context is available
+     */
+    @Nullable
+    public static CallContext getCurrentIfAvailable() {
+        return currentContext.get();
+    }
+
     /*
      * Initializes a new context, either with a new flow-id or with the given one.
      */
@@ -104,8 +122,8 @@ public class CallContext {
         CallContext ctx = new CallContext();
         ctx.addToMDC(MDC_FLOW, externalFlowId);
         ctx.setLang(NLS.getDefaultLanguage());
-        currentContext.set(ctx);
         interactionCounter.inc();
+        setCurrent(ctx);
         return ctx;
     }
 
@@ -141,12 +159,33 @@ public class CallContext {
      */
     public static void setCurrent(CallContext context) {
         currentContext.set(context);
+        mdcMap.put(Thread.currentThread().getId(), context.mdc);
     }
 
-    private Map<String, String> mdc = new LinkedHashMap<>();
+    /**
+     * Detaches this CallContext from the current thread
+     */
+    public static void detach() {
+        currentContext.set(null);
+        mdcMap.remove(Thread.currentThread().getId());
+    }
+
+    private Map<String, String> mdc = new LinkedHashMap<String, String>();
     private Map<Class<?>, Object> subContext = new HashMap<>();
     private Watch watch = Watch.start();
     private String lang = NLS.getDefaultLanguage();
+
+    /**
+     * Returns the mapped diagnostic context for the given thread.
+     *
+     * @param threadId the id of the thread for which the MDC is requested
+     * @return the MDC a map of strings
+     */
+    @Nonnull
+    public static Map<String, String> getMDC(long threadId) {
+        return mdcMap.getOrDefault(threadId, Collections.emptyMap());
+    }
+
 
     /**
      * Returns the current mapped diagnostic context (MDC).
@@ -272,5 +311,4 @@ public class CallContext {
 
         return sb.toString();
     }
-
 }

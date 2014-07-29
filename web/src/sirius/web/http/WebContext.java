@@ -1028,7 +1028,7 @@ public class WebContext {
     }
 
     /**
-     * Tries to perform a HTTP Basic authentication by parsing the <dd>Authorization</dd> header.
+     * Tries to perform a HTTP Basic authentication by parsing the <tt>Authorization</tt> header.
      * <p>
      * If no such header is found or if the contents are malformed, an 401 UNAUTHORIZED response will be generated
      * ({@link Response#unauthorized(String)}) and <tt>null</tt> will be returned.

@@ -354,7 +354,7 @@ public class Query<E extends Entity> {
     /**
      * Sets the value used to perform custom routing.
      * <p>
-     * This must match the value of the field as specified in <dd>routing</dd> in
+     * This must match the value of the field as specified in <tt>routing</tt> in
      * {@link sirius.search.annotations.Indexed}.
      * </p>
      *

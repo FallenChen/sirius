@@ -58,7 +58,7 @@ public class ExecutionBuilder<R> {
         @Override
         public void run() {
             try {
-                CallContext ctx = CallContext.getCurrent();
+                CallContext ctx = CallContext.getCurrentIfAvailable();
                 try {
                     if (callContext == null) {
                         CallContext.initialize();
@@ -69,7 +69,11 @@ public class ExecutionBuilder<R> {
                     runnable.run();
                     promise.success(null);
                 } finally {
-                    CallContext.setCurrent(ctx);
+                    if (ctx == null) {
+                        CallContext.detach();
+                    } else {
+                        CallContext.setCurrent(ctx);
+                    }
                 }
             } catch (Throwable t) {
                 Exceptions.handle(Async.LOG, t);
