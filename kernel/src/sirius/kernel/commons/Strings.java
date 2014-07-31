@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -300,6 +301,11 @@ public class Strings {
         }
 
         return result.toString();
+    }
+
+    @Nonnull
+    public static String join(@Nonnull String separator, @Nonnull String... parts) {
+        return join(Arrays.asList(parts), separator);
     }
 
     /**
