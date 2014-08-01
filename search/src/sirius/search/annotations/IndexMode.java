@@ -129,7 +129,7 @@ public @interface IndexMode {
      *
      * @return use one of the constants defined by this annotations to specify the index mode
      */
-    String indexMode();
+    String indexMode() default MODE_NOT_ANALYZED;
 
     /**
      * Permits to specify the analyzer to use for this field. By default the standard analyzer set by
@@ -155,4 +155,12 @@ public @interface IndexMode {
      * an empty string is specified, the default values of elasticsearch will be applied
      */
     String normEnabled() default "";
+
+    /**
+     * Permits to specify if the contents of this field are included in the _all field.
+     *
+     * @return <tt>true</tt> if the contents of this field should be included in the <tt>_all</tt> field,
+     * <tt>false</tt> otherwise
+     */
+    boolean includeInAll() default true;
 }

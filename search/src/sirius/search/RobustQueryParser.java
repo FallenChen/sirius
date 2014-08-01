@@ -212,14 +212,14 @@ class RobustQueryParser {
         }
         if (sb.length() > 0) {
             String value = sb.toString();
-            if (value.length() > 3 && value.endsWith("*")) {
+            if (value.length() > 1 && value.endsWith("*")) {
                 if (negate) {
                     BoolQueryBuilder qry = QueryBuilders.boolQuery();
-                    qry.mustNot(QueryBuilders.prefixQuery(field, value.substring(0, value.length() - 2)));
+                    qry.mustNot(QueryBuilders.prefixQuery(field, value.substring(0, value.length() - 1)));
                     return Collections.singletonList(qry);
                 } else {
                     return Collections.singletonList(QueryBuilders.prefixQuery(field,
-                                                                               value.substring(0, value.length() - 2)
+                                                                               value.substring(0, value.length() - 1)
                     ));
                 }
             }

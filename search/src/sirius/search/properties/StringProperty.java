@@ -30,6 +30,7 @@ public class StringProperty extends Property {
     private final String norms;
     private final String options;
     private final String analyzer;
+    private final boolean includeInAll;
 
     /**
      * Factory for generating properties based on their field type
@@ -61,6 +62,8 @@ public class StringProperty extends Property {
                                                                          .indexOptions() : "";
         this.analyzer = field.isAnnotationPresent(IndexMode.class) ? field.getAnnotation(IndexMode.class)
                                                                          .analyzer() : "";
+        this.includeInAll = field.isAnnotationPresent(IndexMode.class) ? field.getAnnotation(IndexMode.class)
+                                                                              .includeInAll() : true;
     }
 
     @Override
@@ -70,7 +73,7 @@ public class StringProperty extends Property {
 
     @Override
     protected boolean isIgnoreFromAll() {
-        return false;
+        return !includeInAll;
     }
 
     @Override
@@ -92,6 +95,9 @@ public class StringProperty extends Property {
             builder.startObject("norms");
             builder.field("enabled", norms);
             builder.endObject();
+        }
+        if (!includeInAll) {
+            builder.field("include_in_all", false);
         }
         builder.endObject();
     }
