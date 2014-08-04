@@ -34,7 +34,6 @@ import sirius.kernel.health.Log;
 import sirius.kernel.timer.EveryTenSeconds;
 import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricsCollector;
-import sirius.web.http.session.ServerSession;
 import sirius.web.http.session.SessionManager;
 
 import java.net.InetSocketAddress;
@@ -303,7 +302,7 @@ public class WebServer implements Lifecycle, MetricProvider {
             LOG.INFO("Binding netty to %s", bindAddress);
         }
 
-        if (Sirius.isDev()) {
+        if (Sirius.isDev() && !Sirius.getConfig().hasPath("http.noLeakDetection")) {
             ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
             LOG.INFO("Enabling PARANOID resource leak detection...");
         }
@@ -322,10 +321,10 @@ public class WebServer implements Lifecycle, MetricProvider {
                  .channel(NioServerSocketChannel.class).childHandler(ctx.wire(new WebServerInitializer()))
                 // At mose have 128 connections waiting to be "connected" - drop everything else...
                 .option(ChannelOption.SO_BACKLOG, 128)
-                        // Send a KEEPALIVE packet every 2h and expect and ACK on the TCP layer
+                // Send a KEEPALIVE packet every 2h and expect and ACK on the TCP layer
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
-                        // Tell the kernel not to buffer our data - we're quite aware of what we're doing and
-                        // will not create "mini writes" anyway
+                // Tell the kernel not to buffer our data - we're quite aware of what we're doing and
+                // will not create "mini writes" anyway
                 .childOption(ChannelOption.TCP_NODELAY, true);
 
         // Bind and start to accept incoming connections.
