@@ -27,7 +27,7 @@ public class HTTPCommand implements Command {
     @Override
     public void execute(Output output, String... params) throws Exception {
         Value microtimingMode = Value.indexOf(0, params);
-        if (microtimingMode.isFilled()) {
+        if (microtimingMode.isFilled() && !"open".equals(microtimingMode.asString())) {
             WebServer.setMicrotimingMode(microtimingMode.coerce(WebServer.MicrotimingMode.class,
                                                                 WebServer.MicrotimingMode.URI));
         }
