@@ -8,10 +8,10 @@
 
 package sirius.kernel.xml;
 
-import org.apache.lucene.util.Counter;
 import org.junit.Test;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.ValueHolder;
+import sirius.kernel.health.Counter;
 import sirius.kernel.health.Exceptions;
 
 import javax.xml.xpath.XPathExpressionException;
@@ -24,11 +24,11 @@ public class TestReader extends Sirius {
     @Test
     public void testReader() throws Exception {
         ValueHolder<String> check = ValueHolder.of(null);
-        Counter nodes = Counter.newCounter();
+        Counter nodes = new Counter();
         XMLReader r = new XMLReader();
         r.addHandler("test", n -> {
             try {
-                nodes.addAndGet(1);
+                nodes.inc();
                 check.set(n.queryString("value"));
             } catch (XPathExpressionException e) {
                 throw Exceptions.handle(e);
@@ -37,7 +37,7 @@ public class TestReader extends Sirius {
         r.parse(new ByteArrayInputStream(
                 "<doc><test><value>1</value></test><test><value>2</value></test><test><value>3</value></test></doc>".getBytes()));
         assertEquals("3", check.get());
-        assertEquals(3l, nodes.get());
+        assertEquals(3l, nodes.getCount());
     }
 
 }
