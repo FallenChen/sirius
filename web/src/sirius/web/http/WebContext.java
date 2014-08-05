@@ -981,11 +981,6 @@ public class WebContext {
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
 
     /**
-     * The default timezone used by HTTP dates.
-     */
-    public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";
-
-    /**
      * Returns the request header with the given name
      *
      * @param header name of the header to fetch.
