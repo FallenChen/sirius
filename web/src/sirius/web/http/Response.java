@@ -260,10 +260,10 @@ public class Response {
                 ((FullHttpResponse) response).release();
             }
             throw Exceptions.handle()
-                    .to(WebServer.LOG)
-                    .error(new IllegalStateException())
-                    .withSystemErrorMessage("Response for %s was already committed!", wc.getRequestedURI())
-                    .handle();
+                            .to(WebServer.LOG)
+                            .error(new IllegalStateException())
+                            .withSystemErrorMessage("Response for %s was already committed!", wc.getRequestedURI())
+                            .handle();
         }
         if (WebServer.LOG.isFINE()) {
             WebServer.LOG.FINE("COMMITTING: " + wc.getRequestedURI());
@@ -365,8 +365,8 @@ public class Response {
         if (ifModifiedSinceDateSeconds > 0 && lastModifiedInMillis > 0) {
             if (ifModifiedSinceDateSeconds >= lastModifiedInMillis / 1000) {
                 setDateAndCacheHeaders(lastModifiedInMillis,
-                        cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
-                        isPrivate);
+                                       cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
+                                       isPrivate);
                 status(HttpResponseStatus.NOT_MODIFIED);
                 return false;
             }
@@ -566,8 +566,8 @@ public class Response {
         } else {
             // Prefer the HTTP/1.1 code 307 as temporary redirect
             HttpResponse response = createFullResponse(HttpResponseStatus.TEMPORARY_REDIRECT,
-                    true,
-                    Unpooled.EMPTY_BUFFER);
+                                                       true,
+                                                       Unpooled.EMPTY_BUFFER);
             response.headers().set(HttpHeaders.Names.LOCATION, url);
             complete(commit(response));
         }
@@ -642,7 +642,7 @@ public class Response {
             } else {
                 setHeader(HttpHeaders.Names.CONTENT_LENGTH, range.getSecond() - range.getFirst() + 1);
                 setHeader(HttpHeaders.Names.CONTENT_RANGE,
-                        "bytes " + range.getFirst() + "-" + range.getSecond() + "/" + fileLength);
+                          "bytes " + range.getFirst() + "-" + range.getSecond() + "/" + fileLength);
             }
             setDateAndCacheHeaders(file.lastModified(), cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
             if (name != null) {
@@ -650,7 +650,7 @@ public class Response {
             }
             HttpResponseStatus responseStatus = range != null ? HttpResponseStatus.PARTIAL_CONTENT : HttpResponseStatus.OK;
             HttpResponse response = !isSSL() && shouldBeCompressed(contentType) ? createChunkedResponse(responseStatus,
-                    true) : createResponse(
+                                                                                                        true) : createResponse(
                     responseStatus,
                     true);
             commit(response, false);
@@ -659,22 +659,22 @@ public class Response {
                 // Forcefully disable the content compressor as it cannot compress a binary chunks....
                 response.headers().set(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
                 ctx.write(new ChunkedFile(raf,
-                        range != null ? range.getFirst() : 0,
-                        range != null ? range.getSecond() - range.getFirst() + 1 : fileLength,
-                        8192));
+                                          range != null ? range.getFirst() : 0,
+                                          range != null ? range.getSecond() - range.getFirst() + 1 : fileLength,
+                                          8192));
             } else if (responseChunked) {
                 // Send chunks of data which can be compressed
                 ctx.write(new ChunkedInputAdapter(new ChunkedFile(raf,
-                        range != null ? range.getFirst() : 0,
-                        range != null ? range.getSecond() - range.getFirst() + 1 : fileLength,
-                        8192)));
+                                                                  range != null ? range.getFirst() : 0,
+                                                                  range != null ? range.getSecond() - range.getFirst() + 1 : fileLength,
+                                                                  8192)));
             } else {
                 // Forcefully disable the content compressor as it cannot compress a DefaultFileRegion
                 response.headers().set(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
                 // Send file using zero copy approach!
                 ctx.write(new DefaultFileRegion(raf.getChannel(),
-                        range != null ? range.getFirst() : 0,
-                        range != null ? range.getSecond() - range.getFirst() + 1 : fileLength));
+                                                range != null ? range.getFirst() : 0,
+                                                range != null ? range.getSecond() - range.getFirst() + 1 : fileLength));
             }
             ChannelFuture writeFuture = ctx.writeAndFlush(DefaultLastHttpContent.EMPTY_LAST_CONTENT);
 
@@ -784,7 +784,7 @@ public class Response {
         }
         if (lastModifiedMillis > 0 && (keySet == null || !keySet.contains(HttpHeaders.Names.LAST_MODIFIED))) {
             addHeaderIfNotExists(HttpHeaders.Names.
-                    LAST_MODIFIED, dateFormatter.format(new Date(lastModifiedMillis)));
+                                         LAST_MODIFIED, dateFormatter.format(new Date(lastModifiedMillis)));
         }
     }
 
@@ -804,9 +804,9 @@ public class Response {
      */
     private void setContentDisposition(String name, boolean download) {
         addHeaderIfNotExists("Content-Disposition",
-                (download ? "attachment;" : "inline;") + "filename=\"" + name.replaceAll(
-                        "[^A-Za-z0-9\\-_\\.]",
-                        "_") + "\""
+                             (download ? "attachment;" : "inline;") + "filename=\"" + name.replaceAll(
+                                     "[^A-Za-z0-9\\-_\\.]",
+                                     "_") + "\""
         );
     }
 
@@ -859,8 +859,8 @@ public class Response {
             HttpHeaders.setContentLength(response, fileLength);
             setContentTypeHeader(name != null ? name : urlConnection.getURL().getFile());
             setDateAndCacheHeaders(urlConnection.getLastModified(),
-                    cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
-                    isPrivate);
+                                   cacheSeconds == null ? HTTP_CACHE : cacheSeconds,
+                                   isPrivate);
             if (name != null) {
                 setContentDisposition(name, download);
             }
@@ -874,7 +874,7 @@ public class Response {
             commit(response);
             // Write the content.
             ChannelFuture writeFuture = ctx.write(new ChunkedInputAdapter(new ChunkedStream(urlConnection.getInputStream(),
-                    8192)));
+                                                                                            8192)));
             complete(writeFuture);
         } catch (Throwable e) {
             internalServerError(e);
@@ -996,8 +996,8 @@ public class Response {
     public void direct(HttpResponseStatus status, String content) {
         try {
             setDateAndCacheHeaders(System.currentTimeMillis(),
-                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                    isPrivate);
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
             ByteBuf channelBuffer = wrapUTF8String(content);
             HttpResponse response = createFullResponse(status, true, channelBuffer);
             complete(commit(response));
@@ -1027,10 +1027,10 @@ public class Response {
             content = Rythm.render(name, params);
         } catch (Throwable e) {
             throw Exceptions.handle()
-                    .to(RythmConfig.LOG)
-                    .error(e)
-                    .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
-                    .handle();
+                            .to(RythmConfig.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
+                            .handle();
         }
         try {
             if (name.endsWith("html")) {
@@ -1039,8 +1039,8 @@ public class Response {
                 setContentTypeHeader(name);
             }
             setDateAndCacheHeaders(System.currentTimeMillis(),
-                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                    isPrivate);
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
             ByteBuf channelBuffer = wrapUTF8String(content);
             HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, channelBuffer);
             complete(commit(response));
@@ -1080,16 +1080,16 @@ public class Response {
             }
         } catch (Throwable e) {
             throw Exceptions.handle()
-                    .to(RythmConfig.LOG)
-                    .error(e)
-                    .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
-                    .handle();
+                            .to(RythmConfig.LOG)
+                            .error(e)
+                            .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
+                            .handle();
         }
         try {
             setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
             setDateAndCacheHeaders(System.currentTimeMillis(),
-                    cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                    isPrivate);
+                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                   isPrivate);
             ByteBuf channelBuffer = wrapUTF8String(content);
             HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, channelBuffer);
             complete(commit(response));
@@ -1102,10 +1102,10 @@ public class Response {
             true).setRequestTimeoutInMs(-1).build());
 
     private static final Set<String> NON_TUNNELLED_HEADERS = Sets.newHashSet(HttpHeaders.Names.TRANSFER_ENCODING,
-            HttpHeaders.Names.SERVER,
-            HttpHeaders.Names.CONTENT_ENCODING,
-            HttpHeaders.Names.EXPIRES,
-            HttpHeaders.Names.CACHE_CONTROL);
+                                                                             HttpHeaders.Names.SERVER,
+                                                                             HttpHeaders.Names.CONTENT_ENCODING,
+                                                                             HttpHeaders.Names.EXPIRES,
+                                                                             HttpHeaders.Names.CACHE_CONTROL);
 
     /**
      * Tunnels the contents retrieved from the given URL as result of this response.
@@ -1158,7 +1158,12 @@ public class Response {
                         if ((Sirius.isDev() || !entry.getKey().startsWith("x-")) && !NON_TUNNELLED_HEADERS.contains(
                                 entry.getKey())) {
                             for (String value : entry.getValue()) {
-                                addHeader(entry.getKey(), value);
+                                if (HttpHeaders.Names.CONTENT_TYPE.equals(entry.getKey())) {
+                                    if (name == null) {
+                                        addHeader(entry.getKey(), value);
+                                    }
+                                    contentType = entry.getValue().get(0);
+                                }
                                 if (HttpHeaders.Names.LAST_MODIFIED.equals(entry.getKey())) {
                                     try {
                                         lastModified = getHTTPDateFormat().parse(value).getTime();
@@ -1167,9 +1172,7 @@ public class Response {
                                     }
                                 }
                             }
-                            if (HttpHeaders.Names.CONTENT_TYPE.equals(entry.getKey())) {
-                                contentType = entry.getValue().get(0);
-                            } else if (HttpHeaders.Names.CONTENT_LENGTH.equals(entry.getKey())) {
+                            if (HttpHeaders.Names.CONTENT_LENGTH.equals(entry.getKey())) {
                                 contentLengthKnown = true;
                             }
                         }
@@ -1179,13 +1182,16 @@ public class Response {
                         return STATE.ABORT;
                     }
 
-                    if (contentType != null) {
+                    if (contentType == null || name != null) {
                         setContentTypeHeader(name != null ? name : url);
-                        if (!shouldBeCompressed(contentType)) {
-                            setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
-                        }
                     }
+                    contentType = String.valueOf(Response.this.headers.get(HttpHeaders.Names.CONTENT_TYPE));
+                    if (!shouldBeCompressed(contentType)) {
+                        setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
+                    }
+
                     setDateAndCacheHeaders(lastModified, cacheSeconds == null ? HTTP_CACHE : cacheSeconds, isPrivate);
+
                     if (name != null) {
                         setContentDisposition(name, download);
                     }
@@ -1198,9 +1204,9 @@ public class Response {
                     try {
                         if (WebServer.LOG.isFINE()) {
                             WebServer.LOG.FINE("Tunnel - CHUNK: %s for %s (Last: %s)",
-                                    bodyPart,
-                                    wc.getRequestedURI(),
-                                    bodyPart.isLast());
+                                               bodyPart,
+                                               wc.getRequestedURI(),
+                                               bodyPart.isLast());
                         }
                         if (!ctx.channel().isOpen()) {
                             return STATE.ABORT;
@@ -1210,7 +1216,7 @@ public class Response {
                             if (bodyPart.isLast()) {
                                 if (responseChunked) {
                                     ctx.channel()
-                                            .write(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
+                                       .write(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
                                     ChannelFuture writeFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
                                     complete(writeFuture);
                                 } else {
@@ -1221,14 +1227,14 @@ public class Response {
                             } else {
                                 if (responseChunked) {
                                     ChannelFuture writeFuture = ctx.channel()
-                                            .writeAndFlush(new DefaultHttpContent(Unpooled.wrappedBuffer(
-                                                    bodyPart.getBodyByteBuffer())));
+                                                                   .writeAndFlush(new DefaultHttpContent(Unpooled.wrappedBuffer(
+                                                                           bodyPart.getBodyByteBuffer())));
                                     while (!ctx.channel().isWritable() && ctx.channel().isOpen()) {
                                         writeFuture.await(5, TimeUnit.SECONDS);
                                     }
                                 } else {
                                     ChannelFuture writeFuture = ctx.channel()
-                                            .writeAndFlush(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer()));
+                                                                   .writeAndFlush(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer()));
                                     while (!ctx.channel().isWritable() && ctx.channel().isOpen()) {
                                         writeFuture.await(5, TimeUnit.SECONDS);
                                     }
@@ -1237,18 +1243,18 @@ public class Response {
                         } else {
                             if (bodyPart.isLast()) {
                                 HttpResponse response = createFullResponse(HttpResponseStatus.valueOf(responseCode),
-                                        true,
-                                        Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer()));
+                                                                           true,
+                                                                           Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer()));
                                 HttpHeaders.setContentLength(response, bodyPart.getBodyByteBuffer().remaining());
                                 complete(commit(response));
                             } else {
                                 HttpResponse response = contentLengthKnown ? createResponse(HttpResponseStatus.valueOf(
-                                        responseCode), true) : createChunkedResponse(HttpResponseStatus.valueOf(
-                                        responseCode), true);
+                                                                                                    responseCode), true
+                                ) : createChunkedResponse(HttpResponseStatus.valueOf(responseCode), true);
                                 commit(response, false);
                                 if (responseChunked) {
                                     ctx.channel()
-                                            .write(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
+                                       .write(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer())));
                                 } else {
                                     ctx.channel().write(Unpooled.wrappedBuffer(bodyPart.getBodyByteBuffer()));
                                 }
@@ -1268,8 +1274,8 @@ public class Response {
                 public STATE onStatusReceived(com.ning.http.client.HttpResponseStatus httpResponseStatus) throws Exception {
                     if (WebServer.LOG.isFINE()) {
                         WebServer.LOG.FINE("Tunnel - STATUS %s for %s",
-                                httpResponseStatus.getStatusCode(),
-                                wc.getRequestedURI());
+                                           httpResponseStatus.getStatusCode(),
+                                           wc.getRequestedURI());
                     }
                     if (httpResponseStatus.getStatusCode() >= 200 && httpResponseStatus.getStatusCode() < 300) {
                         responseCode = httpResponseStatus.getStatusCode();
@@ -1290,8 +1296,8 @@ public class Response {
                     }
                     if (!wc.responseCommitted) {
                         HttpResponse response = createFullResponse(HttpResponseStatus.valueOf(responseCode),
-                                true,
-                                Unpooled.EMPTY_BUFFER);
+                                                                   true,
+                                                                   Unpooled.EMPTY_BUFFER);
                         HttpHeaders.setContentLength(response, 0);
                         complete(commit(response));
                     } else if (!wc.responseCompleted) {
@@ -1310,19 +1316,22 @@ public class Response {
                 public void onThrowable(Throwable t) {
                     if (WebServer.LOG.isFINE()) {
                         WebServer.LOG.FINE("Tunnel - ERROR %s for %s",
-                                t.getMessage() + " (" + t.getMessage() + ")",
-                                wc.getRequestedURI());
+                                           t.getMessage() + " (" + t.getMessage() + ")",
+                                           wc.getRequestedURI());
                     }
                     if (!(t instanceof ClosedChannelException)) {
                         error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
                     }
                 }
             });
-        } catch (Throwable t) {
+        } catch (Throwable t)
+
+        {
             if (!(t instanceof ClosedChannelException)) {
                 error(HttpResponseStatus.INTERNAL_SERVER_ERROR, Exceptions.handle(WebServer.LOG, t));
             }
         }
+
     }
 
     /**
@@ -1335,10 +1344,10 @@ public class Response {
     public JSONStructuredOutput json() {
         String callback = wc.get("callback").getString();
         String encoding = wc.get("encoding")
-                .asString(Strings.isEmpty(callback) ? Charsets.UTF_8.name() : Charsets.ISO_8859_1.name());
+                            .asString(Strings.isEmpty(callback) ? Charsets.UTF_8.name() : Charsets.ISO_8859_1.name());
         return new JSONStructuredOutput(outputStream(HttpResponseStatus.OK, "application/json;charset=" + encoding),
-                callback,
-                encoding);
+                                        callback,
+                                        encoding);
     }
 
     /**
@@ -1435,8 +1444,8 @@ public class Response {
                         addHeaderIfNotExists(HttpHeaders.Names.CONTENT_TYPE, contentType);
                     }
                     setDateAndCacheHeaders(System.currentTimeMillis(),
-                            cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                            isPrivate);
+                                           cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
+                                           isPrivate);
                     if (name != null) {
                         setContentDisposition(name, download);
                     }
