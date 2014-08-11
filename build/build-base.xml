@@ -27,6 +27,7 @@
 -->
 <project name="sirius" default="ivy" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
 
+
     <!-- =========================================================================================================== -->
     <!-- Directries and paths.... -->
     <!-- =========================================================================================================== -->
@@ -45,12 +46,30 @@
     <!-- Path to directory which contains sirius -->
     <property name="sirius.dir" value="${build.dir}/../sirius"/>
 
+    <!-- Path to directory which contains tests -->
+    <property name="sirius.dir" value="${build.dir}/../sirius"/>
+
     <!-- Prepare classpath -->
     <path id="compile.path">
         <fileset dir="${dist.dir}/lib" includes="*.jar"/>
         <pathelement path="${dist.dir}/app" />
     </path>
 
+    <!-- Prepare test classpath -->
+    <path id="test.path">
+        <path refid="compile.path"/>
+        <fileset dir="${main.dir}/build/testlib" includes="*.jar"/>
+    </path>
+
+    <taskdef
+            name="groovyc"
+            classname="org.codehaus.groovy.ant.Groovyc"
+            classpathref="test.path" />
+
+    <taskdef name="junit"
+             classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
+        <classpath refid="test.path"/>
+    </taskdef>
     <!-- =========================================================================================================== -->
     <!-- Used to auto-install ivy -->
     <!-- =========================================================================================================== -->
@@ -92,6 +111,7 @@
         </delete>
         <ivy:resolve file="${build.dir}/ivy.xml" />
         <ivy:retrieve conf="compile" />
+        <ivy:retrieve pattern="${build.dir}/testlib/[artifact].[ext]" conf="test"/>
         <ivy:report todir="${build.dir}/lib/report" conf="compile" graph="false" />
     </target>
 
@@ -112,6 +132,86 @@
     </target>
     <target name="makeVersionB" depends="genDateCode" unless="hasBuild">
         <property name="app.version" value="${dateCode}" />
+    </target>
+
+    <!-- =========================================================================================================== -->
+    <!-- Test -->
+    <!-- =========================================================================================================== -->
+    <target name="test-prepare" depends="ivy, makeVersionA, makeVersionB" description="prepare for automated tests">
+        <mkdir dir="${dist.dir}" />
+        <delete>
+            <fileset dir="${dist.dir}">
+                <include name="**/*"/>
+            </fileset>
+        </delete>
+
+        <!-- Copy libraries there -->
+        <mkdir dir="${dist.dir}/lib" />
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="${build.dir}/lib">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+        <!-- Copy Test libraries there -->
+        <mkdir dir="${dist.dir}/testlib" />
+        <copy todir="${dist.dir}/testlib">
+            <fileset dir="${build.dir}/testlib">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+        <!-- Copy libraries not managed by ivy/maven -->
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="${sirius.dir}/build/unmanaged-lib">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+        <copy todir="${dist.dir}/lib">
+            <fileset dir="${build.dir}/unmanaged-lib">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+
+        <!-- Initialize destination for test classes + resources -->
+        <delete>
+            <fileset dir="${dist.dir}/test">
+                <include name="**/*"/>
+            </fileset>
+        </delete>
+        <mkdir dir="${dist.dir}/app" />
+        <mkdir dir="${dist.dir}/test" />
+        <mkdir dir="${dist.dir}/test/reports" />
+    </target>
+
+    <target name="test-compile" depends="test-prepare, make-kernel, make-web, make-app, make-search, make-main-app" description="compiles the test classes">
+        <groovyc fork="true"
+                 destdir="${dist.dir}/test"
+                 includeantruntime="false"
+                 encoding="UTF-8"
+                 failonerror="true"
+                 classpathref="test.path" >
+            <src path="${main.dir}/test"/>
+            <javac debug="on">
+                <compilerarg value="-Xlint:deprecation"/>
+            </javac>
+        </groovyc>
+    </target>
+
+    <target name="test" depends="test-compile" description="run automated tests">
+
+        <junit fork="yes" dir="${dist.dir}" haltonfailure="yes">
+            <formatter type="plain" usefile="false" />
+            <formatter type="xml"/>
+            <classpath >
+                <path refid="test.path"/>
+                <pathelement location="${dist.dir}/test" />
+            </classpath>
+            <batchtest fork="yes" todir="${dist.dir}/test/reports" >
+                <fileset dir="${dist.dir}/test">
+                    <include name="**/*Test.class" />
+                    <include name="**/*Spec.class" />
+                </fileset>
+            </batchtest>
+        </junit>
     </target>
 
     <!-- =========================================================================================================== -->
