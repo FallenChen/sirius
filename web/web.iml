@@ -10,6 +10,7 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="kernel" exported="" />
+    <orderEntry type="library" scope="TEST" name="test" level="project" />
   </component>
 </module>
 
