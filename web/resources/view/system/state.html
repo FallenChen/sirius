@@ -74,7 +74,7 @@
                                 <span class="@info.getNodeState()">@info.getName()</span> <small>@info.getEndpoint()</small>
                             </h2>
                             <div style="text-align: center">
-                                Last Ping: @NLS.toUserString(info.getLastPing(), true)<br />
+                                Last Ping: @NLS.toUserString(info.getLastPing())<br />
                                 Uptime: @info.getUptime()<br />
                             </div>
                             @if (info.getPingFailures() > 0) {

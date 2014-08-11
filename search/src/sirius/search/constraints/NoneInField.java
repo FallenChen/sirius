@@ -62,7 +62,7 @@ public class NoneInField implements Constraint {
             }
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             for (Object value : values) {
-                boolQueryBuilder.mustNot(QueryBuilders.termQuery(field, value));
+                boolQueryBuilder.mustNot(QueryBuilders.termQuery(field, FieldOperator.convertTimeToDates(value)));
             }
             return boolQueryBuilder;
         }
@@ -77,7 +77,7 @@ public class NoneInField implements Constraint {
             }
             BoolFilterBuilder boolFilterBuilder = FilterBuilders.boolFilter();
             for (Object value : values) {
-                boolFilterBuilder.mustNot(FilterBuilders.termFilter(field, value));
+                boolFilterBuilder.mustNot(FilterBuilders.termFilter(field, FieldOperator.convertTimeToDates(value)));
             }
 
             return boolFilterBuilder;

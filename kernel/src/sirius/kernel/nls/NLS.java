@@ -8,11 +8,8 @@
 
 package sirius.kernel.nls;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.joda.time.DateMidnight;
-import org.joda.time.DateTime;
-import org.joda.time.LocalDate;
-import org.joda.time.LocalTime;
 import sirius.kernel.Classpath;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
@@ -25,11 +22,19 @@ import sirius.kernel.timer.TimerService;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.math.BigDecimal;
-import java.sql.Time;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
 import java.util.*;
 
 /**
@@ -64,8 +69,19 @@ import java.util.*;
 public class NLS {
 
     private static final Babelfish blubb = new Babelfish();
+
     private static String defaultLanguage;
     private static Set<String> supportedLanguages;
+
+    private static final DateTimeFormatter MACHINE_DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss",
+                                                                                                  Locale.ENGLISH);
+    private static final DateTimeFormatter MACHINE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd",
+                                                                                             Locale.ENGLISH);
+    private static final DateTimeFormatter MACHINE_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss",
+                                                                                             Locale.ENGLISH);
+    private static final Map<String, DateTimeFormatter> dateTimeFormatters = Maps.newTreeMap();
+    private static final Map<String, DateTimeFormatter> dateFormatters = Maps.newTreeMap();
+    private static final Map<String, DateTimeFormatter> timeFormatters = Maps.newTreeMap();
 
     /**
      * Returns the currently active language as two-letter code.
@@ -423,8 +439,8 @@ public class NLS {
      * @param lang the language for which the format is requested
      * @return a format initialized with the pattern described by the given language
      */
-    public static SimpleDateFormat getDateFormat(String lang) {
-        return new SimpleDateFormat(get("NLS.patternDate", lang));
+    public static DateTimeFormatter getDateFormat(String lang) {
+        return dateFormatters.computeIfAbsent(lang, l -> DateTimeFormatter.ofPattern(get("NLS.patternDate", l)));
     }
 
     /**
@@ -433,8 +449,9 @@ public class NLS {
      * @param lang the language for which the format is requested
      * @return a format initialized with the pattern described by the given language
      */
-    public static SimpleDateFormat getFullTimeFormat(String lang) {
-        return new SimpleDateFormat(get("NLS.patternFullTime", lang));
+    public static DateTimeFormatter getTimeFormatWithSeconds(String lang) {
+        return dateTimeFormatters.computeIfAbsent(lang,
+                                                  l -> DateTimeFormatter.ofPattern(get("NLS.patternFullTime", l)));
     }
 
     /**
@@ -443,8 +460,8 @@ public class NLS {
      * @param lang the language for which the format is requested
      * @return a format initialized with the pattern described by the given language
      */
-    public static SimpleDateFormat getTimeFormat(String lang) {
-        return new SimpleDateFormat(get("NLS.patternTime", lang));
+    public static DateTimeFormatter getTimeFormat(String lang) {
+        return timeFormatters.computeIfAbsent(lang, l -> DateTimeFormatter.ofPattern(get("NLS.patternTime", l)));
     }
 
     /**
@@ -453,8 +470,8 @@ public class NLS {
      * @param lang the language for which the format is requested
      * @return a format initialized with the pattern described by the given language
      */
-    public static SimpleDateFormat getDateTimeFormat(String lang) {
-        return new SimpleDateFormat(get("NLS.patternDateTime", lang));
+    public static DateTimeFormatter getDateTimeFormat(String lang) {
+        return dateTimeFormatters.computeIfAbsent(lang, l -> DateTimeFormatter.ofPattern(get("NLS.patternDateTime", l)));
     }
 
     /**
@@ -492,6 +509,7 @@ public class NLS {
     }
 
     /**
+     * FIXME
      * Formats the given data in a language independent format.
      *
      * @param data the input data which should be converted to string
@@ -508,26 +526,17 @@ public class NLS {
         if (data instanceof Boolean) {
             return data.toString();
         }
-        if (data instanceof Calendar) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            return format.format(((Calendar) data).getTime());
-        }
-        if (data instanceof Time) {
-            SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
-            return format.format(new Date(((Time) data).getTime()));
-        }
-        if (data instanceof Date) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            return format.format((Date) data);
-        }
-        if (data instanceof LocalDate) {
-            return ((LocalDate) data).toString("yyyy-MM-dd", Locale.ENGLISH);
-        }
-        if (data instanceof DateMidnight) {
-            return ((DateMidnight) data).toString("yyyy-MM-dd", Locale.ENGLISH);
-        }
-        if (data instanceof DateTime) {
-            return ((DateTime) data).toString("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
+        if (data instanceof Temporal) {
+            Temporal temporal = (Temporal) data;
+            if (ChronoUnit.HOURS.isSupportedBy(temporal)) {
+                if (!ChronoField.DAY_OF_MONTH.isSupportedBy(temporal)) {
+                    return MACHINE_TIME_FORMAT.format(temporal);
+                } else {
+                    return MACHINE_DATE_TIME_FORMAT.format(temporal);
+                }
+            } else {
+                return MACHINE_DATE_FORMAT.format(temporal);
+            }
         }
         if (data instanceof Integer) {
             return String.valueOf(data);
@@ -572,36 +581,25 @@ public class NLS {
     }
 
     /**
+     * FIXME
      * Formats the given data according to the format rules of the current language
      *
      * @param object the object to be converted to a string
      * @return a string representation of the given object, formatted by the language settings of the current language
      */
     public static String toUserString(Object object) {
-        return toUserString(object, getCurrentLang(), false);
-    }
-
-
-    /**
-     * Formats the given data according to the format rules of the current language
-     *
-     * @param object             the object to be converted to a string
-     * @param fullDateConversion controls whether dates will also include their time fields in the result string
-     * @return a string representation of the given object, formatted by the language settings of the current language
-     */
-    public static String toUserString(Object object, boolean fullDateConversion) {
-        return toUserString(object, getCurrentLang(), fullDateConversion);
+        return toUserString(object, getCurrentLang());
     }
 
     /**
+     * FIXME
      * Formats the given data according to the format rules of the given language
      *
-     * @param data               the object to be converted to a string
-     * @param lang               a two-letter language code for which the translation is requested
-     * @param fullDateConversion controls whether dates will also include their time fields in the result string
+     * @param data the object to be converted to a string
+     * @param lang a two-letter language code for which the translation is requested
      * @return a string representation of the given object, formatted by the language settings of the current language
      */
-    public static String toUserString(Object data, String lang, boolean fullDateConversion) {
+    public static String toUserString(Object data, String lang) {
         if (data == null) {
             return "";
         }
@@ -615,50 +613,17 @@ public class NLS {
                 return CommonKeys.NO.translated();
             }
         }
-        if (data instanceof Calendar) {
-            if (fullDateConversion) {
-                return getDateTimeFormat(lang).format(((Calendar) data).getTime());
+        if (data instanceof Temporal) {
+            Temporal temporal = (Temporal) data;
+            if (ChronoUnit.HOURS.isSupportedBy(temporal)) {
+                if (!ChronoField.DAY_OF_MONTH.isSupportedBy(temporal)) {
+                    return getTimeFormatWithSeconds(lang).format(temporal);
+                } else {
+                    return getDateTimeFormat(lang).format(temporal);
+                }
             } else {
-                return getDateFormat(lang).format(((Calendar) data).getTime());
+                return getDateFormat(lang).format(temporal);
             }
-        }
-        if (data instanceof Time) {
-            if (fullDateConversion) {
-                return getFullTimeFormat(lang).format(new Date(((Time) data).getTime()));
-            } else {
-                return getTimeFormat(lang).format(new Date(((Time) data).getTime()));
-            }
-        }
-        if (data instanceof Date) {
-            if (fullDateConversion) {
-                return getDateTimeFormat(lang).format((Date) data);
-            } else {
-                return getDateFormat(lang).format((Date) data);
-            }
-        }
-        if (data instanceof DateMidnight) {
-            if (fullDateConversion) {
-                return getDateTimeFormat(lang).format(((DateMidnight) data).toDate());
-            } else {
-                return getDateFormat(lang).format(((DateMidnight) data).toDate());
-            }
-        }
-        if (data instanceof DateTime) {
-            if (fullDateConversion) {
-                return getDateTimeFormat(lang).format(((DateTime) data).toDate());
-            } else {
-                return getDateFormat(lang).format(((DateTime) data).toDate());
-            }
-        }
-        if (data instanceof LocalDate) {
-            if (fullDateConversion) {
-                return getDateTimeFormat(lang).format(((LocalDate) data).toDate());
-            } else {
-                return getDateFormat(lang).format(((LocalDate) data).toDate());
-            }
-        }
-        if (data instanceof LocalTime) {
-            return getTimeFormat(lang).format(((LocalTime) data).toDateTimeToday().toDate());
         }
         if (data instanceof Integer) {
             return String.valueOf(data);
@@ -688,47 +653,37 @@ public class NLS {
     }
 
     /**
+     * FIXME
      * Converts dates to a "human" format (today, yesterday, tomorrow).
      * <p>
      * Everything but today, yesterday and tomorrow will be converted to a string representation formatted by
      * using the date format of the current language.
      * </p>
      *
-     * @param object the date to be formatted. If the given object isn't a known date class
-     *               (Date, Calendar or Joda-Class), <tt>toUserString</tt> is called
+     * @param date the date to be formatted. If the given object isn't a known date class
+     *             (Date, Calendar or Joda-Class), <tt>toUserString</tt> is called
      * @return a date string which a human would use in common sentences
      */
-    public static String toSpokenDate(Object object) {
-        if (object == null) {
-            return toUserString(object, getCurrentLang(), false);
+    public static String toSpokenDate(Temporal date) {
+        if (date == null) {
+            return "";
         }
-        if (object instanceof Date) {
-            object = LocalDate.fromDateFields((Date) object);
-        }
-        if (object instanceof DateTime) {
-            object = ((DateTime) object).toLocalDate();
-        }
-        if (object instanceof DateMidnight) {
-            object = ((DateMidnight) object).toLocalDate();
-        }
-        if (object instanceof Calendar) {
-            object = LocalDate.fromCalendarFields((Calendar) object);
-        }
-        if (object instanceof LocalDate) {
-            LocalDate reference = LocalDate.now();
-            if (reference.equals(object)) {
-                return NLS.get("NLS.today");
+        if (ChronoUnit.HOURS.isSupportedBy(date)) {
+            if (!ChronoField.DAY_OF_MONTH.isSupportedBy(date)) {
+                return getTimeFormat(getCurrentLang()).format(date);
+            } else {
+                return getDateTimeFormat(getCurrentLang()).format(date);
             }
-            reference = reference.plusDays(1);
-            if (reference.equals(object)) {
+        } else {
+            if (LocalDate.now().equals(date)) {
+                return NLS.get("NLS.today");
+            } else if (LocalDate.now().minusDays(1).equals(date)) {
+                return NLS.get("NLS.yesterday");
+            } else if (LocalDate.now().plusDays(1).equals(date)) {
                 return NLS.get("NLS.tomorrow");
             }
-            reference = reference.minusDays(1);
-            if (reference.equals(object)) {
-                return NLS.get("NLS.yesterday");
-            }
+            return getDateFormat(getCurrentLang()).format(date);
         }
-        return toUserString(object, getCurrentLang(), false);
     }
 
     /**
@@ -795,51 +750,28 @@ public class NLS {
         if (String.class.equals(clazz)) {
             return (V) value;
         }
-        if (Date.class.equals(clazz)) {
-            try {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                return (V) format.parse(value);
-            } catch (ParseException e) {
-                throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                                             .format(), e);
-            }
-        }
-        if (Time.class.equals(clazz)) {
-            try {
-                SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
-                return (V) new Time(format.parse(value).getTime());
-            } catch (ParseException e) {
-                throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                                             .set("format", "HH:mm:ss")
-                                                                             .format(), e);
-            }
-        }
-        if (DateTime.class.equals(clazz)) {
-            try {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                return (V) new DateTime(format.parse(value));
-            } catch (ParseException e) {
-                throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                                             .format(), e);
-            }
-        }
         if (LocalDate.class.equals(clazz)) {
             try {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                return (V) new LocalDate(format.parse(value));
-            } catch (ParseException e) {
+                return (V) LocalDate.from(MACHINE_DATE_FORMAT.parse(value));
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
+                                                                             .set("format", "yyyy-MM-dd")
+                                                                             .format(), e);
+            }
+        }
+        if (LocalDateTime.class.equals(clazz)) {
+            try {
+                return (V) LocalDateTime.from(MACHINE_DATE_TIME_FORMAT.parse(value));
+            } catch (DateTimeParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
                                                                              .set("format", "yyyy-MM-dd HH:mm:ss")
                                                                              .format(), e);
             }
         }
-        if (DateMidnight.class.equals(clazz)) {
+        if (ZonedDateTime.class.equals(clazz)) {
             try {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-                return (V) new DateMidnight(format.parse(value));
-            } catch (ParseException e) {
+                return (V) ZonedDateTime.from(MACHINE_DATE_TIME_FORMAT.parse(value));
+            } catch (DateTimeParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
                                                                              .set("format", "yyyy-MM-dd HH:mm:ss")
                                                                              .format(), e);
@@ -847,24 +779,14 @@ public class NLS {
         }
         if (LocalTime.class.equals(clazz)) {
             try {
-                SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
-                return (V) new LocalTime(format.parse(value));
-            } catch (ParseException e) {
+                return (V) LocalTime.from(MACHINE_TIME_FORMAT.parse(value));
+            } catch (DateTimeParseException e) {
                 throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
                                                                              .set("format", "HH:mm:ss")
                                                                              .format(), e);
             }
         }
-        if (Calendar.class.equals(clazz)) {
-            try {
-                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                return (V) format.parse(value);
-            } catch (ParseException e) {
-                throw new IllegalArgumentException(fmtr("NLS.errInvalidDate").set("value", value)
-                                                                             .set("format", "yyyy-MM-dd HH:mm:ss")
-                                                                             .format(), e);
-            }
-        }
+
         throw new IllegalArgumentException(fmtr("NLS.parseError").set("type", clazz).format());
     }
 
@@ -957,64 +879,34 @@ public class NLS {
             }
             return (V) new Boolean(Boolean.parseBoolean(value));
         }
-        if (Date.class.equals(clazz)) {
-            try {
-                AdvancedDateParser parser = new AdvancedDateParser(lang);
-                return (V) parser.parse(value).getCalendar().getTime();
-            } catch (ParseException e) {
-                throw new IllegalArgumentException(e.getMessage(), e);
-            }
-        }
-        if (Time.class.equals(clazz)) {
-            try {
-                return (V) new Time(getFullTimeFormat(lang).parse(value).getTime());
-            } catch (ParseException e) {
-                try {
-                    return (V) new Time(getTimeFormat(lang).parse(value).getTime());
-                } catch (ParseException ex) {
-                    throw new IllegalArgumentException(fmtr("NLS.errInvalidTime").set("value", value).format(), ex);
-                }
-            }
-        }
-        if (DateTime.class.equals(clazz)) {
-            try {
-                AdvancedDateParser parser = new AdvancedDateParser(lang);
-                return (V) new DateTime(parser.parse(value).getCalendar());
-            } catch (ParseException e) {
-                throw new IllegalArgumentException(e.getMessage(), e);
-            }
-        }
         if (LocalDate.class.equals(clazz)) {
             try {
                 AdvancedDateParser parser = new AdvancedDateParser(lang);
-                return (V) new LocalDate(parser.parse(value).getCalendar());
+                return (V) LocalDate.from(parser.parse(value).getTemporal());
             } catch (ParseException e) {
                 throw new IllegalArgumentException(e.getMessage(), e);
             }
         }
-        if (DateMidnight.class.equals(clazz)) {
+        if (LocalDateTime.class.equals(clazz)) {
             try {
                 AdvancedDateParser parser = new AdvancedDateParser(lang);
-                return (V) new DateMidnight(parser.parse(value).getCalendar());
+                return (V) LocalDateTime.from(parser.parse(value).getTemporal());
+            } catch (ParseException e) {
+                throw new IllegalArgumentException(e.getMessage(), e);
+            }
+        }
+        if (ZonedDateTime.class.equals(clazz)) {
+            try {
+                AdvancedDateParser parser = new AdvancedDateParser(lang);
+                return (V) ZonedDateTime.from(parser.parse(value).getTemporal());
             } catch (ParseException e) {
                 throw new IllegalArgumentException(e.getMessage(), e);
             }
         }
         if (LocalTime.class.equals(clazz)) {
             try {
-                return (V) new LocalTime(getFullTimeFormat(lang).parse(value));
-            } catch (ParseException e) {
-                try {
-                    return (V) new LocalTime(getTimeFormat(lang).parse(value));
-                } catch (ParseException ex) {
-                    throw new IllegalArgumentException(fmtr("NLS.errInvalidTime").set("value", value).format(), ex);
-                }
-            }
-        }
-        if (Calendar.class.equals(clazz)) {
-            try {
                 AdvancedDateParser parser = new AdvancedDateParser(lang);
-                return (V) parser.parse(value).getCalendar();
+                return (V) LocalTime.from(parser.parse(value).getTemporal());
             } catch (ParseException e) {
                 throw new IllegalArgumentException(e.getMessage(), e);
             }

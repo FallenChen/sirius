@@ -7,7 +7,9 @@ import sirius.kernel.di.GlobalContext;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.nls.NLS;
 
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * Supplies the contexts of the {@link Content.Generator} with default variables.
@@ -31,15 +33,9 @@ public class DefaultContentContextExtender implements ContentContextExtender {
         context.put("strings", Strings.class);
         context.put("log", Content.LOG);
 
-        Calendar now = Calendar.getInstance();
-        context.put("now", now);
-        context.put("date", NLS.toUserString(now, false));
-        context.put("time", NLS.getTimeFormat(NLS.getCurrentLang()).format(now.getTime()));
-        context.put("year", now.get(Calendar.YEAR));
-        context.put("month", now.get(Calendar.MONTH) + 1);
-        context.put("day", now.get(Calendar.DAY_OF_MONTH));
-        context.put("hour", now.get(Calendar.HOUR_OF_DAY));
-        context.put("minute", now.get(Calendar.MINUTE));
-        context.put("second", now.get(Calendar.SECOND));
+        context.put("now", LocalDateTime.now());
+        context.put("today", LocalDate.now());
+        context.put("date", NLS.toUserString(LocalDate.now()));
+        context.put("time", NLS.toUserString(LocalTime.now()));
     }
 }

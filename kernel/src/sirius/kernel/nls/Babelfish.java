@@ -103,7 +103,6 @@ public class Babelfish {
         int updatedFiles = 0;
         for (Map.Entry<String, Collection<Translation>> e : mm.getUnderlyingMap().entrySet()) {
             Map<String, SortedProperties> propMap = Maps.newTreeMap();
-            Properties props = new SortedProperties();
             for (Translation entry : e.getValue()) {
                 properties++;
                 entry.writeTo(propMap);
@@ -112,12 +111,9 @@ public class Babelfish {
                 try {
                     File file = findSource(e.getKey() + "_" + entry.getKey() + ".properties");
                     if (file != null) {
-                        FileOutputStream out = new FileOutputStream(file);
-                        try {
+                        try (FileOutputStream out = new FileOutputStream(file)) {
                             entry.getValue().store(out, null);
                             updatedFiles++;
-                        } finally {
-                            out.close();
                         }
                     }
                 } catch (Throwable ex) {
@@ -157,15 +153,11 @@ public class Babelfish {
         if (!current.isDirectory() || !current.exists()) {
             return null;
         }
-        for (File child : current.listFiles()) {
-            if (child.getName().equals(path[0])) {
-                File result = completeFile(child, path);
-                if (result != null) {
-                    return result;
-                }
-            }
+        File[] files = current.listFiles();
+        if (files == null) {
+            return null;
         }
-        for (File child : current.listFiles()) {
+        for (File child : files) {
             // We need a directory...
             if (!child.isDirectory()) {
                 break;
@@ -180,9 +172,11 @@ public class Babelfish {
                     break;
                 }
             }
-            File result = findFile(child, path);
-            if (result != null) {
-                return result;
+            if (child.getName().equals(path[0])) {
+                File result = completeFile(child, path);
+                if (result != null) {
+                    return result;
+                }
             }
         }
 
@@ -226,7 +220,7 @@ public class Babelfish {
             LOG.INFO("Non-existent translation: %s", property);
             entry = new Translation(property);
             entry.setAutocreated(true);
-            Map<String, Translation> copy = new TreeMap<String, Translation>(translationMap);
+            Map<String, Translation> copy = new TreeMap<>(translationMap);
             translationsWriteLock.lock();
             try {
                 copy.put(entry.getKey(), entry);
@@ -307,7 +301,7 @@ public class Babelfish {
         ResourceBundle bundle = ResourceBundle.getBundle(baseName + "_" + lang, CONTROL);
         translationsWriteLock.lock();
         try {
-            Map<String, Translation> copy = new TreeMap<String, Translation>(translationMap);
+            Map<String, Translation> copy = new TreeMap<>(translationMap);
             for (String key : bundle.keySet()) {
                 String value = bundle.getString(key);
                 importProperty(copy, lang, relativePath, key, value);

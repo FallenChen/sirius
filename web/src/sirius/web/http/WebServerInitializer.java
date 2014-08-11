@@ -15,12 +15,13 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import org.joda.time.Duration;
 import sirius.kernel.commons.PriorityCollector;
 import sirius.kernel.di.PartCollection;
 import sirius.kernel.di.std.ConfigValue;
 import sirius.kernel.di.std.Parts;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -51,8 +52,9 @@ class WebServerInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addFirst("lowlevel", LowLevelHandler.INSTANCE);
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("encoder", new HttpResponseEncoder());
-        if (idleTimeout != null && idleTimeout.getMillis() > 0) {
-            pipeline.addLast("idler", new IdleStateHandler(0, 0, idleTimeout.getMillis(), TimeUnit.MILLISECONDS));
+        if (idleTimeout != null && idleTimeout.get(ChronoUnit.SECONDS) > 0) {
+            pipeline.addLast("idler",
+                             new IdleStateHandler(0, 0, idleTimeout.get(ChronoUnit.SECONDS), TimeUnit.SECONDS));
         }
         pipeline.addLast("compressor", new SmartHttpContentCompressor());
         pipeline.addLast("chunkedWriter", new ChunkedWriteHandler());

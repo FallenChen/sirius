@@ -8,10 +8,10 @@
 
 package sirius.kernel.health;
 
-import org.joda.time.DateTime;
 import sirius.kernel.commons.Tuple;
 import sirius.kernel.nls.NLS;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -74,7 +74,7 @@ public class Incident {
      * @return the timestamp when this incident was created, formatted as string
      */
     public String getTimestampAsString() {
-        return NLS.toUserString(new DateTime(timestamp), true);
+        return NLS.toUserString(Instant.ofEpochMilli(timestamp));
     }
 
     /**

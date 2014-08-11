@@ -10,11 +10,11 @@ package sirius.web.http.session;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.joda.time.Duration;
 import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.ConfigValue;
 
 import javax.annotation.Nonnull;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -78,9 +78,9 @@ class MemoryServerSession implements ServerSession {
     @Override
     public int getMaxInactiveInterval() {
         if (numAccesses < 2) {
-            return (int) miniSessionLifetime.getStandardSeconds();
+            return (int) miniSessionLifetime.getSeconds();
         } else {
-            return (int) sessionLifetime.getStandardSeconds();
+            return (int) sessionLifetime.getSeconds();
         }
     }
 

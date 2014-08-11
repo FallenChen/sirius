@@ -8,10 +8,6 @@
 
 package sirius.kernel.commons;
 
-import org.joda.time.DateMidnight;
-import org.joda.time.DateTime;
-import org.joda.time.LocalDate;
-import org.joda.time.LocalTime;
 import sirius.kernel.nls.NLS;
 
 import javax.annotation.CheckReturnValue;
@@ -19,6 +15,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.*;
+import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -413,43 +413,30 @@ public class Value {
         if (Amount.class.equals(targetClazz)) {
             return (T) getAmount();
         }
-        if (Date.class.equals(targetClazz) && data instanceof Calendar) {
-            return (T) ((Calendar) data).getTime();
+        if (LocalDate.class.equals(targetClazz)) {
+            if (is(TemporalAccessor.class, Calendar.class, Date.class, java.sql.Date.class, Timestamp.class)) {
+                return (T) asLocalDate((LocalDate) defaultValue);
+            }
         }
-        if (Calendar.class.equals(targetClazz) && data instanceof Date) {
-            Calendar cal = Calendar.getInstance();
-            cal.setTime((Date) data);
-            return (T) cal;
+        if (LocalDateTime.class.equals(targetClazz)) {
+            if (is(TemporalAccessor.class, Calendar.class, Date.class, java.sql.Date.class, Timestamp.class)) {
+                return (T) asLocalDateTime((LocalDateTime) defaultValue);
+            }
         }
-        if (DateTime.class.equals(targetClazz) && (data instanceof Date || data instanceof Calendar)) {
-            return (T) new DateTime(data);
+        if (ZonedDateTime.class.equals(targetClazz)) {
+            if (is(TemporalAccessor.class, Calendar.class, Date.class, java.sql.Date.class, Timestamp.class)) {
+                return (T) asZonedDateTime((ZonedDateTime) defaultValue);
+            }
         }
-        if (DateTime.class.equals(targetClazz) && data instanceof LocalDate) {
-            return (T) ((LocalDate) data).toDateMidnight().toDateTime();
-        }
-        if (DateTime.class.equals(targetClazz) && data instanceof DateMidnight) {
-            return (T) ((DateMidnight) data).toDateTime();
-        }
-        if (LocalDate.class.equals(targetClazz) && (data instanceof Date || data instanceof Calendar)) {
-            return (T) new LocalDate(data);
-        }
-        if (LocalDate.class.equals(targetClazz) && data instanceof DateTime) {
-            return (T) ((DateTime) data).toLocalDate();
-        }
-        if (LocalDate.class.equals(targetClazz) && data instanceof DateMidnight) {
-            return (T) ((DateMidnight) data).toLocalDate();
-        }
-        if (LocalTime.class.equals(targetClazz) && (data instanceof Date || data instanceof Calendar)) {
-            return (T) new LocalTime(data);
-        }
-        if (LocalTime.class.equals(targetClazz) && data instanceof LocalDate) {
-            return (T) ((LocalDate) data).toDateMidnight().toDateTime().toLocalTime();
-        }
-        if (LocalTime.class.equals(targetClazz) && data instanceof DateMidnight) {
-            return (T) ((DateMidnight) data).toDateTime().toLocalTime();
-        }
-        if (LocalTime.class.equals(targetClazz) && data instanceof DateTime) {
-            return (T) ((DateTime) data).toLocalTime();
+        if (LocalTime.class.equals(targetClazz) && data instanceof TemporalAccessor) {
+            if (is(TemporalAccessor.class,
+                   Calendar.class,
+                   Date.class,
+                   java.sql.Date.class,
+                   Timestamp.class,
+                   Time.class)) {
+                return (T) asLocalTime((LocalTime) defaultValue);
+            }
         }
         if (targetClazz.isEnum()) {
             try {
@@ -780,6 +767,199 @@ public class Value {
         } catch (NumberFormatException e) {
             return defaultValue;
         }
+    }
+
+    public LocalDate asLocalDate(LocalDate defaultValue) {
+        if (data == null) {
+            return defaultValue;
+        }
+        if (is(Instant.class)) {
+            return LocalDate.from((Instant) data);
+        }
+        if (is(LocalDateTime.class)) {
+            return ((LocalDateTime) data).toLocalDate();
+        }
+        if (is(ZonedDateTime.class)) {
+            return ((ZonedDateTime) data).toLocalDate();
+        }
+        if (is(Date.class)) {
+            return LocalDate.from(Instant.ofEpochMilli(((Date) data).getTime()));
+        }
+        if (is(Calendar.class)) {
+            return LocalDate.from(Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()));
+        }
+        if (is(java.sql.Date.class)) {
+            return LocalDate.from(Instant.ofEpochMilli(((java.sql.Date) data).getTime()));
+        }
+        if (is(Timestamp.class)) {
+            return LocalDate.from(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()));
+        }
+
+        return defaultValue;
+    }
+
+    public LocalDateTime asLocalDateTime(LocalDateTime defaultValue) {
+        if (data == null) {
+            return defaultValue;
+        }
+        if (is(Instant.class)) {
+            return LocalDateTime.from((Instant) data);
+        }
+        if (is(LocalDateTime.class)) {
+            return (LocalDateTime) data;
+        }
+        if (is(LocalTime.class)) {
+            return ((LocalTime) data).atDate(LocalDate.now());
+        }
+        if (is(ZonedDateTime.class)) {
+            return ((ZonedDateTime) data).toLocalDateTime();
+        }
+        if (is(Date.class)) {
+            return LocalDateTime.from(Instant.ofEpochMilli(((Date) data).getTime()));
+        }
+        if (is(Calendar.class)) {
+            return LocalDateTime.from(Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()));
+        }
+        if (is(java.sql.Date.class)) {
+            return LocalDateTime.from(Instant.ofEpochMilli(((java.sql.Date) data).getTime()));
+        }
+        if (is(Timestamp.class)) {
+            return LocalDateTime.from(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()));
+        }
+
+        return defaultValue;
+    }
+
+    public LocalTime asLocalTime(LocalTime defaultValue) {
+        if (data == null) {
+            return defaultValue;
+        }
+        if (is(Instant.class)) {
+            return LocalTime.from((Instant) data);
+        }
+        if (is(LocalDateTime.class)) {
+            return ((LocalDateTime) data).toLocalTime();
+        }
+        if (is(LocalTime.class)) {
+            return (LocalTime) data;
+        }
+        if (is(ZonedDateTime.class)) {
+            return ((ZonedDateTime) data).toLocalTime();
+        }
+        if (is(Date.class)) {
+            return LocalTime.from(Instant.ofEpochMilli(((Date) data).getTime()));
+        }
+        if (is(Calendar.class)) {
+            return LocalTime.from(Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()));
+        }
+        if (is(java.sql.Date.class)) {
+            return LocalTime.from(Instant.ofEpochMilli(((java.sql.Date) data).getTime()));
+        }
+        if (is(Timestamp.class)) {
+            return LocalTime.from(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()));
+        }
+
+        return defaultValue;
+    }
+
+    public ZonedDateTime asZonedDateTime(ZonedDateTime defaultValue) {
+        if (data == null) {
+            return defaultValue;
+        }
+        if (is(Instant.class)) {
+            return ZonedDateTime.from((Instant) data);
+        }
+        if (is(LocalDate.class)) {
+            return ((LocalDate) data).atStartOfDay(ZoneId.systemDefault());
+        }
+        if (is(LocalDateTime.class)) {
+            return ((LocalDateTime) data).atZone(ZoneId.systemDefault());
+        }
+        if (is(LocalTime.class)) {
+            return ((LocalTime) data).atDate(LocalDate.now()).atZone(ZoneId.systemDefault());
+        }
+        if (is(ZonedDateTime.class)) {
+            return (ZonedDateTime) data;
+        }
+        if (is(Date.class)) {
+            return ZonedDateTime.from(Instant.ofEpochMilli(((Date) data).getTime()));
+        }
+        if (is(Calendar.class)) {
+            return ZonedDateTime.from(Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()));
+        }
+        if (is(java.sql.Date.class)) {
+            return ZonedDateTime.from(Instant.ofEpochMilli(((java.sql.Date) data).getTime()));
+        }
+        if (is(Timestamp.class)) {
+            return ZonedDateTime.from(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()));
+        }
+        return defaultValue;
+    }
+
+    public Instant asInstant(Instant defaultValue) {
+        if (data == null) {
+            return defaultValue;
+        }
+        if (is(Instant.class)) {
+            return (Instant) data;
+        }
+        if (is(LocalDate.class)) {
+            return ((LocalDate) data).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        }
+        if (is(LocalDateTime.class)) {
+            return ((LocalDateTime) data).atZone(ZoneId.systemDefault()).toInstant();
+        }
+        if (is(LocalTime.class)) {
+            return ((LocalTime) data).atDate(LocalDate.now()).atZone(ZoneId.systemDefault()).toInstant();
+        }
+        if (is(ZonedDateTime.class)) {
+            return ((ZonedDateTime) data).toInstant();
+        }
+        if (is(Date.class)) {
+            return Instant.ofEpochMilli(((Date) data).getTime());
+        }
+        if (is(Calendar.class)) {
+            return Instant.ofEpochMilli(((Calendar) data).getTimeInMillis());
+        }
+        if (is(java.sql.Date.class)) {
+            return Instant.ofEpochMilli(((java.sql.Date) data).getTime());
+        }
+        if (is(Timestamp.class)) {
+            return Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime());
+        }
+        return defaultValue;
+    }
+
+    public Instant asInstantOfEpochSeconds(Instant defaultValue) {
+        long epochSeconds = asLong(-1);
+        if (epochSeconds < 0) {
+            return defaultValue;
+        }
+        return Instant.ofEpochSecond(epochSeconds);
+    }
+
+    public Instant asInstantOfEpochMillis(Instant defaultValue) {
+        long epochSeconds = asLong(-1);
+        if (epochSeconds < 0) {
+            return defaultValue;
+        }
+        return Instant.ofEpochSecond(epochSeconds);
+    }
+
+    public LocalDateTime asLocalDateTimeOfEpochMillis(LocalDateTime defaultValue) {
+        Instant temporal = asInstantOfEpochMillis(null);
+        if (temporal == null) {
+            return defaultValue;
+        }
+        return LocalDateTime.from(temporal);
+    }
+
+    public LocalDateTime asLocalDateTimeOfEpochSeconds(LocalDateTime defaultValue) {
+        Instant temporal = asInstantOfEpochSeconds(null);
+        if (temporal == null) {
+            return defaultValue;
+        }
+        return LocalDateTime.from(temporal);
     }
 
     /**
@@ -1135,13 +1315,22 @@ public class Value {
     }
 
     /**
-     * Checks if the value implements the given class.
+     * Checks if the value implements one of the given classes.
      *
-     * @param clazz the class to check
-     * @return <tt>true</tt> if the wrapped value is assignable to the given <tt>clazz</tt>
+     * @param classes the classes to check against
+     * @return <tt>true</tt> if the wrapped value is assignable to one of the given <tt>classes</tt>
      */
-    public boolean is(Class<?> clazz) {
-        return get() != null && clazz.isAssignableFrom(get().getClass());
+    public boolean is(Class<?>... classes) {
+        if (data == null) {
+            return false;
+        }
+        for (Class<?> clazz : classes) {
+            if (clazz.isAssignableFrom(data.getClass())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

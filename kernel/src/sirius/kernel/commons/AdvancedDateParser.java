@@ -12,6 +12,9 @@ import sirius.kernel.nls.NLS;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.Temporal;
 import java.util.Calendar;
 import java.util.Set;
 import java.util.TreeSet;
@@ -31,7 +34,7 @@ import java.util.TreeSet;
  * <li><code><b>YM_EXPRESSION</b> ::= NUMBER</code></li>
  * <li><code><b>MODIFIER</b> ::= ("start" | "end") ("of")? ("day" | "week" | "month" | "year")</code></li>
  * </ul>
- * <p/>
+ * <p>
  * <b>Examples</b>
  * <ul>
  * <li><code>now</code> - actual date</li>
@@ -726,22 +729,26 @@ public class AdvancedDateParser {
          * @param calendar   the effective date to be used
          * @param dateString the input string which yielded the given calendar
          */
-        public DateSelection(Calendar calendar, String dateString) {
+        DateSelection(Calendar calendar, String dateString) {
             super();
-            this.calendar = calendar;
+            this.date = LocalDateTime.of(calendar.get(Calendar.YEAR),
+                                         calendar.get(Calendar.MONTH) + 1,
+                                         calendar.get(Calendar.DAY_OF_MONTH),
+                                         calendar.get(Calendar.HOUR_OF_DAY),
+                                         calendar.get(Calendar.MINUTE));
             this.dateString = dateString;
         }
 
-        private Calendar calendar;
+        private Temporal date;
         private String dateString;
 
         /**
-         * Returns the effective date as <tt>Calendar</tt>
+         * Returns the effective date as <tt>Temporal</tt>
          *
          * @return the effective date. This might be <tt>null</tt> if parsing the expression failed.
          */
-        public Calendar getCalendar() {
-            return calendar;
+        public Temporal getTemporal() {
+            return date;
         }
 
         /**
@@ -755,28 +762,45 @@ public class AdvancedDateParser {
 
         @Override
         public String toString() {
-            return asString(false);
+            return asDateString();
         }
 
         /**
-         * Returns a string representation of this <tt>DateSelection</tt>
+         * Returns a string representation of this <tt>DateSelection</tt> without any information about the time
+         * of day for the parsed date.
          *
-         * @param dateTime determines whether to include the effective date in angular brackets
-         * @return the input string used to create this <tt>DateSelection</tt> and if <tt>dateTime</tt> is true,
-         *         appended with the effective date surrounded by angular brackets
+         * @return the input string used to create this <tt>DateSelection</tt> appended with the effective
+         * date surrounded by angular brackets
          */
-        public String asString(boolean dateTime) {
+        public String asDateString() {
             if (dateString == null) {
-                return getDateString(dateTime);
+                return getDateString(false);
             }
-            return dateString + " [" + getDateString(dateTime) + "]";
+            return dateString + " [" + getDateString(false) + "]";
+        }
+
+        /**
+         * Returns a string representation of this <tt>DateSelection</tt> including the time information.
+         *
+         * @return the input string used to create this <tt>DateSelection</tt> appended with the effective
+         * date surrounded by angular brackets
+         */
+        public String asDateTimeString() {
+            if (dateString == null) {
+                return getDateString(true);
+            }
+            return dateString + " [" + getDateString(true) + "]";
         }
 
         private String getDateString(boolean dateTime) {
-            if (calendar == null) {
+            if (date == null) {
                 return "";
             }
-            return NLS.toUserString(calendar, dateTime);
+            if (dateTime) {
+                return NLS.toUserString(date);
+            } else {
+                return NLS.toUserString(LocalDate.from(date));
+            }
         }
 
         /**

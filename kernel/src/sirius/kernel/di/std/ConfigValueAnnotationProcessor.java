@@ -9,27 +9,23 @@
 package sirius.kernel.di.std;
 
 import com.typesafe.config.ConfigValueType;
-import org.joda.time.Duration;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.FieldAnnotationProcessor;
 import sirius.kernel.di.Injector;
 import sirius.kernel.di.MutableGlobalContext;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.time.Duration;
 import java.util.List;
 
 /**
  * AnnotationProcessor which handles the {@link ConfigValue} annotation.
  *
+ * @author Andreas Haufler (aha@scireum.de)
  * @see sirius.kernel.di.FieldAnnotationProcessor
  * @see ConfigValue
- *
- * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/08
  */
 @Register
@@ -58,17 +54,16 @@ public class ConfigValueAnnotationProcessor implements FieldAnnotationProcessor 
             } else if (List.class.equals(field.getType())) {
                 field.set(object, Sirius.getConfig().getStringList(val.value()));
             } else if (Duration.class.equals(field.getType())) {
-                field.set(object, new Duration(Sirius.getConfig().getMilliseconds(val.value())));
+                field.set(object, Duration.ofMillis(Sirius.getConfig().getMilliseconds(val.value())));
             } else {
                 throw new IllegalArgumentException(Strings.apply("Cannot fill field of type %s with a config value!",
                                                                  field.getType().getName()));
             }
         } else if (val.required()) {
-            Injector.LOG
-                 .WARN("Missing config value: %s in (%s.%s)!",
-                       val.value(),
-                       field.getDeclaringClass().getName(),
-                       field.getName());
+            Injector.LOG.WARN("Missing config value: %s in (%s.%s)!",
+                              val.value(),
+                              field.getDeclaringClass().getName(),
+                              field.getName());
         }
     }
 

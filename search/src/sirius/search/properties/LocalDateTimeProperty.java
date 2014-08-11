@@ -8,25 +8,27 @@
 
 package sirius.search.properties;
 
-import org.joda.time.DateMidnight;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
-import sirius.web.security.UserContext;
 import sirius.web.http.WebContext;
+import sirius.web.security.UserContext;
 
 import java.lang.reflect.Field;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
- * Represents a date property which contains no associated time value. This is used to represents fields of type
- * {@link DateMidnight}
+ * Represents a timestamp property which contains a date along with a time value. This is used to represents fields of type
+ * {@link  java.time.LocalDateTime}
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/12
  */
-public class DateProperty extends Property {
+public class LocalDateTimeProperty extends Property {
 
     /**
      * Factory for generating properties based on their field type
@@ -36,14 +38,13 @@ public class DateProperty extends Property {
 
         @Override
         public boolean accepts(Field field) {
-            return DateMidnight.class.equals(field.getType());
+            return LocalDateTime.class.equals(field.getType());
         }
 
         @Override
         public Property create(Field field) {
-            return new DateProperty(field);
+            return new LocalDateTimeProperty(field);
         }
-
     }
 
     @Override
@@ -57,7 +58,7 @@ public class DateProperty extends Property {
         if (value.isEmptyString()) {
             return null;
         }
-        Object result = NLS.parseUserString(DateMidnight.class, value.getString());
+        Object result = NLS.parseUserString(LocalDateTime.class, value.getString());
         if (result == null) {
             UserContext.setFieldError(name, value.get());
             throw Exceptions.createHandled()
@@ -75,13 +76,26 @@ public class DateProperty extends Property {
         if (Strings.isEmpty(value)) {
             return null;
         }
-        return DateMidnight.parse(String.valueOf(value));
+        String valueAsString = (String) value;
+        if (valueAsString.contains("+")) {
+            return LocalDateTime.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(valueAsString));
+        } else {
+            return LocalDateTime.from(DateTimeFormatter.ISO_LOCAL_DATE_TIME.parse(valueAsString));
+        }
+    }
+
+    @Override
+    protected Object transformToSource(Object o) {
+        if (o == null || !(o instanceof LocalDateTime)) {
+            return null;
+        }
+        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(((LocalDateTime) o).atZone(ZoneId.systemDefault()));
     }
 
     /*
      * Instances are only created by the factory
      */
-    private DateProperty(Field field) {
+    private LocalDateTimeProperty(Field field) {
         super(field);
     }
 }

@@ -9,8 +9,8 @@
 package sirius.web.health;
 
 import com.google.common.collect.Lists;
-import org.joda.time.DateTime;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -27,7 +27,7 @@ public class NodeInfo {
     private String name;
     private int priority;
     private String endpoint;
-    private DateTime lastPing;
+    private LocalDateTime lastPing;
     private int pingFailures;
     private String uptime;
     private MetricState nodeState;
@@ -93,7 +93,7 @@ public class NodeInfo {
      *
      * @return the timestamp of the last successful communication
      */
-    public DateTime getLastPing() {
+    public LocalDateTime getLastPing() {
         return lastPing;
     }
 
@@ -101,7 +101,7 @@ public class NodeInfo {
      * Resets the ping failure counter and sets the lastPing value to <tt>now</tt>
      */
     protected void pingSucceeded() {
-        this.lastPing = new DateTime();
+        this.lastPing = LocalDateTime.now();
         this.pingFailures = 0;
     }
 

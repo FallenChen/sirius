@@ -9,6 +9,11 @@
 package sirius.search.constraints;
 
 import org.elasticsearch.index.query.*;
+import sirius.kernel.commons.Value;
+
+import java.time.Instant;
+import java.time.temporal.TemporalAccessor;
+import java.util.Date;
 
 /**
  * Represents a relational filter which can be used to filter &lt; or &lt;=, along with &gt; or &gt;=
@@ -45,8 +50,22 @@ public class FieldOperator implements Constraint {
     public static FieldOperator less(String field, Object value) {
         FieldOperator result = new FieldOperator(field);
         result.bound = Bound.LT;
-        result.value = value;
+        result.value = convertTimeToDates(value);
+
         return result;
+    }
+
+    /*
+     * Converts Java 8 Time API objects down to the classic API which is used by Elasticsearch
+     */
+    protected static Object convertTimeToDates(Object value) {
+        if (value != null && value instanceof Instant) {
+            return new Date(((Instant) value).toEpochMilli());
+        } else if (value != null && value instanceof TemporalAccessor) {
+            return new Date(Value.of(value).asInstant(null).toEpochMilli());
+        }
+
+        return value;
     }
 
     /**
@@ -158,7 +177,7 @@ public class FieldOperator implements Constraint {
 
     @Override
     public String toString(boolean skipConstraintValues) {
-        return field + " "+bound+" '" + (skipConstraintValues ? "?" : value) + "'";
+        return field + " " + bound + " '" + (skipConstraintValues ? "?" : value) + "'";
     }
 
     @Override

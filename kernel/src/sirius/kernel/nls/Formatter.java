@@ -121,10 +121,9 @@ public class Formatter {
      * @return <tt>this</tt> to permit fluent method chains
      */
     public Formatter set(String property, Object value) {
-        setDirect(property, NLS.toUserString(value, lang, false), urlEncode);
+        setDirect(property, NLS.toUserString(value, lang), urlEncode);
         return this;
     }
-
 
     /**
      * Adds the replacement value to use for the given <tt>property</tt>, without url encoding the value.
@@ -138,7 +137,7 @@ public class Formatter {
      * @return <tt>this</tt> to permit fluent method chains
      */
     public Formatter setUnencoded(String property, Object value) {
-        return setDirect(property, NLS.toUserString(value == null ? "" : value, lang, false), false);
+        return setDirect(property, NLS.toUserString(value == null ? "" : value, lang), false);
     }
 
     /**

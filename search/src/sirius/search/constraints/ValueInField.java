@@ -29,7 +29,7 @@ public class ValueInField implements Constraint {
      * Use the #on(Object, String) factory method
      */
     private ValueInField(Object value, String field) {
-        this.value = value;
+        this.value = FieldOperator.convertTimeToDates(value);
         this.field = field;
     }
 

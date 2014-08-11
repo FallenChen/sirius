@@ -10,13 +10,13 @@ package sirius.web.scripting;
 
 import com.google.common.collect.Lists;
 import org.apache.log4j.Level;
-import org.joda.time.DateTime;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.LogMessage;
 
 import javax.script.ScriptContext;
 import javax.script.SimpleScriptContext;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -24,13 +24,13 @@ import java.util.List;
  */
 public class LocalEnvironment {
     private String path;
-    private DateTime loadTime;
+    private Instant loadTime;
     private List<LogMessage> messages = Lists.newArrayList();
     private ScriptContext ctx = new SimpleScriptContext();
 
     public LocalEnvironment(String path) {
         this.path = path;
-        this.loadTime = new DateTime();
+        this.loadTime = Instant.now();
         put("env", this);
     }
 

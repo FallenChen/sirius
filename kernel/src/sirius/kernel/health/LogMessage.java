@@ -9,8 +9,9 @@
 package sirius.kernel.health;
 
 import org.apache.log4j.Level;
-import org.joda.time.DateTime;
 import sirius.kernel.nls.NLS;
+
+import java.time.Instant;
 
 /**
  * Contains a log message passed from {@link Log} to {@link LogTap}.
@@ -86,7 +87,7 @@ public class LogMessage {
      * @return the timestamp when this message was created, formatted as string
      */
     public String getTimestampAsString() {
-        return NLS.toUserString(new DateTime(timestamp), true);
+        return NLS.toUserString(Instant.ofEpochMilli(timestamp));
     }
 
     /**

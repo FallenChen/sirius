@@ -1,7 +1,6 @@
 package sirius.kernel.timer;
 
 import com.google.common.collect.Lists;
-import org.joda.time.DateTime;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.Async;
 import sirius.kernel.di.Lifecycle;
@@ -16,7 +15,8 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -126,7 +126,7 @@ public class TimerService implements Lifecycle {
         if (lastTenSecondsExecution == 0) {
             return "-";
         }
-        return NLS.toUserString(new Date(lastTenSecondsExecution), true);
+        return NLS.toUserString(Instant.ofEpochMilli(lastTenSecondsExecution));
     }
 
     /**
@@ -139,7 +139,7 @@ public class TimerService implements Lifecycle {
         if (lastOneMinuteExecution == 0) {
             return "-";
         }
-        return NLS.toUserString(new Date(lastOneMinuteExecution), true);
+        return NLS.toUserString(Instant.ofEpochMilli(lastOneMinuteExecution));
     }
 
     /**
@@ -152,7 +152,7 @@ public class TimerService implements Lifecycle {
         if (lastTenMinutesExecution == 0) {
             return "-";
         }
-        return NLS.toUserString(new Date(lastTenMinutesExecution), true);
+        return NLS.toUserString(Instant.ofEpochMilli(lastTenMinutesExecution));
     }
 
     /**
@@ -165,7 +165,7 @@ public class TimerService implements Lifecycle {
         if (lastHourExecution == 0) {
             return "-";
         }
-        return NLS.toUserString(new Date(lastHourExecution), true);
+        return NLS.toUserString(Instant.ofEpochMilli(lastHourExecution));
     }
 
 
@@ -334,14 +334,14 @@ public class TimerService implements Lifecycle {
      */
     public void runEveryDayTimers(boolean outOfSchedule) {
         for (final EveryDay task : everyDay.getParts()) {
-            int hour = -1;
             if (!Sirius.getConfig().hasPath("timer.daily." + task.getConfigKeyName())) {
                 LOG.WARN("Skipping daily timer %s as config key '%s' is missing!",
                          task.getClass().getName(),
                          "timer.daily." + task.getConfigKeyName());
             } else {
                 if (outOfSchedule || Sirius.getConfig()
-                                           .getInt("timer.daily." + task.getConfigKeyName()) == new DateTime().getHourOfDay()) {
+                                           .getInt("timer.daily." + task.getConfigKeyName()) == LocalTime.now()
+                                                                                                         .getHour()) {
                     executeTask(task);
                 }
             }

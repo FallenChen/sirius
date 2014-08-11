@@ -84,7 +84,7 @@ public class OneInField implements Constraint {
             }
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             for (Object value : values) {
-                boolQueryBuilder.should(QueryBuilders.termQuery(field, value));
+                boolQueryBuilder.should(QueryBuilders.termQuery(field, FieldOperator.convertTimeToDates(value)));
             }
             return boolQueryBuilder;
         }
@@ -99,7 +99,7 @@ public class OneInField implements Constraint {
             }
             BoolFilterBuilder boolFilterBuilder = FilterBuilders.boolFilter();
             for (Object value : values) {
-                boolFilterBuilder.should(FilterBuilders.termFilter(field, value));
+                boolFilterBuilder.should(FilterBuilders.termFilter(field, FieldOperator.convertTimeToDates(value)));
             }
             if (orEmpty) {
                 boolFilterBuilder.should(FilterBuilders.missingFilter(field));
