@@ -172,7 +172,7 @@
         </copy>
 
         <!-- Initialize destination for test classes + resources -->
-        <delete>
+        <delete failonerror="false">
             <fileset dir="${dist.dir}/test">
                 <include name="**/*"/>
             </fileset>
