@@ -16,6 +16,9 @@
 <!-- Include JUNIT for testing -->
 <dependency org="org.apache.ant" name="ant-junit" rev="1.8.4" conf="test"/>
 
+<!-- Include JUNIT for testing -->
+<dependency org="com.googlecode.junit-toolbox" name="junit-toolbox" rev="2.0" conf="test"/>
+
 <!-- Include Spock for testing -->
 <dependency org="org.spockframework" name="spock-core" rev="0.7-groovy-2.0" conf="test"/>
 

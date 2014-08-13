@@ -21,10 +21,6 @@ import javax.xml.xpath.XPathExpressionException
  */
 class XMLReaderSpec extends Specification {
 
-    void setup() {
-        Sirius.initializeTestEnvironment();
-    }
-
     def "XMLReader extracts XPATH expression"() {
         given:
         def check = ValueHolder.of(null);

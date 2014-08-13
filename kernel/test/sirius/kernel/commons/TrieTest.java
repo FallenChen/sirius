@@ -9,7 +9,7 @@ import static org.junit.Assert.*;
  *
  * @author Andreas Haufler (aha@scireum.de)
  */
-public class TestTrie {
+public class TrieTest {
     @Test
     public void isFilled() {
         Trie<Integer> trie = Trie.create();

@@ -12,7 +12,7 @@ import static org.junit.Assert.*;
  *
  * @author Andreas Haufler (aha@scireum.de)
  */
-public class TestAmount extends Sirius {
+public class AmountTest extends Sirius {
     @Test
     public void predicates() {
         Amount a = Amount.of(100);

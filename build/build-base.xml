@@ -246,7 +246,7 @@
     </target>
 
     <target name="test-module">
-        <junit fork="yes" dir="${dist.dir}" haltonfailure="yes">
+        <junit fork="yes" dir="${dist.dir}" printsummary="yes" haltonfailure="yes">
             <formatter type="brief" usefile="false" />
             <formatter type="xml"/>
             <classpath >
@@ -255,8 +255,9 @@
             </classpath>
             <batchtest fork="yes" todir="${test.report.dir}/${module.name}" >
                 <fileset dir="${test.dir}/${module.name}">
-                    <include name="**/*Test.class" />
-                    <include name="**/*Spec.class" />
+                    <include name="**/*Suite.class" />
+                    <!--<include name="**/*Test.class" />-->
+                    <!--<include name="**/*Spec.class" />-->
                 </fileset>
             </batchtest>
         </junit>

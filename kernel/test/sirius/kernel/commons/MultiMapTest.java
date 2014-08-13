@@ -9,7 +9,7 @@ import static org.junit.Assert.assertArrayEquals;
  *
  * @author Andreas Haufler (aha@scireum.de)
  */
-public class TestMultiMap {
+public class MultiMapTest {
     @Test
     public void test() {
         MultiMap<String, String> mm = MultiMap.create();

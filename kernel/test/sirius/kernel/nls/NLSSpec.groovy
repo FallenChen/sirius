@@ -20,10 +20,6 @@ import java.time.LocalDateTime
  */
 class NLSSpec extends Specification {
 
-    void setup() {
-        Sirius.initializeTestEnvironment();
-    }
-
     def "toMachineString() formats a LocalDate as date without time"() {
         given:
         def date = LocalDate.of(2014, 8, 9);

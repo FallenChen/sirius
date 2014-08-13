@@ -9,7 +9,7 @@ import static org.junit.Assert.*;
  *
  * @author Andreas Haufler (aha@scireum.de)
  */
-public class TestStrings {
+public class StringsTest {
 
     @Test
     public void isFilled() {

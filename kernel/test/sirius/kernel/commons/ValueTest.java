@@ -11,7 +11,7 @@ import static org.junit.Assert.*;
  *
  * @author Andreas Haufler (aha@scireum.de)
  */
-public class TestValue {
+public class ValueTest {
     @Test
     public void isFilled() {
         assertTrue(Value.of(1).isFilled());

@@ -11,7 +11,7 @@ import static org.junit.Assert.assertEquals;
  *
  * @author Andreas Haufler (aha@scireum.de)
  */
-public class TestPriorityCollector {
+public class PriorityCollectorTest {
     @Test
     public void test() {
         PriorityCollector<String> c = PriorityCollector.create();

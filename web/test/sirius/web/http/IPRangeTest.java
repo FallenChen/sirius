@@ -15,7 +15,7 @@ import java.net.InetAddress;
 
 import static org.junit.Assert.*;
 
-public class TestIPRange extends Sirius {
+public class IPRangeTest extends Sirius {
     @Test
     public void testSimpleRange() throws Exception {
         assertTrue(IPRange.parseRange("192.168.192.1").matches(InetAddress.getByName("192.168.192.1")));
