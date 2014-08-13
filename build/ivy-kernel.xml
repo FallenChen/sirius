@@ -12,3 +12,15 @@
 
 <!-- JSR305 annotations like @Nonnull etc. -->
 <dependency org="com.google.code.findbugs" name="jsr305" rev="2.0.2" conf="compile" />
+
+<!-- Include JUNIT for testing -->
+<dependency org="org.apache.ant" name="ant-junit" rev="1.8.4" conf="test"/>
+
+<!-- Include Spock for testing -->
+<dependency org="org.spockframework" name="spock-core" rev="0.7-groovy-2.0" conf="test"/>
+
+<!-- Include cglib for mocking via Spock -->
+<dependency org="cglib" name="cglib" rev="3.1" conf="test"/>
+
+<!-- Include objenesis for mocking via Spock -->
+<dependency org="org.objenesis" name="objenesis" rev="2.1" conf="test"/>
