@@ -227,11 +227,24 @@ class RobustQueryParser {
             List<QueryBuilder> result = Lists.newArrayList();
             BoolQueryBuilder qry = QueryBuilders.boolQuery();
 
-            for (String token : tokenizer.apply(value)) {
+            if (field.equals(defaultField)) {
+                for (String token : tokenizer.apply(value)) {
+                    if (negate) {
+                        qry.mustNot(QueryBuilders.termQuery(field, token));
+                    } else {
+                        result.add(QueryBuilders.termQuery(field, token));
+                    }
+                }
+            } else {
+                // if we're looking for an id, the field is called _id in elastic search.
+                if ("id".equals(field)) {
+                    field = "_id";
+                }
+
                 if (negate) {
-                    qry.mustNot(QueryBuilders.termQuery(field, token));
+                    qry.mustNot(QueryBuilders.termQuery(field, value));
                 } else {
-                    result.add(QueryBuilders.termQuery(field, token));
+                    result.add(QueryBuilders.termQuery(field, value));
                 }
             }
             if (negate) {
