@@ -783,16 +783,16 @@ public class Value {
             return ((ZonedDateTime) data).toLocalDate();
         }
         if (is(Date.class)) {
-            return LocalDate.from(Instant.ofEpochMilli(((Date) data).getTime()));
+            return Instant.ofEpochMilli(((Date) data).getTime()).atZone(ZoneId.systemDefault()).toLocalDate();
         }
         if (is(Calendar.class)) {
-            return LocalDate.from(Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()));
+            return Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()).atZone(ZoneId.systemDefault()).toLocalDate();
         }
         if (is(java.sql.Date.class)) {
-            return LocalDate.from(Instant.ofEpochMilli(((java.sql.Date) data).getTime()));
+            return Instant.ofEpochMilli(((java.sql.Date) data).getTime()).atZone(ZoneId.systemDefault()).toLocalDate();
         }
         if (is(Timestamp.class)) {
-            return LocalDate.from(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()));
+            return Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()).atZone(ZoneId.systemDefault()).toLocalDate();
         }
 
         return defaultValue;
@@ -815,16 +815,19 @@ public class Value {
             return ((ZonedDateTime) data).toLocalDateTime();
         }
         if (is(Date.class)) {
-            return LocalDateTime.from(Instant.ofEpochMilli(((Date) data).getTime()));
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(((Date) data).getTime()), ZoneId.systemDefault());
         }
         if (is(Calendar.class)) {
-            return LocalDateTime.from(Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()));
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(((Calendar) data).getTimeInMillis()),
+                                           ZoneId.systemDefault());
         }
         if (is(java.sql.Date.class)) {
-            return LocalDateTime.from(Instant.ofEpochMilli(((java.sql.Date) data).getTime()));
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(((java.sql.Date) data).getTime()),
+                                           ZoneId.systemDefault());
         }
         if (is(Timestamp.class)) {
-            return LocalDateTime.from(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()));
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()),
+                                           ZoneId.systemDefault());
         }
 
         return defaultValue;
@@ -951,7 +954,7 @@ public class Value {
         if (temporal == null) {
             return defaultValue;
         }
-        return LocalDateTime.from(temporal);
+        return LocalDateTime.ofInstant(temporal, ZoneOffset.systemDefault());
     }
 
     public LocalDateTime asLocalDateTimeOfEpochSeconds(LocalDateTime defaultValue) {
@@ -959,7 +962,7 @@ public class Value {
         if (temporal == null) {
             return defaultValue;
         }
-        return LocalDateTime.from(temporal);
+        return LocalDateTime.ofInstant(temporal, ZoneOffset.systemDefault());
     }
 
     /**
