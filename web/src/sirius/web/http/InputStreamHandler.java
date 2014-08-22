@@ -10,22 +10,23 @@ package sirius.web.http;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
+import com.google.common.io.CharStreams;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import sirius.kernel.health.Exceptions;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
+import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link ContentHandler} used by {@link sirius.web.controller.ControllerDispatcher}.
  * <p>
  * This handler receives chunks of data which are stored in an internal buffer. This buffer can be accessed via
- * the familiar {@link InputStream} interface. Not that the methods of this implementation might block if either
+ * the familiar {@link InputStream} interface. Note that the methods of this implementation might block if either
  * the internal buffer is full, or if no content is currently readable.
  * </p>
  * <p>
@@ -183,6 +184,42 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
 
         super.close();
     }
+
+    /**
+     * returns the content of this reader assuming UTF-8
+     * @throws UnsupportedEncodingException when this InputStream does not support UTF-8
+     * @throws IOException when reading lines from this InputStream fails
+     * @see #getContentAsStrings(java.lang.String)
+     */
+    public List<String> getContentAsStrings() throws IOException {
+        return getContentAsStrings("UTF-8");
+    }
+
+    /**
+     * returns the content of this reader
+     * @throws UnsupportedEncodingException when this InputStream does not support the specified encoding
+     * @throws IOException when reading lines from this InputStream fails
+     * @see #getContentAsStrings()
+     */
+    public List<String> getContentAsStrings(String encoding) throws IOException {
+        List<String> result = new ArrayList<>();
+        result.addAll(CharStreams.readLines(new InputStreamReader(this, encoding))
+                                 .stream()
+                                 .map(InputStreamHandler::cleanseFormatCharactersAtBeginning)
+                                 .collect(Collectors.toList()));
+        return result;
+    }
+
+    private static String cleanseFormatCharactersAtBeginning(String toBeCleansed) {
+        if (toBeCleansed == null || toBeCleansed.length() == 0) {
+            return toBeCleansed;
+        }
+        if (Character.getType(toBeCleansed.charAt(0)) == Character.FORMAT) {
+            toBeCleansed = toBeCleansed.substring(1);
+        }
+        return toBeCleansed;
+    }
+
 
     private void release() {
         try {
