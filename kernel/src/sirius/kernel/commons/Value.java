@@ -1395,6 +1395,40 @@ public class Value {
     }
 
     /**
+     * Determines if the wrapped value is equal to one of the given objects.
+     * <p>
+     *     Instead of using <code>if (!value.in(...)) {}</code> consider {@link #notIn(Object...)}.
+     * </p>
+     * @param objects the set of objects to check against
+     * @return <tt>true</tt> if the wrapped data is contained in the given objects array, <tt>false</tt> otherwise
+     */
+    public boolean in(Object... objects) {
+        for(Object obj : objects) {
+            if (obj == null) {
+                if (data == null) {
+                    return true;
+                }
+            } else if (obj == data || obj.equals(data)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determines if the wrapped value isn't equal to any of the given objects.
+     * <p>
+     *     This is the inverse of {@link #in(Object...)}
+     * </p>
+     * @param objects the set of objects to check against
+     * @return <tt>true</tt> if the wrapped data isn't contained in the given objects array, <tt>false</tt> otherwise
+     */
+    public boolean notIn(Object... objects) {
+        return !in(objects);
+    }
+
+    /**
      * Determines if the string representation of the wrapped value is equal to the string representation of the given
      * object.
      * <p>In this case equality does not take differences of upper and lower case characters into account. Therefore
@@ -1404,7 +1438,7 @@ public class Value {
      *
      * @param otherString the input to compare against
      * @return <tt>true</tt> if the string representation of the wrapped object is equal to the string representation
-     * of the given paramter, where differences of lower- and uppercase are not taken into account.
+     * of the given parameter, where differences of lower- and uppercase are not taken into account.
      * @see String#equalsIgnoreCase(String)
      */
     public boolean equalsIgnoreCase(Object otherString) {
