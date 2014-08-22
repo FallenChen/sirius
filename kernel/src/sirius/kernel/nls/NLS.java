@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -82,6 +81,7 @@ public class NLS {
     private static final Map<String, DateTimeFormatter> dateTimeFormatters = Maps.newTreeMap();
     private static final Map<String, DateTimeFormatter> dateFormatters = Maps.newTreeMap();
     private static final Map<String, DateTimeFormatter> timeFormatters = Maps.newTreeMap();
+    private static final Map<String, DateTimeFormatter> fullTimeFormatters = Maps.newTreeMap();
 
     /**
      * Returns the currently active language as two-letter code.
@@ -383,36 +383,35 @@ public class NLS {
     /**
      * Returns the name of the given month in the current language
      *
-     * @param month the month which name is requested. Use constants like {@link Calendar#JANUARY}, since the
-     *              developers of this API chose quite brain-dead indices (January is 0....).
+     * @param month the month which name is requested (1..12)
      * @return the name of the given month translated in the current language
-     * or <code>""</code> if an invalid index was given
+     * or <tt>""</tt> if an invalid index was given
      */
     public static String getMonthName(int month) {
         switch (month) {
-            case Calendar.JANUARY:
+            case 1:
                 return CommonKeys.JANUARY.translated();
-            case Calendar.FEBRUARY:
+            case 2:
                 return CommonKeys.FEBRUARY.translated();
-            case Calendar.MARCH:
+            case 3:
                 return CommonKeys.MARCH.translated();
-            case Calendar.APRIL:
+            case 4:
                 return CommonKeys.APRIL.translated();
-            case Calendar.MAY:
+            case 5:
                 return CommonKeys.MAY.translated();
-            case Calendar.JUNE:
+            case 6:
                 return CommonKeys.JUNE.translated();
-            case Calendar.JULY:
+            case 7:
                 return CommonKeys.JULY.translated();
-            case Calendar.AUGUST:
+            case 8:
                 return CommonKeys.AUGUST.translated();
-            case Calendar.SEPTEMBER:
+            case 9:
                 return CommonKeys.SEPTEMBER.translated();
-            case Calendar.OCTOBER:
+            case 10:
                 return CommonKeys.OCTOBER.translated();
-            case Calendar.NOVEMBER:
+            case 11:
                 return CommonKeys.NOVEMBER.translated();
-            case Calendar.DECEMBER:
+            case 12:
                 return CommonKeys.DECEMBER.translated();
         }
         return "";
@@ -450,7 +449,7 @@ public class NLS {
      * @return a format initialized with the pattern described by the given language
      */
     public static DateTimeFormatter getTimeFormatWithSeconds(String lang) {
-        return dateTimeFormatters.computeIfAbsent(lang,
+        return fullTimeFormatters.computeIfAbsent(lang,
                                                   l -> DateTimeFormatter.ofPattern(get("NLS.patternFullTime", l)));
     }
 
@@ -471,7 +470,8 @@ public class NLS {
      * @return a format initialized with the pattern described by the given language
      */
     public static DateTimeFormatter getDateTimeFormat(String lang) {
-        return dateTimeFormatters.computeIfAbsent(lang, l -> DateTimeFormatter.ofPattern(get("NLS.patternDateTime", l)));
+        return dateTimeFormatters.computeIfAbsent(lang,
+                                                  l -> DateTimeFormatter.ofPattern(get("NLS.patternDateTime", l)));
     }
 
     /**
@@ -509,7 +509,6 @@ public class NLS {
     }
 
     /**
-     * FIXME
      * Formats the given data in a language independent format.
      *
      * @param data the input data which should be converted to string
@@ -581,7 +580,6 @@ public class NLS {
     }
 
     /**
-     * FIXME
      * Formats the given data according to the format rules of the current language
      *
      * @param object the object to be converted to a string
@@ -592,7 +590,6 @@ public class NLS {
     }
 
     /**
-     * FIXME
      * Formats the given data according to the format rules of the given language
      *
      * @param data the object to be converted to a string
@@ -653,15 +650,13 @@ public class NLS {
     }
 
     /**
-     * FIXME
      * Converts dates to a "human" format (today, yesterday, tomorrow).
      * <p>
      * Everything but today, yesterday and tomorrow will be converted to a string representation formatted by
      * using the date format of the current language.
      * </p>
      *
-     * @param date the date to be formatted. If the given object isn't a known date class
-     *             (Date, Calendar or Joda-Class), <tt>toUserString</tt> is called
+     * @param date the date to be formatted
      * @return a date string which a human would use in common sentences
      */
     public static String toSpokenDate(Temporal date) {
@@ -1039,7 +1034,7 @@ public class NLS {
      *
      * @param number the number to be rounded
      * @return a string representation using the current languages decimal format.
-     * Rounds fractional parts less or equal to <code>0.00001</code>
+     * Rounds fractional parts less or equal to <tt>0.00001</tt>
      */
     public static String smartRound(double number) {
         if (Math.abs(Math.floor(number) - number) > 0.000001D) {
@@ -1058,7 +1053,7 @@ public class NLS {
      *
      * @param size the size to format in bytes
      * @return an english representation (using dot as decimal separator) along with one of the known abbreviations:
-     * <code>Byes, KB, MB, GB, TB, PB</code>.
+     * <tt>Bytes, KB, MB, GB, TB, PB</tt>.
      */
     public static String formatSize(long size) {
         int index = 0;

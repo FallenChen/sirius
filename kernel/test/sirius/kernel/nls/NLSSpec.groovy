@@ -14,6 +14,7 @@ import spock.lang.Specification
 
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 /**
  * Created by aha on 11.08.14.
@@ -47,6 +48,17 @@ class NLSSpec extends Specification {
         def result = NLS.toUserString(date);
         then:
         result == "09.08.2014 12:00:59";
+    }
+
+    def "toUserString() formats a LocalTime as simple time"() {
+        given:
+        def date = LocalTime.of(17, 23, 15);
+        and:
+        CallContext.getCurrent().setLang("de");
+        when:
+        def result = NLS.toUserString(date);
+        then:
+        result == "17:23:15";
     }
 
     def "toUserString() formats a LocalDate as date without time"() {
