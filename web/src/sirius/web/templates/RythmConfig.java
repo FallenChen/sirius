@@ -112,7 +112,7 @@ public class RythmConfig implements Initializable {
         @Override
         public ITemplateResource load(String path) {
             if (path.contains("://")) {
-                path = Strings.split(path,"://").getSecond();
+                path = Strings.split(path, "://").getSecond();
             }
             return content.resolve(path)
                           .map(u -> new URLTemplateResource(u))
