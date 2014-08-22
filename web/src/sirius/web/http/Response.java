@@ -1151,7 +1151,6 @@ public class Response {
                     FluentCaseInsensitiveStringsMap headers = h.getHeaders();
 
 
-                    String contentType = null;
                     long lastModified = 0;
 
                     for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
@@ -1159,10 +1158,7 @@ public class Response {
                                 entry.getKey())) {
                             for (String value : entry.getValue()) {
                                 if (HttpHeaders.Names.CONTENT_TYPE.equals(entry.getKey())) {
-                                    if (name == null) {
-                                        addHeader(entry.getKey(), value);
-                                    }
-                                    contentType = entry.getValue().get(0);
+                                    addHeaderIfNotExists(entry.getKey(), value);
                                 }
                                 if (HttpHeaders.Names.LAST_MODIFIED.equals(entry.getKey())) {
                                     try {
@@ -1182,10 +1178,10 @@ public class Response {
                         return STATE.ABORT;
                     }
 
-                    if (contentType == null || name != null) {
+                    if (Strings.isEmpty(Response.this.headers.get(HttpHeaders.Names.CONTENT_TYPE))) {
                         setContentTypeHeader(name != null ? name : url);
                     }
-                    contentType = String.valueOf(Response.this.headers.get(HttpHeaders.Names.CONTENT_TYPE));
+                    String contentType = String.valueOf(Response.this.headers.get(HttpHeaders.Names.CONTENT_TYPE));
                     if (!shouldBeCompressed(contentType)) {
                         setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.IDENTITY);
                     }
