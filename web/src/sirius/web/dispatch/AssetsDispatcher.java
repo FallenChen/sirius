@@ -146,7 +146,7 @@ public class AssetsDispatcher implements WebDispatcher {
         String cacheKey = scopeId + "-" + uri.substring(1).replaceAll("[^a-zA-Z0-9_\\.]", "_");
         File file = new File(getCacheDirFile(), cacheKey);
 
-        if (!file.exists() || file.lastModified() < content.resolve(uri).get().getLastModified()) {
+        if (!file.exists() || file.lastModified() < content.resolve(uri + ".vm").get().getLastModified()) {
             try {
                 if (Sirius.isDev()) {
                     Content.LOG.INFO("Compiling: " + uri + ".vm");
