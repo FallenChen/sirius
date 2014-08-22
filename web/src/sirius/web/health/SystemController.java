@@ -15,10 +15,17 @@ import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.MemoryBasedHealthMonitor;
+import sirius.kernel.nls.NLS;
+import sirius.kernel.nls.Translation;
 import sirius.web.controller.Controller;
+import sirius.web.controller.Page;
 import sirius.web.controller.Routed;
 import sirius.web.http.WebContext;
 import sirius.web.security.Permission;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Contains the default admin GUI.
@@ -37,6 +44,8 @@ public class SystemController implements Controller {
     public static final String PERMISSION_SYSTEM_ERRORS = "permission-system-errors";
 
     public static final String PERMISSION_SYSTEM_STATE = "permission-system-state";
+
+    public static final String PERMISSION_SYSTEM_NLS = "permission-system-nls";
 
     @Routed("/system/console")
     @Permission(PERMISSION_SYSTEM_CONSOLE)
@@ -71,6 +80,20 @@ public class SystemController implements Controller {
     @Permission(PERMISSION_SYSTEM_ERRORS)
     public void errors(WebContext ctx) {
         ctx.respondWith().template("/view/system/errors.html", monitor.getIncidents());
+    }
+
+    @Routed("/system/nls")
+    @Permission(PERMISSION_SYSTEM_NLS)
+    public void nls(WebContext ctx) {
+        Page<Translation> result = new Page<>();
+        result.addFacet("mode", "Mode", null);
+        result.bindToRequest(ctx);
+        Stream<Translation> translationStream = NLS.getTranslationEngine().getTranslations(result.getQuery());
+        List<Translation> translationsPage = translationStream.skip(result.getStart() - 1)
+                                                              .limit(result.getPageSize())
+                                                              .collect(Collectors.toList());
+        result.withItems(translationsPage);
+        ctx.respondWith().template("/view/system/nls.html", NLS.getSupportedLanguages(), "de", "en", translationsPage);
     }
 
     @Routed("/system/ok")
