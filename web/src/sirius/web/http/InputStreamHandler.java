@@ -8,6 +8,7 @@
 
 package sirius.web.http;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.io.CharStreams;
@@ -16,6 +17,7 @@ import io.netty.buffer.Unpooled;
 import sirius.kernel.health.Exceptions;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -189,10 +191,10 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
      * returns the content of this reader assuming UTF-8
      * @throws UnsupportedEncodingException when this InputStream does not support UTF-8
      * @throws IOException when reading lines from this InputStream fails
-     * @see #getContentAsStrings(java.lang.String)
+     * @see #getContentAsStrings(java.nio.charset.Charset)
      */
     public List<String> getContentAsStrings() throws IOException {
-        return getContentAsStrings("UTF-8");
+        return getContentAsStrings(Charsets.UTF_8);
     }
 
     /**
@@ -201,7 +203,7 @@ public class InputStreamHandler extends InputStream implements ContentHandler {
      * @throws IOException when reading lines from this InputStream fails
      * @see #getContentAsStrings()
      */
-    public List<String> getContentAsStrings(String encoding) throws IOException {
+    public List<String> getContentAsStrings(Charset encoding) throws IOException {
         List<String> result = new ArrayList<>();
         result.addAll(CharStreams.readLines(new InputStreamReader(this, encoding))
                                  .stream()
