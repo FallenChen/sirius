@@ -6,10 +6,9 @@
  * http://www.scireum.de - info@scireum.de
  */
 
-package sirius.search;
+package sirius.web.controller;
 
 import com.google.common.collect.Lists;
-import org.elasticsearch.search.facet.terms.TermsFacet;
 import sirius.kernel.cache.ValueComputer;
 import sirius.kernel.commons.Strings;
 
@@ -95,32 +94,33 @@ public class Facet {
     }
 
     /**
-     * Loads all items from the given {@link TermsFacet}
-     *
-     * @param facet the facet to load the data from
-     */
-    public void loadFrom(TermsFacet facet) {
-        for (TermsFacet.Entry entry : facet.getEntries()) {
-            String key = entry.getTerm().string();
-            items.add(new FacetItem(key,
-                                    translator == null ? key : translator.compute(key),
-                                    entry.getCount(),
-                                    Strings.areEqual(value, key)));
-        }
-    }
-
-    /**
      * Adds a facet item
      *
      * @param key   the filter value of the item
      * @param title the public visible name of the item
      * @param count the number of matched for this item
+     * @return the facet itself for fluent method calls
      */
-    public void addItem(String key, String title, long count) {
+    public Facet addItem(String key, String title, long count) {
         items.add(new FacetItem(key,
                                 Strings.isFilled(title) ? title : translator.compute(key),
                                 count,
                                 Strings.areEqual(value, key)));
+        return this;
+    }
+
+    public Facet addItems(Iterable<String> items) {
+        for(String item : items) {
+            addItem(item, null, -1);
+        }
+        return this;
+    }
+
+    public <E extends Enum<E>> Facet addEnumItem(Class<E> enumClass) {
+        for (E item : enumClass.getEnumConstants()) {
+            addItem(item.name(), item.toString(), -1);
+        }
+        return this;
     }
 
     /**
@@ -130,5 +130,17 @@ public class Facet {
      */
     public boolean hasItems() {
         return !items.isEmpty();
+    }
+
+    /**
+     * Specifies the value used for this facet.
+     *
+     * @param value the active filter value of this facet
+     * @return the facet itself for fluent method calls
+     */
+    public Facet withValue(String value) {
+        this.value = value;
+
+        return this;
     }
 }

@@ -6,54 +6,158 @@
  * http://www.scireum.de - info@scireum.de
  */
 
-package sirius.search;
+package sirius.web.controller;
 
+import com.google.common.collect.Lists;
+import sirius.kernel.cache.ValueComputer;
 import sirius.kernel.commons.Monoflop;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.nls.NLS;
+import sirius.web.http.WebContext;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
- * Represents a slice of a result set which is being "paged through".
- * <p>
- * Pages are mainly created by {@link sirius.search.Query#queryPage()}.
- * </p>
+ * Represents a slice of a result set which is being "paged through" and can provide filter facets.
  *
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/12
  */
 public class Page<E> {
 
+    public static final int DEFAULT_PAGE_SIZE = 25;
     private String query;
-    private final int start;
-    private final int end;
-    private final ResultList<E> items;
-    private final boolean more;
-    private final String duration;
-    private int pageSize;
+    private int start;
+    private int total;
+    private List<E> items = Collections.emptyList();
+    private boolean more;
+    private String duration;
     private List<Facet> facets;
+    private Supplier<List<Facet>> facetsSupplier;
     private boolean hasFacets;
+    private int pageSize = DEFAULT_PAGE_SIZE;
 
     /**
-     * Creates a new page based on the given parameters.
+     * Specifies the query used to compute the result list.
      *
-     * @param query    the query string which was used to create the result set
-     * @param start    the index of the first item on this page
-     * @param end      the index of the last item on this page
-     * @param items    the list of items
-     * @param more     determines if there are more items in the result set
-     * @param duration the time it took to execute the query
-     * @param pageSize the maximal number of items on a page
+     * @param query the query string which was used to create the result set
+     * @return the page itself for fluent method calls
      */
-    public Page(String query, int start, int end, ResultList<E> items, boolean more, String duration, int pageSize) {
+    public Page withQuery(String query) {
         this.query = query;
-        this.start = start;
-        this.end = end;
+        return this;
+    }
+
+    /**
+     * Specifies the index of the first item.
+     *
+     * @param start the index of the first item shown on this page (relative to the overall list).
+     * @return the page itself for fluent method calls
+     */
+    public Page withStart(int start) {
+        this.start = Math.max(start, 1);
+        return this;
+    }
+
+    /**
+     * Specifies the effective items this page contains.
+     *
+     * @param items the items contained in the page.
+     * @return the page itself for fluent method calls
+     */
+    public Page withItems(List<E> items) {
         this.items = items;
-        this.more = more;
+        return this;
+    }
+
+    /**
+     * Specifies the duration (as string) it took to compute (query) the page items.
+     *
+     * @param duration the duration required to compute the page items.
+     * @return the page itself for fluent method calls
+     */
+    public Page withDuration(String duration) {
         this.duration = duration;
+        return this;
+    }
+
+    /**
+     * Specifies the facets available to further filter the page (or underlying data source).
+     *
+     * @param facets the facets available for further filtering
+     * @return the page itself for fluent method calls
+     */
+    public Page withFactes(List<Facet> facets) {
+        this.facets = facets;
+        return this;
+    }
+
+    public Facet addFacet(String field, String title, ValueComputer<String, String> translator) {
+        if (this.facets == null) {
+            this.facets = Lists.newArrayList();
+        }
+        Facet facet = new Facet(title, field, null, translator);
+        facets.add(facet);
+
+        return facet;
+    }
+
+    public Page bindToRequest(WebContext ctx) {
+        if (ctx.get("start").isFilled()) {
+            withStart(ctx.get("start").asInt(1));
+        }
+        withQuery(ctx.get("query").asString());
+        for (Facet f : getFacets()) {
+            f.withValue(ctx.get(f.getName()).asString());
+        }
+
+        return this;
+    }
+
+    /**
+     * Specifies the supplier used to compute the facets available to further filter the page (or underlying data source).
+     *
+     * @param facetsSupplier the facets supplier computing the facets available for further filtering
+     * @return the page itself for fluent method calls
+     */
+    public Page withFactesSupplier(Supplier<List<Facet>> facetsSupplier) {
+        this.facetsSupplier = facetsSupplier;
+        return this;
+    }
+
+    /**
+     * Specifies the flag which indicates if "more" items are available.
+     *
+     * @param more indicates if more items are available or not.
+     * @return the page itself for fluent method calls
+     */
+    public Page withHasMore(boolean more) {
+        this.more = more;
+        return this;
+    }
+
+    /**
+     * Specifies the number of items shown per page.
+     *
+     * @param pageSize the number of items shown per page
+     * @return the page itself for fluent method calls
+     */
+    public Page withPageSize(int pageSize) {
         this.pageSize = pageSize;
+        return this;
+    }
+
+    /**
+     * Specifies the number of total items.
+     *
+     * @param total the number of items in the data source (applying the current filters)
+     * @return the page itself for fluent method calls
+     */
+    public Page withTotalItems(int total) {
+        this.total = total;
+        return this;
     }
 
     /**
@@ -80,7 +184,7 @@ public class Page<E> {
      * @return the one based index of the last item on this page
      */
     public int getEnd() {
-        return end;
+        return start + items.size() - 1;
     }
 
     /**
@@ -89,7 +193,7 @@ public class Page<E> {
      * @return the list of items on this page
      */
     public List<E> getItems() {
-        return items.getResults();
+        return items;
     }
 
     /**
@@ -134,10 +238,10 @@ public class Page<E> {
      * @return a string naming the first and last index of this page
      */
     public String getRange() {
-        if (end == 0) {
+        if (getItems().isEmpty()) {
             return NLS.get("Page.noResults");
         }
-        return start + " - " + end;
+        return start + " - " + getEnd();
     }
 
     /**
@@ -184,7 +288,7 @@ public class Page<E> {
      *
      * @param field      the additional field to set
      * @param value      the value of the field to set
-     * @param resetStart determines if the start value should be kept (<tt>false</tt>) or resetted to 1 (<tt>true</tt>)
+     * @param resetStart determines if the start value should be kept (<tt>false</tt>) or reset to 1 (<tt>true</tt>)
      * @return a query string containing all filters, the query and the given parameter
      */
     public String createQueryString(String field, String value, boolean resetStart) {
@@ -254,7 +358,11 @@ public class Page<E> {
      */
     public List<Facet> getFacets() {
         if (facets == null) {
-            facets = items.getFacets();
+            if (facetsSupplier != null) {
+                facets = facetsSupplier.get();
+            } else {
+                facets = Collections.emptyList();
+            }
             for (Facet facet : facets) {
                 facet.parent = this;
                 if (facet.hasItems()) {
@@ -277,5 +385,9 @@ public class Page<E> {
         }
 
         return hasFacets;
+    }
+
+    public int getPageSize() {
+        return pageSize;
     }
 }

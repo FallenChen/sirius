@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.facet.terms.TermsFacet;
 import sirius.kernel.commons.Monoflop;
+import sirius.web.controller.Facet;
 
 import java.util.Iterator;
 import java.util.List;
@@ -80,7 +81,7 @@ public class ResultList<T> implements Iterable<T> {
      * Returns the list of all result entities
      *
      * @return the underlying list of result entities. Note that this is not a copy so modifying this list will alter
-     *         the result
+     * the result
      */
     public List<T> getResults() {
         return results;
@@ -94,7 +95,11 @@ public class ResultList<T> implements Iterable<T> {
     public List<Facet> getFacets() {
         if (factesProcessed.firstCall() && response != null) {
             for (Facet facet : termFacets) {
-                facet.loadFrom(response.getFacets().facet(TermsFacet.class, facet.getName()));
+                TermsFacet tf = response.getFacets().facet(TermsFacet.class, facet.getName());
+                for (TermsFacet.Entry entry : tf.getEntries()) {
+                    String key = entry.getTerm().string();
+                    facet.addItem(key, key, entry.getCount());
+                }
             }
         }
         return termFacets;

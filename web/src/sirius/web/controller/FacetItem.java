@@ -6,7 +6,7 @@
  * http://www.scireum.de - info@scireum.de
  */
 
-package sirius.search;
+package sirius.web.controller;
 
 /**
  * Represents a single item of a {@link Facet}.

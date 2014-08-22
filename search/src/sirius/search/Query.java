@@ -35,6 +35,8 @@ import sirius.kernel.nls.NLS;
 import sirius.search.constraints.*;
 import sirius.search.properties.EnumProperty;
 import sirius.search.properties.Property;
+import sirius.web.controller.Facet;
+import sirius.web.controller.Page;
 import sirius.web.http.WebContext;
 import sirius.web.security.UserContext;
 
@@ -459,13 +461,7 @@ public class Query<E extends Entity> {
     public Query<E> addTermFacet(String field, String value, ValueComputer<String, String> translator) {
         final Property p = Index.getDescriptor(clazz).getProperty(field);
         if (p instanceof EnumProperty && translator == null) {
-            translator = new ValueComputer<String, String>() {
-                @Nullable
-                @Override
-                public String compute(@Nonnull String value) {
-                    return ((EnumProperty) p).transformFromSource(value).toString();
-                }
-            };
+            translator = (v) -> ((EnumProperty) p).transformFromSource(v).toString();
         }
         termFacets.add(new Facet(NLS.get(clazz.getSimpleName() + "." + field), field, value, translator));
         if (Strings.isFilled(value)) {
@@ -904,7 +900,7 @@ public class Query<E extends Entity> {
     }
 
     /**
-     * Executes the query and returns the resulting items as a {@link Page}.
+     * Executes the query and returns the resulting items as a {@link sirius.web.controller.Page}.
      *
      * @return the result of the query along with all facets and paging-metadata
      */
@@ -925,7 +921,14 @@ public class Query<E extends Entity> {
             hasMore = true;
             result.getResults().remove(result.size() - 1);
         }
-        return new Page<>(query, start + 1, start + result.size(), result, hasMore, w.duration(), pageSize);
+        final ResultList<E> finalResult = result;
+        return new Page<>().withQuery(query)
+                           .withStart(start + 1)
+                           .withItems(result.getResults())
+                           .withFactesSupplier(() -> finalResult.getFacets())
+                           .withHasMore(hasMore)
+                           .withDuration(w.duration())
+                           .withPageSize(pageSize);
     }
 
     /**
