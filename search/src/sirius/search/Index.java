@@ -829,6 +829,9 @@ public class Index {
      * @return the descriptor for the given class
      */
     public static EntityDescriptor getDescriptor(Class<? extends Entity> clazz) {
+        if (!ready) {
+            throw Exceptions.handle().to(LOG).withSystemErrorMessage("Index is not ready yet.").handle();
+        }
         return schema.getDescriptor(clazz);
     }
 
