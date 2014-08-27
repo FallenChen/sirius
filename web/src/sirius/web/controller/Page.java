@@ -341,6 +341,40 @@ public class Page<E> {
     }
 
     /**
+     * Creates an incomplete query string to be completed by appending the start index.
+     * The Query String will contain all filters and the search query except 'start', for which the value must be
+     * appended.
+     *
+     * ex.:
+     * <pre>
+     * var startIndex = "33";
+     * $('a.config-start').attr("href", "@prefix/@baseURL?@page.createQueryStringForConfigurableStart()" + startIndex);
+     * </pre>
+     * @return a query string missing the start value
+     */
+    public String createQueryStringForConfigurableStart() {
+        StringBuilder sb = new StringBuilder();
+        boolean fieldFound = false;
+        Monoflop mf = Monoflop.create();
+        for (Facet f : getFacets()) {
+            if (Strings.isFilled(f.getValue())) {
+                sb.append(mf.firstCall() ? "" : "&");
+                sb.append(f.getName());
+                sb.append("=");
+                sb.append(Strings.urlEncode(f.getValue()));
+            }
+        }
+        if (Strings.isFilled(query)) {
+            sb.append(mf.firstCall() ? "" : "&");
+            sb.append("query=");
+            sb.append(Strings.urlEncode(query));
+        }
+        sb.append(mf.firstCall() ? "" : "&");
+        sb.append("start=");
+        return sb.toString();
+    }
+
+    /**
      * Adds a filter facet to this result page.
      *
      * @param facet the facet to add
