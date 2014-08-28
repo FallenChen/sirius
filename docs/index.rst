@@ -3,13 +3,29 @@ The SIRIUS Framework
 
 SIRIUS is a modern framework written in Java which all functionality required to build robust commercial grade applications. Although it is primarily being used as a platform to build web applications, it can also be beneficial for rich client applications as *OpenCobra* shows.
 
+Project Information
+-------------------
+
+.. toctree::
+    :maxdepth: 2
+
+    intro
+    contribute
+    license
+
+OpenSource Applications using SIRIUS
+------------------------------------
+* S3 Ninja (http://s3ninja.net)
+* SDS - Software Distribution System (https://github.com/scireum/sds-server)
+* OpenCobra (http://opencobra.com)
+
+
 Core Functionality
 ------------------
 
 .. toctree::
     :maxdepth: 2
 
-    intro
     kernel/commons
     kernel/di
     kernel/nls
@@ -17,8 +33,7 @@ Core Functionality
     kernel/cache
     kernel/health
     kernel/xml
-    contribute
-    license
+    kernel/lifecycle
 
 Web Profile Functionality
 -------------------------
@@ -29,9 +44,13 @@ Web Profile Functionality
     web/http
     web/controller
     web/services
+    web/templates
+    web/mails
+    web/security
     web/jdbc
     web/console
-    web/cluster
+    web/monitoring
+    web/help
 
 App Profile Functionality
 -------------------------
@@ -39,10 +58,3 @@ App Profile Functionality
 
 Search Profile Functionality
 ----------------------------
-
-
-OpenSource Applications using SIRIUS
-------------------------------------
-* S3 Ninja (http://s3ninja.net)
-* SDS - Software Distribution System (https://github.com/scireum/sds-server)
-* OpenCobra (http://opencobra.com)
