@@ -103,7 +103,7 @@ public class Facet {
      */
     public Facet addItem(String key, String title, long count) {
         items.add(new FacetItem(key,
-                                Strings.isFilled(title) ? title : translator.compute(key),
+                                Strings.isFilled(title) || translator == null ? title : translator.compute(key),
                                 count,
                                 Strings.areEqual(value, key)));
         return this;
