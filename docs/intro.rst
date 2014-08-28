@@ -1,11 +1,21 @@
 Introduction
 ====================
 
-OpenSource Applications using SIRIUS
-------------------------------------
-* S3Ninja (http://s3ninja.net)
-* Software Distribution System (https://github.com/scireum/sds-server)
-* OpenCobra (http://opencobra.com)
+Reasons to use SIRIUS
+---------------------
+
+Using SIRIUS
+------------
+
+Profiles
+--------
+
+Directory Layout
+----------------
+
+
+
+
 
 Main Concepts and Key Terms
 ---------------------------
