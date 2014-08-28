@@ -9,6 +9,7 @@
 package sirius.kernel;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -31,11 +32,14 @@ import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
@@ -64,6 +68,7 @@ public class Sirius {
     private static final boolean dev;
     private static Config config;
     private static Map<String, Boolean> frameworks = Maps.newHashMap();
+    private static List<String> customizations = Lists.newArrayList();
     private static Classpath classpath;
     private static volatile boolean started = false;
     private static volatile boolean running = false;
@@ -146,14 +151,20 @@ public class Sirius {
                 LOG.DEBUG_INFO(Strings.apply("  * %s: %b", framework, enabled));
             } catch (Exception e) {
                 LOG.WARN("Cannot convert status '%s' of framework '%s' to a boolean! Framework will be disabled.",
-                        entry.getValue().render(),
-                        framework);
+                         entry.getValue().render(),
+                         framework);
                 frameworkStatus.put(framework, false);
             }
         }
         LOG.INFO("Enabled %d of %d frameworks...", numEnabled, total);
+        // Although customizations are loaded in setupConfiguration, we output the status here,
+        // as this seems more intiutive for the customer (the poor guy reading the logs...)
+        LOG.INFO("Active Customizations: %s", customizations);
 
         frameworks = frameworkStatus;
+
+
+
     }
 
     /*
@@ -175,10 +186,10 @@ public class Sirius {
                         lifecycle.started();
                     } catch (Throwable e) {
                         Exceptions.handle()
-                                .error(e)
-                                .to(LOG)
-                                .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
-                                .handle();
+                                  .error(e)
+                                  .to(LOG)
+                                  .withSystemErrorMessage("Startup of: %s failed!", lifecycle.getName())
+                                  .handle();
                     }
                 }
             }).execute());
@@ -195,23 +206,23 @@ public class Sirius {
     private static void init(final ClassLoader loader) {
 
         initialized = true;
-        classpath = new Classpath(loader, "component.marker");
+        classpath = new Classpath(loader, "component.marker", customizations);
 
         if (startedAsTest) {
             // Load test configurations (will override component configs)
             classpath.find(Pattern.compile("component-test\\.conf"))
-                    .forEach(value -> config = config.withFallback(ConfigFactory.load(loader, value.group())));
+                     .forEach(value -> config = config.withFallback(ConfigFactory.load(loader, value.group())));
         }
 
         // Load component configurations
         classpath.find(Pattern.compile("component-(.*?)\\.conf")).forEach(value -> {
-                    if (!"test".equals(value.group(1))) {
-                        config = config.withFallback(
-                                ConfigFactory.load(loader,
-                                        value.group())
-                        );
-                    }
-                }
+                                                                              if (!"test".equals(value.group(1))) {
+                                                                                  config = config.withFallback(
+                                                                                          ConfigFactory.load(loader,
+                                                                                                             value.group())
+                                                                                  );
+                                                                              }
+                                                                          }
         );
 
         // Setup log-system based on configuration
@@ -257,10 +268,10 @@ public class Sirius {
                 lifecycle.stopped();
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Stop of: %s failed!", lifecycle.getName())
+                          .handle();
             }
         }
         LOG.INFO("---------------------------------------------------------");
@@ -273,10 +284,10 @@ public class Sirius {
                 LOG.INFO("Terminated: %s (Took: %s)", lifecycle.getName(), w.duration());
             } catch (Throwable e) {
                 Exceptions.handle()
-                        .error(e)
-                        .to(LOG)
-                        .withSystemErrorMessage("Termination of: %s failed!", lifecycle.getName())
-                        .handle();
+                          .error(e)
+                          .to(LOG)
+                          .withSystemErrorMessage("Termination of: %s failed!", lifecycle.getName())
+                          .handle();
             }
         }
         if (Sirius.isDev()) {
@@ -380,6 +391,89 @@ public class Sirius {
     }
 
     /**
+     * Returns a list of all active customer configurations.
+     * <p>
+     * A customer configuration can be used to override basic functionality with more specialized classes or resources
+     * which were adapted based on customer needs.
+     * </p>
+     * <p>
+     * As often groups of customers share the same requirements, not only a single configuration can be activated
+     * but a list. Within this list each configuration may override classes and resources of all former
+     * configurations. Therefore the last configuration will always "win".
+     * </p>
+     * <p>
+     * Note that classes must be placed in the package: <b>configuration.[name]</b> (with arbitrary sub packages).
+     * Also resources must be placed in: <b>configuration/[name]/resource-path</b>.
+     * </p>
+     *
+     * @return a list of all active configurations
+     */
+    public static List<String> getActiveConfigurations() {
+        return Collections.unmodifiableList(customizations);
+    }
+
+    /**
+     * Determines if the given config is active (or null which is considered active)
+     *
+     * @param configName the name of the config to check. <tt>null</tt> will be considered as active
+     */
+    public static boolean isActiveCustomization(@Nullable String configName) {
+        return configName == null || Sirius.getActiveConfigurations().contains(configName);
+    }
+
+    /**
+     * Determines if the given resource is part of a configuration.
+     *
+     * @param resource the resource path to check
+     * @return <tt>true</tt> if the given resource is part of a configuration, <tt>false</tt> otherwise
+     */
+    public static boolean isConfigurationResource(@Nullable String resource) {
+        return resource != null && resource.startsWith("configurations");
+    }
+
+    /**
+     * Extracts the customization name from a resource.
+     * <p>
+     * Valid names are paths like "customizations/[name]/..." or classes like "customizations.[name]...".
+     * </p>
+     *
+     * @param resource the name of the resource
+     * @return the name of the customizations or <tt>null</tt> if no config name is contained
+     */
+    @Nullable
+    public static String getCustomizationName(@Nullable String resource) {
+        if (resource == null) {
+            return null;
+        }
+        if (resource.startsWith("customizations/")) {
+            return Strings.split(resource.substring(15), "/").getFirst();
+        } else if (resource.startsWith("customizations.")) {
+            return Strings.split(resource.substring(15), ".").getFirst();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Compares the two given customizations according to the order given in the system config.
+     *
+     * @param configA the name of the first customization
+     * @param configB the name of the second customization
+     * @return an int value which can be used to compare the order of the two given configs.
+     */
+    public static int compareCustomizations(@Nullable String configA, @Nullable String configB) {
+        if (configA == null) {
+            if (configB == null) {
+                return 0;
+            }
+            return 1;
+        } else if (configB == null) {
+            return -1;
+        }
+        return customizations.indexOf(configA) - customizations.indexOf(configB);
+    }
+
+    /**
      * Waits until a connection to thee port specified in <tt>sirius.shutdownPort</tt> is made.
      */
     private static void waitForLethalConnection() {
@@ -395,10 +489,10 @@ public class Sirius {
             }
         } catch (Exception e) {
             Exceptions.handle()
-                    .to(LOG)
-                    .error(e)
-                    .withSystemErrorMessage("Error while waiting for shutdown-ping: %s (%s)")
-                    .handle();
+                      .to(LOG)
+                      .error(e)
+                      .withSystemErrorMessage("Error while waiting for shutdown-ping: %s (%s)")
+                      .handle();
         }
     }
 
@@ -441,12 +535,33 @@ public class Sirius {
         } else if (startedAsTest) {
             LOG.INFO("test.conf not present work directory");
         }
+        Config instanceConfig = null;
         if (new File("instance.conf").exists()) {
             LOG.INFO("using instance.conf from filesystem...");
-            config = ConfigFactory.parseFile(new File("instance.conf")).withFallback(config);
+            instanceConfig = ConfigFactory.parseFile(new File("instance.conf"));
         } else {
             LOG.INFO("instance.conf not present work directory");
         }
+
+        // Setup customer customizations
+        if (instanceConfig != null && instanceConfig.hasPath("sirius.customizations")) {
+            customizations = instanceConfig.getStringList("sirius.customizations");
+        } else if (config.hasPath("sirius.customizations")) {
+            customizations = config.getStringList("sirius.customizations");
+        }
+
+        for (String conf : customizations) {
+            if (Sirius.class.getResource("/customizations/" + conf + "/settings.conf") != null) {
+                LOG.INFO("loading settings.conf for customization '" + conf + "'");
+                config = ConfigFactory.load(loader, "customizations/" + conf + "/settings.conf").withFallback(config);
+            } else {
+                LOG.INFO("customization '" + conf + "' has no settings.conf...");
+            }
+        }
+        if (instanceConfig != null) {
+            config = instanceConfig.withFallback(config);
+        }
+
     }
 
     /*
@@ -493,9 +608,9 @@ public class Sirius {
             @Override
             public void publish(LogRecord record) {
                 repository.getLogger(record.getLoggerName())
-                        .log(Log.convertJuliLevel(record.getLevel()),
-                                formatter.formatMessage(record),
-                                record.getThrown());
+                          .log(Log.convertJuliLevel(record.getLevel()),
+                               formatter.formatMessage(record),
+                               record.getThrown());
             }
 
             @Override

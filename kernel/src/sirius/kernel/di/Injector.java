@@ -80,7 +80,7 @@ public class Injector {
         LOG.INFO("Initializing the MicroKernel....");
 
         LOG.INFO("~ Scanning .class files...");
-        classpath.find(Pattern.compile(".*?.class")).forEach(matcher -> {
+        classpath.find(Pattern.compile(".*?\\.class")).forEach(matcher -> {
             String relativePath = matcher.group();
             String className = relativePath.substring(0, relativePath.length() - 6).replace("/", ".");
             try {
@@ -129,29 +129,6 @@ public class Injector {
                                         clazz.getName(),
                                         action.getClass().getSimpleName())
                                 .handle();
-                    }
-                }
-            }
-        }
-
-        Collection<MethodAnnotationProcessor> methodAnnotations = ctx.getParts(MethodAnnotationProcessor.class);
-        if (!methodAnnotations.isEmpty()) {
-            LOG.INFO("~ Applying %d factory load actions on %d classes...", methodAnnotations.size(), loadedClasses.size());
-            for (Class<?> clazz : loadedClasses) {
-                for (MethodAnnotationProcessor p : methodAnnotations) {
-                    for (Method method : clazz.getDeclaredMethods()) {
-                        if (method.isAnnotationPresent(p.getTrigger())) {
-                            try {
-                                p.handle(ctx, method);
-                            } catch (Throwable e) {
-                                Injector.LOG.WARN("Cannot process annotation %s on %s.%s: %s (%s)",
-                                        p.getTrigger().getName(),
-                                        method.getDeclaringClass().getName(),
-                                        method.getName(),
-                                        e.getMessage(),
-                                        e.getClass().getName());
-                            }
-                        }
                     }
                 }
             }

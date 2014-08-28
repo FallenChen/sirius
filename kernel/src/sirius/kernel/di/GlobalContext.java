@@ -110,36 +110,6 @@ public interface GlobalContext {
     <T> T wire(@Nonnull T object);
 
     /**
-     * Tries to find a <b>factory</b> with the given name to create an instance of the given type.
-     * <p>
-     * A factory is a method which wears a {@link sirius.kernel.di.std.Register} annotation. This mechanism can be
-     * used in cases where a part is an overkill.
-     * </p>
-     *
-     * @param type        the type of object produced by the factory
-     * @param factoryName the name of the factory used
-     * @return an object produced by the factory, wrapped as {@link java.util.Optional}. If no appropriate factory is
-     * found, an empty Optional will be returned.
-     */
-    @Nonnull
-    <P> Optional<P> make(Class<P> type, String factoryName);
-
-    /**
-     * Tries to find a <b>factory</b> with the given name.
-     * <p>
-     * A factory is a method which wears a {@link sirius.kernel.di.std.Register} annotation. This mechanism can be
-     * used in cases where a part is an overkill.
-     * </p>
-     *
-     * @param type        the type of object produced by the factory
-     * @param factoryName the name of the factory used
-     * @return a factory which produces objects of the given type. If no factory was found, a default implementation
-     * will be returned which produces empty optionals.
-     */
-    @Nonnull
-    <P> Supplier<Optional<P>> getFactory(Class<P> type, String factoryName);
-
-    /**
      * Registers a new part for the given name and lookup classes.
      * <p>
      *     In contrast to {@link sirius.kernel.di.MutableGlobalContext#registerPart(String, Object, Class[])} this

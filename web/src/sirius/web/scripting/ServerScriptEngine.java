@@ -49,8 +49,6 @@ public class ServerScriptEngine implements Initializable {
     public void register(String uniqueName, Object object, String iFace) {
         try {
             Class<?> lookupClass = Class.forName(iFace);
-//            Proxy.newProxyInstance(getClass().getClassLoader(), )
-
             Invocable inv = (Invocable) engine;
             Object part = inv.getInterface(object, lookupClass);
             if (part == null) {
@@ -76,7 +74,7 @@ public class ServerScriptEngine implements Initializable {
         ScriptEngineManager manager = new ScriptEngineManager();
         engine = manager.getEngineByName(scriptEngine);
 
-        Sirius.getClasspath().find(Pattern.compile("scripts/(.*?\\.js)")).map(m -> m.group(0)).forEach(m -> {
+        Sirius.getClasspath().find(Pattern.compile("(scripts|customizations/[^/]+/scripts)/(.*?\\.js)")).map(m -> m.group(0)).forEach(m -> {
             LOG.INFO("Loading: %s", m);
             evalLibraryScript(m);
             timer.addWatchedResource(VelocityResourceLoader.INSTANCE.resolve(m), () -> evalLibraryScript(m));

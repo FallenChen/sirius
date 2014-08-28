@@ -75,17 +75,19 @@ public class Translation {
     /**
      * Adds a translation for the given language.
      *
-     * @param lang  a two-letter language code for which the given translation should be used
-     * @param value the translation for the given language
+     * @param lang   a two-letter language code for which the given translation should be used
+     * @param value  the translation for the given language
+     * @param silent determines if a warning is issued if an existing translation is overridden. Setting
+     *               silent to <tt>true</tt> will prevent such warnings and is used to load customer specific
+     *               translations which purpose is ti override existing translations.
      */
-    public void addTranslation(String lang, String value) {
-        if (translationTable.containsKey(lang) && !Strings.areEqual(translationTable.get(lang), value)) {
-            Babelfish.LOG
-                     .WARN("Overriding translation for '%s' in language %s: '%s' --> '%s'",
-                           key,
-                           lang,
-                           translationTable.get(lang),
-                           value);
+    public void addTranslation(String lang, String value, boolean silent) {
+        if (!silent && translationTable.containsKey(lang) && !Strings.areEqual(translationTable.get(lang), value)) {
+            Babelfish.LOG.WARN("Overriding translation for '%s' in language %s: '%s' --> '%s'",
+                               key,
+                               lang,
+                               translationTable.get(lang),
+                               value);
         }
         translationTable.put(lang, value);
     }
@@ -151,7 +153,7 @@ public class Translation {
      *
      * @param effectiveFilter the filter to be applied. <tt>null</tt> indicates that no filtering should take place
      * @return <tt>true</tt> if the given filter was <tt>null</tt> or if it either occurred in the key
-     *         or in one of the translations.
+     * or in one of the translations.
      */
     protected boolean containsText(String effectiveFilter) {
         if (effectiveFilter == null) {

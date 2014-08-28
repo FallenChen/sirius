@@ -10,6 +10,7 @@ package sirius.kernel.di;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import sirius.kernel.Sirius;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
@@ -18,7 +19,6 @@ import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
-import java.util.function.Supplier;
 
 /**
  * An instance of PartRegistry is kept by {@link sirius.kernel.di.Injector} to track all registered
@@ -29,18 +29,25 @@ import java.util.function.Supplier;
  */
 class PartRegistry implements MutableGlobalContext {
 
-    /**
+    /*
      * Contains all registered parts
      */
     private final MultiMap<Class<?>, Object> parts = MultiMap.createSynchronized();
 
-    /**
+    /*
+     * Contains classes which are replaced by customer customizations (custom classes). This map is used
+     * to speed up checking while initializing the system.
+     *
+     * Content: ClassToReplace -> Replacement
+     */
+    private final Map<Class<?>, Object> blacklist = Maps.newHashMap();
+
+    /*
      * Contains all registered parts with a unique name. These parts will also
      * be contained in parts. This is just a lookup map if searched by unique
      * name.
      */
     private final Map<Class<?>, Map<String, Object>> namedParts = Maps.newConcurrentMap();
-    private final Map<Class<?>, Map<String, Supplier<Optional<?>>>> factories = Maps.newConcurrentMap();
 
     @SuppressWarnings("unchecked")
     @Override
@@ -136,10 +143,41 @@ class PartRegistry implements MutableGlobalContext {
 
     @Override
     public void registerPart(Object part, Class<?>... implementedInterfaces) {
+        String customizationName = Sirius.getCustomizationName(part.getClass().getName());
+        if (!Sirius.isActiveCustomization(customizationName)) {
+            return;
+        }
+        Class<?> predecessor = part.getClass().isAnnotationPresent(Replace.class) ? part.getClass()
+                                                                                        .getAnnotation(Replace.class)
+                                                                                        .value() : null;
+        if (predecessor != null && customizationName == null) {
+            Injector.LOG.WARN("@Replace should be only used within a customization. %s (%s) seems to be a base class!",
+                              part,
+                              part.getClass());
+        }
+        Object successor = blacklist.get(part.getClass());
         for (Class<?> iFace : implementedInterfaces) {
-            parts.put(iFace, part);
+            if (successor == null) {
+                parts.put(iFace, part);
+                if (predecessor != null) {
+                    synchronized (parts) {
+                        parts.getUnderlyingMap().get(iFace).remove(predecessor);
+                    }
+                }
+            } else {
+                synchronized (parts) {
+                    Collection<Object> partList = parts.getUnderlyingMap().get(iFace);
+                    if (partList == null || !partList.contains(successor)) {
+                        parts.put(iFace, part);
+                    }
+                }
+            }
+        }
+        if (predecessor != null) {
+            blacklist.put(predecessor, part);
         }
     }
+
 
     @Override
     @SuppressWarnings("unchecked")
@@ -152,7 +190,7 @@ class PartRegistry implements MutableGlobalContext {
     }
 
     @Override
-    public void registerDynamicPart(String uniqueName, Object part, Class<?> lookupClass) {
+    public synchronized void registerDynamicPart(String uniqueName, Object part, Class<?> lookupClass) {
         Map<String, Object> partsOfClass = namedParts.get(lookupClass);
         if (partsOfClass != null) {
             Object originalPart = partsOfClass.get(uniqueName);
@@ -169,62 +207,37 @@ class PartRegistry implements MutableGlobalContext {
 
     @Override
     public synchronized void registerPart(String uniqueName, Object part, Class<?>... implementedInterfaces) {
+        String customizationName = Sirius.getCustomizationName(part.getClass().getName());
+        if (!Sirius.isActiveCustomization(customizationName)) {
+            return;
+        }
         for (Class<?> clazz : implementedInterfaces) {
             Map<String, Object> partsOfClass = namedParts.get(clazz);
             if (partsOfClass != null) {
-                if (partsOfClass.containsKey(uniqueName)) {
-                    throw new IllegalArgumentException(Strings.apply(
-                            "The part '%s' cannot be registered as '%s' for class '%s'. The id is already taken by: %s (%s)",
-                            part,
-                            clazz.getName(),
-                            uniqueName,
-                            partsOfClass.get(uniqueName),
-                            partsOfClass.get(uniqueName).getClass().getName()));
+                Object currentPart = partsOfClass.get(uniqueName);
+                if (currentPart != null) {
+                    String currentCustomization = Sirius.getCustomizationName(currentPart.getClass().getName());
+                    int comp = Sirius.compareCustomizations(currentCustomization, customizationName);
+                    if (comp < 0) {
+                        // Don't override a customized part with a system part
+                        return;
+                    } else if (comp == 0) {
+                        throw new IllegalArgumentException(Strings.apply(
+                                "The part '%s' cannot be registered as '%s' for class '%s'. The id is already taken by: %s (%s)",
+                                part,
+                                clazz.getName(),
+                                uniqueName,
+                                partsOfClass.get(uniqueName),
+                                partsOfClass.get(uniqueName).getClass().getName()));
+                    }
                 }
             } else {
                 partsOfClass = Collections.synchronizedMap(new TreeMap<>());
                 namedParts.put(clazz, partsOfClass);
             }
             partsOfClass.put(uniqueName, part);
-            parts.put(clazz, part);
         }
-    }
-
-    @Override
-    public void registerFactory(String uniqueName, Supplier<?> factory, Class<?> lookupClass) {
-        Map<String, Supplier<Optional<?>>> factoriesOfClass = factories.computeIfAbsent(lookupClass,
-                                                                                        k -> Collections.synchronizedMap(
-                                                                                                new TreeMap<>())
-        );
-        if (factoriesOfClass.containsKey(uniqueName)) {
-            throw new IllegalArgumentException(Strings.apply(
-                    "The factory '%s' cannot be registered as '%s' for class '%s'. The id is already taken by: %s (%s)",
-                    factory,
-                    lookupClass.getName(),
-                    uniqueName,
-                    factoriesOfClass.get(uniqueName),
-                    factoriesOfClass.get(uniqueName).getClass().getName()));
-        }
-        factoriesOfClass.put(uniqueName, () -> Optional.ofNullable(factory.get()));
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <P> Optional<P> make(Class<P> type, String factoryName) {
-        return (Optional<P>) Optional.ofNullable(factories.get(type))
-                                     .map(m -> m.get(factoryName))
-                                     .map(f -> f.get())
-                                     .orElseGet(() -> Optional.empty());
-    }
-
-    private static final Supplier<Optional<?>> EMPTY_FACTORY = () -> Optional.empty();
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <P> Supplier<Optional<P>> getFactory(Class<P> type, String factoryName) {
-        return (Supplier<Optional<P>>) (Object) Optional.ofNullable(factories.get(type))
-                                                        .map(m -> m.get(factoryName))
-                                                        .orElse(EMPTY_FACTORY);
+        registerPart(part, implementedInterfaces);
     }
 
     @Override

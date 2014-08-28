@@ -11,6 +11,7 @@ package sirius.kernel.nls;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import sirius.kernel.Classpath;
+import sirius.kernel.Sirius;
 import sirius.kernel.commons.MultiMap;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.ValueHolder;
@@ -262,13 +263,34 @@ public class Babelfish {
      * @param classpath the classpath used to discover all relevant properties files
      */
     protected void init(final Classpath classpath) {
+        // Load core translations and keep customizations in a separate list as we have to work out the
+        // correct ordering first...
+        List<Matcher> customizations = Lists.newArrayList();
         classpath.find(PROPERTIES_FILE).forEach(value -> {
-            LOG.FINE("Loading: %s", value.group());
-            String baseName = value.group(1);
-            String lang = value.group(2);
-            importProperties(value.group(), baseName, lang);
-            loadedResourceBundles.add(value.group());
+            if (Sirius.isConfigurationResource(value.group())) {
+                customizations.add(value);
+            } else {
+                loadMatchedResource(value);
+            }
         });
+
+        // Sort configurations according to system config
+        Collections.sort(customizations, (a, b) -> {
+            String confA = Sirius.getCustomizationName(a.group());
+            String confB = Sirius.getCustomizationName(b.group());
+            return Sirius.compareCustomizations(confA, confB);
+        });
+
+        // Apply translations in correct order
+        customizations.stream().forEach(value -> loadMatchedResource(value));
+    }
+
+    private void loadMatchedResource(Matcher value) {
+        LOG.FINE("Loading: %s", value.group());
+        String baseName = value.group(1);
+        String lang = value.group(2);
+        importProperties(value.group(), baseName, lang);
+        loadedResourceBundles.add(value.group());
     }
 
     /*
@@ -283,7 +305,7 @@ public class Babelfish {
     }
 
     /*
-     * Disables the cached for properties files to enable reloading
+     * Disables the cache for properties files to enable reloading
      */
     private static class NonCachingControl extends ResourceBundle.Control {
 
@@ -328,6 +350,6 @@ public class Babelfish {
             entry.setFile(file);
             modifyableTranslationsCopy.put(key, entry);
         }
-        entry.addTranslation(lang, value);
+        entry.addTranslation(lang, value, file.startsWith("configurations"));
     }
 }

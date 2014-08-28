@@ -51,16 +51,19 @@ public class Classpath {
     private List<URL> componentRoots;
     private ClassLoader loader;
     private String componentName;
+    private List<String> customizations;
 
     /**
      * Creates a new Classpath, scanning for component roots with the given name
      *
-     * @param loader        the class loader used to load the components
-     * @param componentName the file name to identify component roots
+     * @param loader         the class loader used to load the components
+     * @param componentName  the file name to identify component roots
+     * @param customizations the list of active customizations to filter visible resources
      */
-    public Classpath(ClassLoader loader, String componentName) {
+    public Classpath(ClassLoader loader, String componentName, List<String> customizations) {
         this.loader = loader;
         this.componentName = componentName;
+        this.customizations = customizations;
     }
 
     /**
@@ -91,13 +94,18 @@ public class Classpath {
     /**
      * Scans the classpath for files which relative path match the given patter
      *
-     * @param pattern   the pattern for the relative path used to filter files
+     * @param pattern the pattern for the relative path used to filter files
      */
     public Stream<Matcher> find(final Pattern pattern) {
-        return getComponentRoots().stream()
-                                  .flatMap(url -> scan(url))
-                                  .map(path -> pattern.matcher(path))
-                                  .filter(Matcher::matches);
+        return getComponentRoots().stream().flatMap(url -> scan(url)).filter(path -> {
+            if (customizations != null && path.startsWith("customizations")) {
+                String config = Sirius.getCustomizationName(path);
+                if (!customizations.contains(config)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(path -> pattern.matcher(path)).filter(Matcher::matches);
     }
 
     /*
@@ -150,4 +158,5 @@ public class Classpath {
             }
         }
     }
+
 }

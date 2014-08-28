@@ -45,13 +45,4 @@ public interface MutableGlobalContext extends GlobalContext {
      */
     void registerPart(String uniqueName, Object part, Class<?>... lookupClasses);
 
-    /**
-     * Registers a new factory with the given name and for the given lookupClass.
-     *
-     * @param uniqueName  the name of the factory used to retrieve the factory.
-     *                    Note that this must be unique per <tt>lookupClass</tt>.
-     * @param factory     the actual factory method used to generate new objects
-     * @param lookupClass the class of objects made by the factory
-     */
-    void registerFactory(String uniqueName, Supplier<?> factory, Class<?> lookupClass);
 }
