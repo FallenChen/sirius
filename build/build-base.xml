@@ -136,7 +136,7 @@
     <!-- =========================================================================================================== -->
     <!-- Test -->
     <!-- =========================================================================================================== -->
-    <target name="build-prepare" depends="ivy, makeVersionA, makeVersionB" description="prepare directory structure for build">
+    <target name="build-prepare" depends="ivy" description="prepare directory structure for build">
         <mkdir dir="${dist.dir}" />
         <delete failonerror="false">
             <fileset dir="${dist.dir}">
@@ -166,7 +166,7 @@
         <mkdir dir="${dist.dir}/app" />
     </target>
 
-    <target name="test-prepare" depends="ivy, makeVersionA, makeVersionB, build-prepare" description="prepare directory structure for automated tests">
+    <target name="test-prepare" depends="ivy, build-prepare" description="prepare directory structure for automated tests">
         <!-- Initialize destination for test classes + resources -->
         <delete failonerror="false">
             <fileset dir="${test.dir}">
@@ -243,7 +243,7 @@
     <!-- =========================================================================================================== -->
     <!-- Builds and bundles the complete application for distribution -->
     <!-- =========================================================================================================== -->
-    <target name="make" depends="ivy,makeVersionA,makeVersionB" description="Builds and bundles the complete application for distribution ">
+    <target name="make" depends="ivy" description="Builds and bundles the complete application for distribution ">
 
         <!-- Create distribution directory -->
         <mkdir dir="${dist.dir}" />
