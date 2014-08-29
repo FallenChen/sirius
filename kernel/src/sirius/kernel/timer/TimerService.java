@@ -195,8 +195,8 @@ public class TimerService implements Lifecycle {
                                 res.callback.run();
                             } catch (Exception e) {
                                 Exceptions.handle()
-                                          .withSystemErrorMessage("Error reloading %s: %s (%s)",
-                                                                  res.file.toString())
+                                          .withSystemErrorMessage("Error reloading %s: %s (%s)", res.file.toString())
+                                          .error(e)
                                           .handle();
                             }
                         }
