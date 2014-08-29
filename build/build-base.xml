@@ -355,7 +355,7 @@
     <!-- Compiles the kernel module -->
     <!-- =========================================================================================================== -->
     <target name="make-kernel" unless="no-kernel">
-        <javac compiler="javac1.8"
+        <javac compiler="javac1.7"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -405,7 +405,7 @@
     <!-- Compiles the web module -->
     <!-- =========================================================================================================== -->
     <target name="make-web" unless="no-web">
-        <javac compiler="javac1.8"
+        <javac compiler="javac1.7"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -457,7 +457,7 @@
             </fileset>
         </copy>
 
-        <javac compiler="javac1.8"
+        <javac compiler="javac1.7"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -503,7 +503,7 @@
     <!-- Compiles the search module -->
     <!-- =========================================================================================================== -->
     <target name="make-search" unless="no-search">
-        <javac compiler="javac1.8"
+        <javac compiler="javac1.7"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -547,7 +547,7 @@
     <!-- Compiles the main application -->
     <!-- =========================================================================================================== -->
     <target name="make-main-app">
-        <javac compiler="javac1.8"
+        <javac compiler="javac1.7"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
