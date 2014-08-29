@@ -292,7 +292,7 @@
             <format property="app.version" pattern="yyww" />
         </tstamp>
         <tstamp>
-            <format property="app.date" pattern="yyyy-mm-dd" />
+            <format property="app.date" pattern="yyyy-MM-dd" />
         </tstamp>
         <property name="app.build" value="-" />
         <property name="app.vcs" value="-" />
