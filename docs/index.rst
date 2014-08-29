@@ -48,7 +48,6 @@ Web Profile Functionality
     web/mails
     web/security
     web/jdbc
-    web/console
     web/monitoring
     web/help
 
