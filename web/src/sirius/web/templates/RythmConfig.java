@@ -50,6 +50,7 @@ import java.util.Map;
  * <li><b>prefix</b>: the http url prefix</li>
  * <li><b>product</b>: the name of the product</li>
  * <li><b>version</b>: the version of the product</li>
+ * <li><b>detailedVersion</b>: the detailed version of the product</li>
  * <li><b>isDev</b>: <tt>true</tt> if the system is started in development mode, <tt>false</tt> otherwise</li>
  * <li><b>call</b>:the current {@link WebContext}</li>
  * </ul>
@@ -114,9 +115,7 @@ public class RythmConfig implements Initializable {
             if (path.contains("://")) {
                 path = Strings.split(path, "://").getSecond();
             }
-            return content.resolve(path)
-                          .map(u -> new URLTemplateResource(u))
-                          .orElse(null);
+            return content.resolve(path).map(u -> new URLTemplateResource(u)).orElse(null);
         }
     }
 
@@ -143,6 +142,7 @@ public class RythmConfig implements Initializable {
             map.put("prefix", String.class);
             map.put("product", String.class);
             map.put("version", String.class);
+            map.put("detailedVersion", String.class);
             map.put("isDev", Boolean.class);
             map.put("call", WebContext.class);
             map.put("template", String.class);
@@ -164,6 +164,7 @@ public class RythmConfig implements Initializable {
             template.__setRenderArg("prefix", wc.getContextPrefix());
             template.__setRenderArg("product", Sirius.getProductName());
             template.__setRenderArg("version", Sirius.getProductVersion());
+            template.__setRenderArg("detailedVersion", Sirius.getProductVersionDetails());
             template.__setRenderArg("isDev", Sirius.isDev());
             template.__setRenderArg("call", wc);
             template.__setRenderArg("template", url);

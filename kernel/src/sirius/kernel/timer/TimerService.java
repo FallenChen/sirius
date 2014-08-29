@@ -171,6 +171,42 @@ public class TimerService implements Lifecycle {
 
     @Override
     public void started() {
+        if (Sirius.isFrameworkEnabled("timer")) {
+            startTimer();
+        }
+        if (Sirius.isDev()) {
+            startResourceWatcher();
+        }
+    }
+
+    private void startResourceWatcher() {
+        if (reloadTimer == null) {
+            reloadTimer = new Timer(true);
+            reloadTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    Thread.currentThread().setName("Resource-Watch");
+                    for (WatchedResource res : loadedFiles) {
+                        long lastModified = res.file.lastModified();
+                        if (lastModified > res.lastModified) {
+                            res.lastModified = res.file.lastModified();
+                            LOG.INFO("Reloading: %s", res.file.toString());
+                            try {
+                                res.callback.run();
+                            } catch (Exception e) {
+                                Exceptions.handle()
+                                          .withSystemErrorMessage("Error reloading %s: %s (%s)",
+                                                                  res.file.toString())
+                                          .handle();
+                            }
+                        }
+                    }
+                }
+            }, RELOAD_INTERVAL, RELOAD_INTERVAL);
+        }
+    }
+
+    private void startTimer() {
         try {
             timerLock.lock();
             try {
@@ -186,33 +222,6 @@ public class TimerService implements Lifecycle {
             }
         } catch (Throwable t) {
             Exceptions.handle(LOG, t);
-        }
-
-        if (Sirius.isDev()) {
-            if (reloadTimer == null) {
-                reloadTimer = new Timer(true);
-                reloadTimer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        Thread.currentThread().setName("Resource-Watch");
-                        for (WatchedResource res : loadedFiles) {
-                            long lastModified = res.file.lastModified();
-                            if (lastModified > res.lastModified) {
-                                res.lastModified = res.file.lastModified();
-                                LOG.INFO("Reloading: %s", res.file.toString());
-                                try {
-                                    res.callback.run();
-                                } catch (Exception e) {
-                                    Exceptions.handle()
-                                              .withSystemErrorMessage("Error reloading %s: %s (%s)",
-                                                                      res.file.toString())
-                                              .handle();
-                                }
-                            }
-                        }
-                    }
-                }, RELOAD_INTERVAL, RELOAD_INTERVAL);
-            }
         }
     }
 

@@ -14,13 +14,10 @@
      * make - to build a release version of the application
 
     You must specify the following properties:
-     * app.name - Name of the application
+     * app.name     - Name of the application
      * app.filename - File-compatible name of the app
-
-    You can set app.version (otherwise it will use a 4-digit date code)
-     * app.version - Current version of the app
-    You can also set app.build, which will then be appended to the version:
-     * app.build - Current build number used
+     * app.build    - current build number used
+     * app.vcs      - current VCS revision (Git hash etc.)
 
 
     You can provide: no-app, no-web or no-kernel to disable the respective modules.
@@ -134,25 +131,6 @@
         <ivy:retrieve conf="compile" />
         <ivy:retrieve pattern="${build.dir}/testlib/[artifact].[ext]" conf="test"/>
         <ivy:report todir="${build.dir}/lib/report" conf="compile" graph="false" />
-    </target>
-
-    <!-- =========================================================================================================== -->
-    <!-- Generates app.version using a 4 digit date code and appending the jenkins BUILD number if available -->
-    <!-- =========================================================================================================== -->
-    <condition property="hasBuild">
-        <isset property="app.build" />
-    </condition>
-
-    <target name="genDateCode">
-        <tstamp>
-            <format property="dateCode" pattern="yyww" />
-        </tstamp>
-    </target>
-    <target name="makeVersionA" depends="genDateCode" if="hasBuild">
-        <property name="app.version" value="${dateCode}-${app.build}" />
-    </target>
-    <target name="makeVersionB" depends="genDateCode" unless="hasBuild">
-        <property name="app.version" value="${dateCode}" />
     </target>
 
     <!-- =========================================================================================================== -->
@@ -309,9 +287,37 @@
             <include name="*.conf" />
             <include name="**/*.html" />
          </replace>
+        <!-- Determine Build parameters -->
+        <tstamp>
+            <format property="app.version" pattern="yyww" />
+        </tstamp>
+        <tstamp>
+            <format property="app.date" pattern="yyyy-mm-dd" />
+        </tstamp>
+        <property name="app.build" value="-" />
+        <property name="app.vcs" value="-" />
+
         <replace dir="${dist.dir}/app"
                  token="@VERSION@"
                  value="${app.version}">
+            <include name="*.conf" />
+            <include name="**/*.html" />
+        </replace>
+        <replace dir="${dist.dir}/app"
+                 token="@DATE@"
+                 value="${app.date}">
+            <include name="*.conf" />
+            <include name="**/*.html" />
+        </replace>
+        <replace dir="${dist.dir}/app"
+                 token="@BUILD@"
+                 value="${app.build}">
+            <include name="*.conf" />
+            <include name="**/*.html" />
+        </replace>
+        <replace dir="${dist.dir}/app"
+                 token="@VCS@"
+                 value="${app.vcs}">
             <include name="*.conf" />
             <include name="**/*.html" />
         </replace>
@@ -349,7 +355,7 @@
     <!-- Compiles the kernel module -->
     <!-- =========================================================================================================== -->
     <target name="make-kernel" unless="no-kernel">
-        <javac compiler="javac1.7"
+        <javac compiler="javac1.8"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -399,7 +405,7 @@
     <!-- Compiles the web module -->
     <!-- =========================================================================================================== -->
     <target name="make-web" unless="no-web">
-        <javac compiler="javac1.7"
+        <javac compiler="javac1.8"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -451,7 +457,7 @@
             </fileset>
         </copy>
 
-        <javac compiler="javac1.7"
+        <javac compiler="javac1.8"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -497,7 +503,7 @@
     <!-- Compiles the search module -->
     <!-- =========================================================================================================== -->
     <target name="make-search" unless="no-search">
-        <javac compiler="javac1.7"
+        <javac compiler="javac1.8"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -541,7 +547,7 @@
     <!-- Compiles the main application -->
     <!-- =========================================================================================================== -->
     <target name="make-main-app">
-        <javac compiler="javac1.7"
+        <javac compiler="javac1.8"
                includeantruntime="false"
                classpathref="compile.path"
                encoding="UTF-8"
@@ -588,104 +594,5 @@
         </antcall>
     </target>
 
-    <!-- =========================================================================================================== -->
-    <!-- Generates the javadocs for the sirius-lib.net site -->
-    <!-- =========================================================================================================== -->
-    <target name="sirius-site" depends="make" description="Generates the javadocs for the sirius-lib.net site">
-        <!-- Create distribution directory -->
-        <mkdir dir="${sirius.dir}/site/docs" />
-        <delete>
-            <fileset dir="${sirius.dir}/site/docs">
-                <include name="**/*"/>
-            </fileset>
-        </delete>
-
-        <javadoc destdir="${sirius.dir}/site/docs" classpathref="compile.path">
-            <fileset dir="${sirius.dir}/kernel/src" />
-            <fileset dir="${sirius.dir}/web/src" />
-            <fileset dir="${sirius.dir}/app/src" />
-        </javadoc>
-    </target>
-
-    <!-- =========================================================================================================== -->
-    <!-- Used to auto-install mvn -->
-    <!-- =========================================================================================================== -->
-    <property name="mvn.jar.version" value="2.1.3"/>
-    <property name="mvn.jar.name" value="maven-ant-tasks-${mvn.jar.version}.jar"/>
-    <property name="mvn.home" value="${user.home}/.m2"/>
-
-    <!-- =========================================================================================================== -->
-    <!-- Check if mvn is present -->
-    <!-- =========================================================================================================== -->
-    <available property="mvn.installed" file="${mvn.home}/${mvn.jar.name}"/>
-
-    <!-- =========================================================================================================== -->
-    <!-- Downloads and installs mvn -->
-    <!-- =========================================================================================================== -->
-    <target name="mvn-install" unless="mvn.installed" description="Downloads and installs mvn">
-        <mkdir dir="${mvn.home}"/>
-        <get src="http://ftp-stud.hs-esslingen.de/pub/Mirrors/ftp.apache.org/dist/maven/ant-tasks/${mvn.jar.version}/binaries/${mvn.jar.name}"
-             dest="${mvn.home}/${mvn.jar.name}"/>
-    </target>
-
-    <!-- =========================================================================================================== -->
-    <!-- Checks if mvn is present or downloads it otherwise -->
-    <!-- =========================================================================================================== -->
-    <target name="mvn-init" depends="mvn-install" description="Checks if mvn is present or downloads it otherwise">
-        <taskdef resource="org/apache/maven/artifact/ant/antlib.xml"
-                 uri="antlib:org.apache.maven.artifact.ant"
-                 classpath="${mvn.home}/${mvn.jar.name}"/>
-    </target>
-
-
-
-    <!-- =========================================================================================================== -->
-    <!-- Generates a maven artifact -->
-    <!-- =========================================================================================================== -->
-    <target name="maven-prepare" depends="mvn-init,make" description="Generates a maven artifact">
-        <ivy:makepom ivyfile="${build.dir}/ivy.xml" pomfile="${build.dir}/pom.xml" />
-        <jar destfile="${dist.dir}/${app.filename}.jar" basedir="${dist.dir}/app" />
-        <jar destfile="${dist.dir}/${app.filename}-javadoc.jar" basedir="${site.dir}/docs" />
-    </target>
-
-    <!-- =========================================================================================================== -->
-    <!-- Deploy snapshot version to Maven snapshot repository -->
-    <!-- =========================================================================================================== -->
-    <target name="mvn-deploy" depends="maven-prepare" description="deploy snapshot version to Maven snapshot repository">
-        <artifact:mvn>
-            <arg value="org.apache.maven.plugins:maven-deploy-plugin:2.6:deploy-file" />
-            <arg value="-Durl=${maven-snapshots-repository-url}" />
-            <arg value="-DrepositoryId=${maven-snapshots-repository-id}" />
-            <arg value="-DpomFile=pom.xml" />
-            <arg value="-Dfile=${dist.dir}/${app.filename}.jar" />
-        </artifact:mvn>
-    </target>
-
-    <!-- =========================================================================================================== -->
-    <!-- Deploy release version to Maven staging repository -->
-    <!-- before this, update project version (both build.xml and pom.xml) from SNAPSHOT to RELEASE -->
-    <!-- =========================================================================================================== -->
-    <target name="mvn-stage" depends="maven-prepare" description="deploy release version to Maven staging repository">
-        <!-- sign and deploy the main artifact -->
-        <artifact:mvn>
-            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
-            <arg value="-Durl=${maven-staging-repository-url}" />
-            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
-            <arg value="-DpomFile=pom.xml" />
-            <arg value="-Dfile=${dist.dir}/${app.filename}.jar" />
-            <arg value="-Pgpg" />
-        </artifact:mvn>
-
-        <!-- sign and deploy the javadoc artifact -->
-        <artifact:mvn>
-            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
-            <arg value="-Durl=${maven-staging-repository-url}" />
-            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
-            <arg value="-DpomFile=pom.xml" />
-            <arg value="-Dfile=${dist.dir}/${app.filename}-javadoc.jar" />
-            <arg value="-Dclassifier=javadoc" />
-            <arg value="-Pgpg" />
-        </artifact:mvn>
-    </target>
 
 </project>

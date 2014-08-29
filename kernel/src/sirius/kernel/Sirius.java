@@ -17,6 +17,7 @@ import org.apache.log4j.*;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggerRepository;
+import org.joda.time.LocalDate;
 import org.junit.BeforeClass;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.Barrier;
@@ -162,7 +163,6 @@ public class Sirius {
         LOG.INFO("Active Customizations: %s", customizations);
 
         frameworks = frameworkStatus;
-
 
 
     }
@@ -664,6 +664,15 @@ public class Sirius {
     @ConfigValue("product.version")
     private static String productVersion;
 
+    @ConfigValue("product.build")
+    private static String productBuild;
+
+    @ConfigValue("product.date")
+    private static String productDate;
+
+    @ConfigValue("product.vcs")
+    private static String productVcs;
+
 
     /**
      * Returns the name of the product which is running SIRIUS.
@@ -687,6 +696,23 @@ public class Sirius {
      */
     public static String getProductVersion() {
         return "@VERSION@".equals(productVersion) ? "DEV" : productVersion;
+    }
+
+    /**
+     * Returns a detailed description of the product version.
+     * <p>
+     * Can be set via the config values <code>product.version</code>, <code>product.build</code>,
+     * <code>product.vcs</code>.
+     * </p>
+     *
+     * @return the detailed version of the product for which the framework was started.
+     */
+    public static String getProductVersionDetails() {
+        String version = getProductVersion();
+        String build = "@BUILD@".equals(productBuild) ? "-" : productBuild;
+        String vcs = "@VCS@".equals(productVcs) ? "-" : productVcs;
+        String date = "@DATE@".equals(productDate) ? NLS.toMachineString(new LocalDate()) : productDate;
+        return Strings.apply("Version: %s, Build: %s (%s), Revision: %s", version, build, date, vcs);
     }
 
     /**
