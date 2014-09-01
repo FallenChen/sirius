@@ -20,8 +20,8 @@ OpenSource Applications using SIRIUS
 * OpenCobra (http://opencobra.com)
 
 
-Core Functionality
-------------------
+Core Profile
+------------
 
 .. toctree::
     :maxdepth: 2
@@ -30,13 +30,14 @@ Core Functionality
     kernel/di
     kernel/nls
     kernel/timers
+    kernel/async
     kernel/cache
     kernel/health
     kernel/xml
     kernel/lifecycle
 
-Web Profile Functionality
--------------------------
+Web Profile
+-----------
 
 .. toctree::
     :maxdepth: 2
@@ -51,9 +52,9 @@ Web Profile Functionality
     web/monitoring
     web/help
 
-App Profile Functionality
--------------------------
+App Profile
+-----------
 
 
-Search Profile Functionality
-----------------------------
+Search Profile
+--------------
