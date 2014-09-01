@@ -13,7 +13,7 @@ Project Information
     contribute
     license
 
-OpenSource Applications using SIRIUS
+Examples using SIRIUS
 ------------------------------------
 * S3 Ninja (http://s3ninja.net)
 * SDS - Software Distribution System (https://github.com/scireum/sds-server)

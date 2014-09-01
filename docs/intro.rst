@@ -1,13 +1,13 @@
 Introduction
 ============
 
-Reasons to use SIRIUS
----------------------
+Reasons for SIRIUS
+------------------
 
 The SIRIUS framework was built by scireum_ as platform for our web based applications. Existing frameworks didn't quite
 cater our needs concerning flexibility, reusability and simplicity.
 
-.. _scireum GmbH: http://www.scireum.de
+.. _scireum: http://www.scireum.de
 
 So here's whats provided by SIRIUS:
 
@@ -20,6 +20,21 @@ So here's whats provided by SIRIUS:
 
 Using SIRIUS
 ------------
+
+Using SIRIUS in your own application is quite easy. Our approach is to include it as Git submodule. It therefore
+becomes a subdirectory in your project. The makes updates extremely easy. Also you have all required build files
+and supporting libraries along with the whole source code at hands. Depending on which profiles you use, add the
+appropriate **src**, **resources** and **test** directories as source code roots to your project. Also add
+**build/lib** as location for libraries or jars. This will be populated by Ivy using the **build.xml** as shown below.
+
+Next to this, also add **sirius/build/unmanaged-lib** and if you're using the *App Profile*
+**sirius/build/unmanaged-app-lib** as library path to your project.
+
+The easiest way to do all this is to use **IntelliJ** as we provide project files for each profile which simply can
+be included as module in your project.
+
+In order to make the dependency injector aware of your own classes, place a *component.marker* in your **src** or
+**resources** folder.
 
 Profiles
 --------
@@ -65,12 +80,16 @@ which can contain further dependencies used by the application which are not ava
 build.xml
 ^^^^^^^^^
 
-This file is used to build the product and setup the environment. Therefore
+This file is used to build the product and setup the environment. Therefore create a **build.xml** within the
+**build** folder which contains the contents as shown below. Make sure the enable or disable the profiles as
+required and setup the name of the target application in **app.name** and **app.filename**. Then run the target
+**ivy** to fetch all required dependencies.
 
-   <project name="PRODUCT-NAME" default="ivy">
+.. code-block:: xml
+
+    <project name="PRODUCT-NAME" default="ivy">
 
         <import file="../sirius/build/build-base.xml" />
-
         <!-- Uncomment to disable the web profile -->
         <!-- <property name="no-web" value="true" /> -->
         <!-- Uncomment to disable the search profile -->
@@ -91,3 +110,37 @@ This file is used to build the product and setup the environment. Therefore
 ivy.xml
 ^^^^^^^
 
+SIRIUS uses Ivy to fetch all required dependencies. Each profile brings a set of dependencies which are listed in
+a separate XML file. As Ivy has no notion of modules one has to include these files in the main **ivy.xml**
+which is to be created in the **build** directory.
+
+.. code-block:: xml
+
+    <?xml version="1.0"?>
+    <!DOCTYPE ivy-module [
+            <!-- Remove dependencies for profiles not required by the application -->
+            <!ENTITY kernel SYSTEM "../sirius/build/ivy-kernel.xml">
+            <!ENTITY web SYSTEM "../sirius/build/ivy-web.xml">
+            <!ENTITY search SYSTEM "../sirius/build/ivy-search.xml">
+            <!ENTITY app SYSTEM "../sirius/build/ivy-app.xml">
+    ]>
+    <ivy-module version="2.0">
+        <info organisation="my.organization" module="myproduct"/>
+
+        <configurations defaultconfmapping="compile->compile;compile->master;test->compile;test->master">
+            <conf name="compile" />
+            <conf name="test" />
+        </configurations>
+
+        <dependencies>
+
+            <!-- Remove includes if not required -->
+            &kernel;
+            &web;
+            &search;
+            &app;
+
+            <!-- Include custom dependencies here -->
+
+        </dependencies>
+    </ivy-module>
