@@ -17,7 +17,6 @@ import org.apache.log4j.*;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggerRepository;
-import org.joda.time.LocalDate;
 import org.junit.BeforeClass;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.Barrier;
@@ -39,6 +38,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -711,7 +711,7 @@ public class Sirius {
         String version = getProductVersion();
         String build = "@BUILD@".equals(productBuild) ? "-" : productBuild;
         String vcs = "@VCS@".equals(productVcs) ? "-" : productVcs;
-        String date = "@DATE@".equals(productDate) ? NLS.toMachineString(new LocalDate()) : productDate;
+        String date = "@DATE@".equals(productDate) ? NLS.toMachineString(LocalDate.now()) : productDate;
         return Strings.apply("Version: %s, Build: %s (%s), Revision: %s", version, build, date, vcs);
     }
 
