@@ -8,9 +8,6 @@
 
 package sirius.app.oma;
 
-import org.joda.time.DateTime;
-import org.joda.time.LocalDate;
-import org.joda.time.LocalTime;
 import sirius.app.oma.annotations.*;
 import sirius.app.oma.schema.Column;
 import sirius.app.oma.schema.SQLKeywords;
@@ -24,7 +21,12 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.sql.Types;
-import java.util.*;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -89,20 +91,18 @@ public class Property {
         }
         if (field.getType() == String.class) {
             if (length == null) {
-                OMA.LOG
-                   .WARN("The string property %s of %s needs an @Length specification! Defaulting to 255",
-                         field.getName(),
-                         field.getDeclaringClass().getName());
+                OMA.LOG.WARN("The string property %s of %s needs an @Length specification! Defaulting to 255",
+                             field.getName(),
+                             field.getDeclaringClass().getName());
                 length = 255;
             }
             return;
         }
         if (field.getType() == BigDecimal.class) {
             if (length == null) {
-                OMA.LOG
-                   .WARN("The numeric property %s of %s needs an @Length specification! Defaulting to 10,3",
-                         field.getDeclaringClass().getName(),
-                         field.getName());
+                OMA.LOG.WARN("The numeric property %s of %s needs an @Length specification! Defaulting to 10,3",
+                             field.getDeclaringClass().getName(),
+                             field.getName());
                 length = 10;
                 decimalPlaces = 3;
             }
@@ -112,8 +112,7 @@ public class Property {
                 .getType() == Float.class || field.getType() == Boolean.class) {
             return;
         }
-        if (field.getType() == Date.class || field.getType() == Calendar.class || field.getType() == DateTime.class || field
-                .getType() == LocalDate.class || field.getType() == LocalTime.class) {
+        if (field.getType() == LocalDate.class || field.getType() == LocalDateTime.class || field.getType() == Instant.class) {
             return;
         }
         if (field.getType().isEnum()) {
