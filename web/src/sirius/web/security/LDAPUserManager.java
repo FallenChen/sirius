@@ -140,7 +140,6 @@ public class LDAPUserManager extends GenericUserManager {
                         }
                     }
 
-                    //
                     Set<String> permissions = transformRoles(roles);
                     permissions.add(UserInfo.PERMISSION_LOGGED_IN);
                     for (String rr : requiredRoles) {
@@ -149,7 +148,7 @@ public class LDAPUserManager extends GenericUserManager {
                         }
                     }
 
-                    return new UserInfo(null, null, sr.getName(), sr.getName(), null, permissions, null);
+                    return new UserInfo(null, null, sr.getNameInNamespace(), sr.getNameInNamespace(), null, permissions, null);
                 }
             } finally {
                 ctx.close();
