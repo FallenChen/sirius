@@ -836,6 +836,7 @@ public class Query<E extends Entity> {
      *
      * @return the result of the query along with all facets and paging-metadata
      */
+    @SuppressWarnings("unchecked")
     public Page<E> queryPage() {
         Watch w = Watch.start();
         int originalLimit = limit;
@@ -854,10 +855,10 @@ public class Query<E extends Entity> {
             result.getResults().remove(result.size() - 1);
         }
         final ResultList<E> finalResult = result;
-        return new Page<>().withQuery(query)
+        return new Page<E>().withQuery(query)
                            .withStart(start + 1)
                            .withItems(result.getResults())
-                           .withFactesSupplier(() -> finalResult.getFacets())
+                           .withFactesSupplier(finalResult::getFacets)
                            .withHasMore(hasMore)
                            .withDuration(w.duration())
                            .withPageSize(pageSize);
