@@ -148,7 +148,9 @@ public class LDAPUserManager extends GenericUserManager {
                         }
                     }
 
-                    return new UserInfo(null, null, sr.getNameInNamespace(), sr.getNameInNamespace(), null, permissions, null);
+                    LdapName name = new LdapName(sr.getName());
+                    String rdn = String.valueOf(name.getRdn(name.size() - 1).getValue());
+                    return new UserInfo(null, null, rdn, rdn, null, permissions, null);
                 }
             } finally {
                 ctx.close();
