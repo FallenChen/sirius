@@ -12,8 +12,8 @@ cater our needs concerning flexibility, reusability and simplicity.
 So here's whats provided by SIRIUS:
 
 * micro kernel based dependency injector
-* powerful configuration framework (based on `typesafe config <https://github.com/typesafehub/config>_`)
-* modern high performance web server (based on `netty <http://netty.io>_`)
+* powerful configuration framework (based on `typesafe config <https://github.com/typesafehub/config>`_)
+* modern high performance web server (based on `netty <http://netty.io>`_)
 * flexible way of handling customer based customizations
 * engine for providing REST services via XML and JSON
 * extensive monitoring and profiling support
@@ -60,7 +60,7 @@ web server. This is largely intended to support legacy code and not as a first c
 
 Search profile
 ^^^^^^^^^^^^^^
-The search profile provides a "ORM" layer for `Elasticsearch <http://www.elasticsearch.org>_`.
+The search profile provides a "ORM" layer for `Elasticsearch <http://www.elasticsearch.org>`_.
 
 Directory Layout
 ----------------
