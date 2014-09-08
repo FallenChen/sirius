@@ -9,11 +9,14 @@
 package sirius.search.constraints;
 
 import org.elasticsearch.index.query.*;
+import sirius.kernel.commons.Strings;
 import sirius.search.Entity;
 import sirius.search.EntityRef;
 import sirius.search.Index;
 
 import java.util.Collection;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Represents a constraint which verifies that the given field contains one of the given values.
@@ -32,7 +35,11 @@ public class OneInField implements Constraint {
      * Use the #on(List, String) factory method
      */
     private OneInField(Collection<?> values, String field) {
-        this.values = values;
+        if (values != null) {
+            this.values = values.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        } else {
+            this.values = null;
+        }
         // In search queries the id field must be referenced via "_id" not "id..
         if (Entity.ID.equalsIgnoreCase(field)) {
             this.field = Index.ID_FIELD;
