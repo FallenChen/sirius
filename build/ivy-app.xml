@@ -1,5 +1,5 @@
 <!-- Required by the servlet emulation layer. Contains all interfaces defined by the spec -->
-<dependency org="javax.servlet" name="javax.servlet-api" rev="3.1.0" conf="compile" />
+<dependency org="javax.servlet" name="servlet-api" rev="2.5" conf="compile"/>
 
 <!-- Used to generate QR codes -->
 <dependency org="com.google.zxing" name="core" rev="2.2" conf="compile"/>

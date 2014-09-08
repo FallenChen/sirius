@@ -58,12 +58,12 @@
     <!-- Prepare test classpaths -->
     <path id="test.path">
         <path refid="compile.path"/>
-        <fileset dir="${main.dir}/build/testlib" includes="*.jar"/>
+        <fileset dir="${build.dir}/testlib" includes="*.jar"/>
     </path>
 
     <path id="test.path.kernel">
         <path refid="compile.path"/>
-        <fileset dir="${main.dir}/build/testlib" includes="*.jar"/>
+        <fileset dir="${build.dir}/testlib" includes="*.jar"/>
     </path>
 
     <path id="test.path.web">

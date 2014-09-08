@@ -22,7 +22,6 @@ import sirius.web.http.Response;
 import sirius.web.http.WebContext;
 
 import javax.servlet.ServletOutputStream;
-import javax.servlet.WriteListener;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -356,28 +355,4 @@ public class ResponseAdapter implements HttpServletResponse {
         return "HttpServletRequest: " + wc.toString();
     }
 
-    @Override
-    public int getStatus() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public String getHeader(String name) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Collection<String> getHeaders(String name) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Collection<String> getHeaderNames() {
-        throw new UnsupportedOperationException();
-    }
-
-//    @Override
-//    public void setContentLengthLong(long len) {
-//        throw new UnsupportedOperationException();
-//    }
 }

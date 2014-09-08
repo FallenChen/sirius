@@ -30,7 +30,6 @@ import sirius.web.http.session.ServerSession;
 import sirius.web.http.session.SessionListener;
 
 import javax.servlet.*;
-import javax.servlet.descriptor.JspConfigDescriptor;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 import java.io.InputStream;
@@ -286,16 +285,6 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     }
 
     @Override
-    public int getEffectiveMajorVersion() {
-        return 0;
-    }
-
-    @Override
-    public int getEffectiveMinorVersion() {
-        return 0;
-    }
-
-    @Override
     public String getMimeType(String s) {
         return MimeHelper.guessMimeType(s);
     }
@@ -380,11 +369,6 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
     }
 
     @Override
-    public boolean setInitParameter(String name, String value) {
-        return false;
-    }
-
-    @Override
     public Object getAttribute(String s) {
         return attributes.get(s);
     }
@@ -406,9 +390,8 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
         } else {
             invokeListeners("attributeAdded",
                             ServletContextAttributeListener.class,
-                            value -> value.attributeAdded(new ServletContextAttributeEvent(ServletContainer.this,
-                                                                                           s,
-                                                                                           o)));
+                            value -> value.attributeAdded(new ServletContextAttributeEvent(ServletContainer.this, s, o))
+            );
         }
         attributes.put(s, o);
     }
@@ -448,18 +431,16 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
             try {
                 invokeListeners("requestInitialized",
                                 ServletRequestListener.class,
-                                (value) -> value.requestInitialized(new ServletRequestEvent(ServletContainer.this,
-                                                                                            req)));
+                                (value) -> value.requestInitialized(new ServletRequestEvent(ServletContainer.this, req))
+                );
                 try {
                     dispatcher.forward(req, res);
-                    if (!req.isAsyncStarted()) {
-                        res.complete();
-                    }
+                    res.complete();
                 } finally {
                     invokeListeners("requestDestroyed",
                                     ServletRequestListener.class,
-                                    value -> value.requestDestroyed(new ServletRequestEvent(ServletContainer.this,
-                                                                                            req)));
+                                    value -> value.requestDestroyed(new ServletRequestEvent(ServletContainer.this, req))
+                    );
                 }
             } catch (Throwable t) {
                 LOG.SEVERE(t);
@@ -490,124 +471,4 @@ public class ServletContainer implements Lifecycle, ServletContext, WebDispatche
             }
         });
     }
-
-    @Override
-    public ServletRegistration.Dynamic addServlet(String servletName, String className) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServletRegistration.Dynamic addServlet(String servletName, Servlet servlet) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServletRegistration.Dynamic addServlet(String servletName, Class<? extends Servlet> servletClass) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T extends Servlet> T createServlet(Class<T> clazz) throws ServletException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServletRegistration getServletRegistration(String servletName) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Map<String, ? extends ServletRegistration> getServletRegistrations() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FilterRegistration.Dynamic addFilter(String filterName, String className) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FilterRegistration.Dynamic addFilter(String filterName, Filter filter) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FilterRegistration.Dynamic addFilter(String filterName, Class<? extends Filter> filterClass) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FilterRegistration getFilterRegistration(String filterName) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public SessionCookieConfig getSessionCookieConfig() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void addListener(String className) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T extends EventListener> void addListener(T t) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void addListener(Class<? extends EventListener> listenerClass) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T extends EventListener> T createListener(Class<T> clazz) throws ServletException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public JspConfigDescriptor getJspConfigDescriptor() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ClassLoader getClassLoader() {
-        return Sirius.getClasspath().getLoader();
-    }
-
-    @Override
-    public void declareRoles(String... roleNames) {
-        throw new UnsupportedOperationException();
-    }
-
-//    @Override
-//    public String getVirtualServerName() {
-//        return "Sirius";
-//    }
 }
