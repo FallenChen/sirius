@@ -268,4 +268,14 @@ public class EntityRefList<E extends Entity> {
         this.values = null;
         this.valueFromCache = false;
     }
+
+    @Override
+    public String toString() {
+        if (getIds().size() > 0) {
+            return clazz.getSimpleName() + ": " + ids;
+        } else {
+            return clazz.getSimpleName() + ": <empty>";
+        }
+    }
+
 }

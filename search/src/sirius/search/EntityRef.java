@@ -237,4 +237,12 @@ public class EntityRef<E extends Entity> {
         return !containsId(id);
     }
 
+    @Override
+    public String toString() {
+        if (isFilled()) {
+            return clazz.getSimpleName() + ": " + id;
+        } else {
+            return clazz.getSimpleName() + ": <empty>";
+        }
+    }
 }
