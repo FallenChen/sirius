@@ -299,9 +299,11 @@ public class Babelfish {
     protected void reloadBundle(String name) {
         LOG.FINE("Reloading: %s", name);
         Matcher m = PROPERTIES_FILE.matcher(name);
-        String baseName = m.group(1);
-        String lang = m.group(2);
-        importProperties(name, baseName, lang);
+        if (m.matches()) {
+            String baseName = m.group(1);
+            String lang = m.group(2);
+            importProperties(name, baseName, lang);
+        }
     }
 
     /*
