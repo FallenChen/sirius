@@ -25,7 +25,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Static helper for managing and scheduling asynchronus background tasks.
+ * Static helper for managing and scheduling asynchronous background tasks.
  * <p/>
  * Provides various helper methods to execute tasks in another thread and to provide interaction via instances of
  * {@link Promise}.
@@ -48,7 +48,8 @@ public class Async {
     public static final String DEFAULT = "default";
     protected static final Map<String, AsyncExecutor> executors = Maps.newConcurrentMap();
 
-    // If sirius is not started yet, we still consider it running already...
+    // If sirius is not started yet, we still consider it running already as the intention of this flag
+    // is to detect a system halt and not to check if the startup sequence has finished.
     private static volatile boolean running = true;
 
     /**
@@ -114,21 +115,13 @@ public class Async {
     public static <V> Promise<V> fork(String category, final ValueProvider<V> computation) {
         final Promise<V> result = promise();
 
-        executor(category).fork(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    result.success(computation.get());
-                } catch (Throwable t) {
-                    result.fail(t);
-                }
+        executor(category).fork(() -> {
+            try {
+                result.success(computation.get());
+            } catch (Throwable t) {
+                result.fail(t);
             }
-        }).dropOnOverload(new Runnable() {
-            @Override
-            public void run() {
-                result.fail(new RejectedExecutionException());
-            }
-        }).execute();
+        }).dropOnOverload(() -> result.fail(new RejectedExecutionException())).execute();
 
         return result;
     }
@@ -140,7 +133,7 @@ public class Async {
      * @return a new <tt>Promise</tt> which can be used to represent an asynchronously computed value.
      */
     public static <V> Promise<V> promise() {
-        return new Promise<V>();
+        return new Promise<>();
     }
 
     /**

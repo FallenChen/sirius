@@ -45,7 +45,7 @@ public class Page<E> {
      * @param query the query string which was used to create the result set
      * @return the page itself for fluent method calls
      */
-    public Page withQuery(String query) {
+    public Page<E> withQuery(String query) {
         this.query = query;
         return this;
     }
@@ -56,7 +56,7 @@ public class Page<E> {
      * @param start the index of the first item shown on this page (relative to the overall list).
      * @return the page itself for fluent method calls
      */
-    public Page withStart(int start) {
+    public Page<E> withStart(int start) {
         this.start = Math.max(start, 1);
         return this;
     }
@@ -67,7 +67,7 @@ public class Page<E> {
      * @param items the items contained in the page.
      * @return the page itself for fluent method calls
      */
-    public Page withItems(List<E> items) {
+    public Page<E> withItems(List<E> items) {
         this.items = items;
         return this;
     }
@@ -78,7 +78,7 @@ public class Page<E> {
      * @param duration the duration required to compute the page items.
      * @return the page itself for fluent method calls
      */
-    public Page withDuration(String duration) {
+    public Page<E> withDuration(String duration) {
         this.duration = duration;
         return this;
     }
@@ -89,7 +89,7 @@ public class Page<E> {
      * @param facets the facets available for further filtering
      * @return the page itself for fluent method calls
      */
-    public Page withFactes(List<Facet> facets) {
+    public Page<E> withFactes(List<Facet> facets) {
         this.facets = facets;
         return this;
     }
@@ -104,7 +104,7 @@ public class Page<E> {
         return facet;
     }
 
-    public Page bindToRequest(WebContext ctx) {
+    public Page<E> bindToRequest(WebContext ctx) {
         if (ctx.get("start").isFilled()) {
             withStart(ctx.get("start").asInt(1));
         }
@@ -122,7 +122,7 @@ public class Page<E> {
      * @param facetsSupplier the facets supplier computing the facets available for further filtering
      * @return the page itself for fluent method calls
      */
-    public Page withFactesSupplier(Supplier<List<Facet>> facetsSupplier) {
+    public Page<E> withFactesSupplier(Supplier<List<Facet>> facetsSupplier) {
         this.facetsSupplier = facetsSupplier;
         return this;
     }
@@ -133,7 +133,7 @@ public class Page<E> {
      * @param more indicates if more items are available or not.
      * @return the page itself for fluent method calls
      */
-    public Page withHasMore(boolean more) {
+    public Page<E> withHasMore(boolean more) {
         this.more = more;
         return this;
     }
@@ -144,7 +144,7 @@ public class Page<E> {
      * @param pageSize the number of items shown per page
      * @return the page itself for fluent method calls
      */
-    public Page withPageSize(int pageSize) {
+    public Page<E> withPageSize(int pageSize) {
         this.pageSize = pageSize;
         return this;
     }
@@ -155,7 +155,7 @@ public class Page<E> {
      * @param total the number of items in the data source (applying the current filters)
      * @return the page itself for fluent method calls
      */
-    public Page withTotalItems(int total) {
+    public Page<E> withTotalItems(int total) {
         this.total = total;
         return this;
     }
@@ -354,7 +354,6 @@ public class Page<E> {
      */
     public String createQueryStringForConfigurableStart() {
         StringBuilder sb = new StringBuilder();
-        boolean fieldFound = false;
         Monoflop mf = Monoflop.create();
         for (Facet f : getFacets()) {
             if (Strings.isFilled(f.getValue())) {

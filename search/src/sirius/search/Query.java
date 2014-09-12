@@ -357,7 +357,7 @@ public class Query<E extends Entity> {
      * @return the query itself for fluent method calls
      */
     public Query<E> orderByDesc(String field) {
-        orderBys.add(new Tuple<String, Boolean>(field, false));
+        orderBys.add(Tuple.create(field, false));
         return this;
     }
 
@@ -372,17 +372,6 @@ public class Query<E extends Entity> {
     }
 
     /**
-     * Simple translator which uses the key as parameter for {@link NLS#get(String)}
-     */
-    public static final ValueComputer<String, String> NLS_TRANSLATOR = new ValueComputer<String, String>() {
-        @Nullable
-        @Override
-        public String compute(@Nonnull String key) {
-            return NLS.get(key);
-        }
-    };
-
-    /**
      * Adds a term facet to be filled by the query.
      *
      * @param field      the field to scan
@@ -395,7 +384,10 @@ public class Query<E extends Entity> {
         if (p instanceof EnumProperty && translator == null) {
             translator = (v) -> ((EnumProperty) p).transformFromSource(v).toString();
         }
-        termFacets.add(new Facet(NLS.get(clazz.getSimpleName() + "." + field), field, value, translator));
+        termFacets.add(new Facet(NLS.get(p.getField().getDeclaringClass().getSimpleName() + "." + field),
+                                 field,
+                                 value,
+                                 translator));
         if (Strings.isFilled(value)) {
             where(FieldEqual.on(field, value).asFilter());
         }
@@ -856,12 +848,12 @@ public class Query<E extends Entity> {
         }
         final ResultList<E> finalResult = result;
         return new Page<E>().withQuery(query)
-                           .withStart(start + 1)
-                           .withItems(result.getResults())
-                           .withFactesSupplier(finalResult::getFacets)
-                           .withHasMore(hasMore)
-                           .withDuration(w.duration())
-                           .withPageSize(pageSize);
+                            .withStart(start + 1)
+                            .withItems(result.getResults())
+                            .withFactesSupplier(finalResult::getFacets)
+                            .withHasMore(hasMore)
+                            .withDuration(w.duration())
+                            .withPageSize(pageSize);
     }
 
     /**
