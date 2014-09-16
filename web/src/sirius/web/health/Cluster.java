@@ -27,12 +27,9 @@ import sirius.kernel.health.Log;
 import sirius.kernel.timer.EveryMinute;
 import sirius.web.mails.MailService;
 
-import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.ConnectException;
-import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Iterator;
@@ -231,7 +228,10 @@ public class Cluster implements EveryMinute {
                 }
             } catch (Throwable t) {
                 if (t instanceof IOException) {
-                    LOG.WARN(t);
+                    LOG.WARN("Cannot reach node %s: %s (%s)",
+                             info.getEndpoint(),
+                             t.getMessage(),
+                             t.getClass().getSimpleName());
                 } else {
                     Exceptions.handle(LOG, t);
                 }

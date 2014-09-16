@@ -219,11 +219,9 @@ public class Sirius {
                                                                               if (!"test".equals(value.group(1))) {
                                                                                   config = config.withFallback(
                                                                                           ConfigFactory.load(loader,
-                                                                                                             value.group())
-                                                                                  );
+                                                                                                             value.group()));
                                                                               }
-                                                                          }
-        );
+                                                                          });
 
         // Setup log-system based on configuration
         setupLogLevels();
@@ -290,16 +288,14 @@ public class Sirius {
                           .handle();
             }
         }
-        if (Sirius.isDev()) {
-            LOG.INFO("---------------------------------------------------------");
-            LOG.INFO("Thread State");
-            LOG.INFO("---------------------------------------------------------");
-            LOG.INFO("%-15s %10s %53s", "STATE", "ID", "NAME");
-            for (ThreadInfo info : ManagementFactory.getThreadMXBean().dumpAllThreads(false, false)) {
-                LOG.INFO("%-15s %10s %53s", info.getThreadState().name(), info.getThreadId(), info.getThreadName());
-            }
-            LOG.INFO("---------------------------------------------------------");
+        LOG.INFO("---------------------------------------------------------");
+        LOG.INFO("System halted! - Thread State");
+        LOG.INFO("---------------------------------------------------------");
+        LOG.INFO("%-15s %10s %53s", "STATE", "ID", "NAME");
+        for (ThreadInfo info : ManagementFactory.getThreadMXBean().dumpAllThreads(false, false)) {
+            LOG.INFO("%-15s %10s %53s", info.getThreadState().name(), info.getThreadId(), info.getThreadName());
         }
+        LOG.INFO("---------------------------------------------------------");
         started = false;
     }
 
