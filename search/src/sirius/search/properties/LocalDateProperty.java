@@ -12,6 +12,7 @@ import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Register;
 import sirius.kernel.health.Exceptions;
+import sirius.kernel.health.HandledException;
 import sirius.kernel.nls.NLS;
 import sirius.web.http.WebContext;
 import sirius.web.security.UserContext;
@@ -58,8 +59,9 @@ public class LocalDateProperty extends Property {
         if (value.isEmptyString()) {
             return null;
         }
-        Object result = NLS.parseUserString(LocalDate.class, value.getString());
-        if (result == null) {
+        try {
+            return NLS.parseUserString(LocalDate.class, value.getString());
+        } catch (IllegalArgumentException e) {
             UserContext.setFieldError(name, value.get());
             throw Exceptions.createHandled()
                             .withNLSKey("Property.invalidInput")
@@ -67,8 +69,6 @@ public class LocalDateProperty extends Property {
                             .set("value", value.asString())
                             .handle();
         }
-
-        return result;
     }
 
     @Override
