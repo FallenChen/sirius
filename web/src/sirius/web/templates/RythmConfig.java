@@ -11,6 +11,7 @@ package sirius.web.templates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.rythmengine.Rythm;
+import org.rythmengine.RythmEngine;
 import org.rythmengine.conf.RythmConfigurationKey;
 import org.rythmengine.extension.II18nMessageResolver;
 import org.rythmengine.extension.ISourceCodeEnhancer;
@@ -22,6 +23,7 @@ import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.di.Initializable;
+import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
@@ -60,7 +62,7 @@ import java.util.Map;
  * @since 2013/11
  */
 @Register
-public class RythmConfig implements Initializable {
+public class RythmConfig implements Lifecycle {
 
     public static final Log LOG = Log.get("rythm");
 
@@ -81,11 +83,11 @@ public class RythmConfig implements Initializable {
     @Part
     private Content content;
 
+
     @Override
-    public void initialize() throws Exception {
+    public void started() {
         Map<String, Object> config = Maps.newTreeMap();
-        // Keep rythm in dev-mode as we might want to be able to reload templates at runtime
-        config.put("rythm.engine.mode", "dev");
+        config.put("rythm.engine.mode", Sirius.isDev() ? "dev" : "prod");
         File tmpDir = new File(System.getProperty("java.io.tmpdir"), CallContext.getCurrent().getNodeName() + "_rythm");
         tmpDir.mkdirs();
         if (Sirius.isDev()) {
@@ -102,6 +104,21 @@ public class RythmConfig implements Initializable {
         config.put(RythmConfigurationKey.CODEGEN_SOURCE_CODE_ENHANCER.getKey(), new SiriusSourceCodeEnhancer());
         Rythm.init(config);
         resourceLoader.setEngine(Rythm.engine());
+    }
+
+    @Override
+    public void stopped() {
+        Rythm.shutdown();
+    }
+
+    @Override
+    public void awaitTermination() {
+        // Not supported by rythm...
+    }
+
+    @Override
+    public String getName() {
+        return "Rythm-Engine";
     }
 
     private class SiriusResourceLoader extends ResourceLoaderBase {
