@@ -15,14 +15,12 @@ import org.rythmengine.RythmEngine;
 import org.rythmengine.conf.RythmConfigurationKey;
 import org.rythmengine.extension.II18nMessageResolver;
 import org.rythmengine.extension.ISourceCodeEnhancer;
-import org.rythmengine.resource.ClasspathResourceLoader;
 import org.rythmengine.resource.ITemplateResource;
 import org.rythmengine.resource.ResourceLoaderBase;
 import org.rythmengine.template.ITemplate;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
-import sirius.kernel.di.Initializable;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.Part;
 import sirius.kernel.di.std.Parts;
@@ -33,9 +31,11 @@ import sirius.web.http.WebContext;
 import sirius.web.security.UserContext;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * Initializes and configures Rythm (http://www.rythmengine.org).
@@ -87,7 +87,8 @@ public class RythmConfig implements Lifecycle {
     @Override
     public void started() {
         Map<String, Object> config = Maps.newTreeMap();
-        config.put("rythm.engine.mode", Sirius.isDev() ? "dev" : "prod");
+        // We always put Rythm in dev mode to support dynamic reloading of templates...
+        config.put("rythm.engine.mode", "dev");
         File tmpDir = new File(System.getProperty("java.io.tmpdir"), CallContext.getCurrent().getNodeName() + "_rythm");
         tmpDir.mkdirs();
         if (Sirius.isDev()) {
@@ -99,15 +100,32 @@ public class RythmConfig implements Lifecycle {
         }
         config.put("rythm.home.tmp.dir", tmpDir.getAbsolutePath());
         config.put("rythm.i18n.message.resolver.impl", I18nResourceResolver.class.getName());
-        ClasspathResourceLoader resourceLoader = new ClasspathResourceLoader();
         config.put(RythmConfigurationKey.RESOURCE_LOADER_IMPLS.getKey(), new SiriusResourceLoader());
         config.put(RythmConfigurationKey.CODEGEN_SOURCE_CODE_ENHANCER.getKey(), new SiriusSourceCodeEnhancer());
         Rythm.init(config);
-        resourceLoader.setEngine(Rythm.engine());
     }
 
     @Override
     public void stopped() {
+        // This is a dirrty hack as the Rythm Engine starts a thread pool which is not shutdown on engine
+        // shutdown. As long as this bug is not fixed in rythm, we need to rely on this hack :-(
+        // Date: 18.09.14 / Rythm 1.0
+        try {
+            Field checkerField = RythmEngine.class.getDeclaredField("nonExistsTemplatesChecker");
+            checkerField.setAccessible(true);
+            Object checker = checkerField.get(Rythm.engine());
+            if (checker != null) {
+                Field schedulerField = checker.getClass().getDeclaredField("scheduler");
+                schedulerField.setAccessible(true);
+                ((ThreadPoolExecutor) schedulerField.get(checker)).shutdown();
+            }
+        } catch (Throwable e) {
+            LOG.WARN("Cannot halt ThreadPoolExecutor of NonExistsTemplatesChecker (Rythm): " + e.getMessage() + " (" + e
+                    .getClass()
+                    .getSimpleName() + ")");
+        }
+
+        // Shut down rest of rythm...
         Rythm.shutdown();
     }
 

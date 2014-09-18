@@ -19,7 +19,7 @@
     Otherwise, async-http-client falls back to the JDK implementation which screws up big.
     <exclude name="netty" conf="compile" />
 
-    As the netty guys had fun renaming each package and a bunch of classes anyway, there are not conflicts
+    As the netty guys had fun renaming each package and a bunch of classes anyway, there are no conflicts
     in doing so. Therefore DO NOT ENABLE the exclude above!
     async-http-client is used by Response#tunnel(...)
 -->

@@ -30,7 +30,9 @@ class URLTemplateResource extends TemplateResourceBase implements ITemplateResou
     private RateLimit checkLimit = RateLimit.timeInterval(10, TimeUnit.SECONDS);
 
     public URLTemplateResource(Resource resource) {
+        super();
         this.resource = resource;
+        this.isProdMode = false;
     }
 
     @Part
@@ -86,7 +88,7 @@ class URLTemplateResource extends TemplateResourceBase implements ITemplateResou
 
     @Override
     protected Long userCheckInterval() {
-        return Long.valueOf(1000 * 5);
+        return Long.valueOf(1000 * 10);
     }
 
     @Override
