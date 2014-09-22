@@ -40,13 +40,17 @@ import javax.mail.internet.MimeMultipart;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 
+/**
+ * Used to send mails using predefined templates.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/09
+ */
 @Register(classes = {MailService.class})
 public class MailService {
 
     public static final String X_BOUNCETOKEN = "X-Bouncetoken";
-
     protected static final Log MAIL = Log.get("mail");
-
     private static final String X_MAILER = "X-Mailer";
     private static final String MIXED = "mixed";
     private static final String TEXT_HTML_CHARSET_UTF_8 = "text/html; charset=\"UTF-8\"";
@@ -65,6 +69,7 @@ public class MailService {
     private static final String MAIL_SMTP_CONNECTIONTIMEOUT = "mail.smtp.connectiontimeout";
     private static final String MAIL_SMTP_TIMEOUT = "mail.smtp.timeout";
     private static final String MAIL_SMTP_WRITETIMEOUT = "mail.smtp.writetimeout";
+
     /*
      * Contains the default timeout used for all socket operations and is set to 60s (=60000ms)
      */
@@ -91,10 +96,14 @@ public class MailService {
     @Part
     private Content content;
 
-
     @Parts(MailLog.class)
     private Collection<MailLog> logs;
 
+    /**
+     * Creates a new builder which is used to specify the mail to send.
+     *
+     * @return a new builder used to create an email.
+     */
     public MailSender createEmail() {
         return new MailSender();
     }
@@ -215,6 +224,9 @@ public class MailService {
         return content;
     }
 
+    /**
+     * Implements the builder pattern to specify the mail to send.
+     */
     public class MailSender {
 
         private String senderEmail;
@@ -231,6 +243,12 @@ public class MailService {
         private String bounceToken;
         private String lang;
 
+        /**
+         * Sets the language used to perform {@link sirius.kernel.nls.NLS} lookups when rendering templates.
+         *
+         * @param langs an array of languages. The first non empty value is used.
+         * @return the builder itself
+         */
         public MailSender setLang(String... langs) {
             if (langs == null) {
                 return this;
@@ -244,57 +262,157 @@ public class MailService {
             return this;
         }
 
+        /**
+         * Sets the email address used as sender of the email.
+         *
+         * @param senderEmail the address used as sender of the email.
+         * @return the builder itself
+         */
         public MailSender fromEmail(String senderEmail) {
             this.senderEmail = senderEmail;
             return this;
         }
 
+        /**
+         * Sets the name used as sender of the mail.
+         *
+         * @param senderName the senders name of the email
+         * @return the builder itself
+         */
         public MailSender fromName(String senderName) {
             this.senderName = senderName;
             return this;
         }
 
+        /**
+         * Specifies the email address to send the mail to.
+         *
+         * @param receiverEmail the target address of the email
+         * @return the builder itself
+         */
         public MailSender toEmail(String receiverEmail) {
             this.receiverEmail = receiverEmail;
             return this;
         }
 
+        /**
+         * Specifies the name of the receiver.
+         *
+         * @param receiverName the name of the receiver
+         * @return the builder itself
+         */
         public MailSender toName(String receiverName) {
             this.receiverName = receiverName;
             return this;
         }
 
+        /**
+         * Specifies the subject line of the mail.
+         *
+         * @param subject the subject line to use.
+         * @return the builder itself
+         */
         public MailSender subject(String subject) {
             this.subject = subject;
             return this;
         }
 
+        /**
+         * Specifies the mail template to use.
+         * <p>
+         * The template is used to fill the subject like as well as the text and HTML part. The <b>mailExtension</b>
+         * named here has to be defined in the system config in the mails/template section:
+         * <code>
+         * <pre>
+         * mail {
+         *  templates {
+         *      my-template {
+         *          subject = "Velocity expression to describe the subject"
+         *          text = "mail/path-to-the-text-template.vm"
+         *          # optional
+         *          html = "mail/path-to-the-html-template.vm"
+         *          # optional
+         *          attachments {
+         *              test-pdf {
+         *                  template = "mail/test.pdf.vm"
+         *                  # optional - evaluated by velocity...
+         *                  fileName = "test.pdf"
+         *                  # optional
+         *                  encoding = "UTF-8"
+         *              }
+         *          }
+         *      }
+         *  }
+         * }
+         * </pre>
+         * </code>
+         * </p>
+         * <p>
+         * The given subject line is evaluates by velocity and my therefore either reference variables or use
+         * macros like #nls('nls-key'). The given <b>context</b> can be used to pass variables to the templates.
+         * </p>
+         *
+         * @param mailExtension the name of the mail extension to use
+         * @param context       the context used to pass in variables used by the templates
+         * @return the builder itself
+         */
         public MailSender useMailTemplate(String mailExtension, @Nonnull Context context) {
             this.mailExtension = mailExtension;
             this.context = context;
             return this;
         }
 
+        /**
+         * Determines whether the HTML part should be included in the email or not. Some email clients have trouble
+         * rendering HTML therefore it can be suppressed so that only text emails are sent.
+         *
+         * @param includeHTMLPart the flag indicating whether the HTML part should be included (default) or not.
+         * @return the builder itself
+         */
         public MailSender includeHTMLPart(boolean includeHTMLPart) {
             this.includeHTMLPart = includeHTMLPart;
             return this;
         }
 
+        /**
+         * Sets the text content of the email.
+         *
+         * @param text the text content of the email
+         * @return the builder itself
+         */
         public MailSender textContent(String text) {
             this.text = text;
             return this;
         }
 
+        /**
+         * Sets the HTML content of the email.
+         *
+         * @param html the HTML content of the email
+         * @return the builder itself
+         */
         public MailSender htmlContent(String html) {
             this.html = html;
             return this;
         }
 
+        /**
+         * Adds an attachment to the email.
+         *
+         * @param attachment the attachment to add to the email
+         * @return the builder itself
+         */
         public MailSender addAttachment(DataSource attachment) {
             attachments.add(attachment);
             return this;
         }
 
+        /**
+         * Adds an array of attachments to the email.
+         *
+         * @param attachment the attachments to add
+         * @return the builder itself
+         */
         public MailSender addAttachments(DataSource... attachment) {
             if (attachment != null) {
                 attachments.addAll(Arrays.asList(attachment));
@@ -302,6 +420,12 @@ public class MailService {
             return this;
         }
 
+        /**
+         * Adds a list of attachments to the email.
+         *
+         * @param attachments the attachments to add
+         * @return the builder itself
+         */
         public MailSender addAttachments(List<DataSource> attachments) {
             if (attachments != null) {
                 this.attachments.addAll(attachments);
@@ -309,11 +433,27 @@ public class MailService {
             return this;
         }
 
+        /**
+         * Sets a bounce token.
+         * <p>This bounce toke is hopefully included in a bounce email (generated if a mail cannot be delivered).
+         * This permits better bounce handling.</p>
+         *
+         * @param token the token to identify the mail by a bounde handler.
+         * @return the builder itself
+         */
         public MailSender setBounceToken(String token) {
             this.bounceToken = token;
             return this;
         }
 
+        /**
+         * Sends the mail using the given settings.
+         * <p>
+         * Once all settings are validated, the mail is send in a separate thread so this method will
+         * return rather quickly. Note that a {@link sirius.kernel.health.HandledException} is thrown in case
+         * of invalid settings (bad mail address etc.).
+         * </p>
+         */
         public void send() {
             SMTPConfiguration config = new DefaultSMTPConfig();
             String tmpLang = NLS.getCurrentLang();
@@ -542,8 +682,7 @@ public class MailService {
                             msg.setSubject(mail.subject);
                             msg.setRecipients(Message.RecipientType.TO,
                                               new InternetAddress[]{new InternetAddress(mail.receiverEmail,
-                                                                                        mail.receiverName)}
-                            );
+                                                                                        mail.receiverName)});
                             if (Strings.isFilled(mail.senderEmail)) {
                                 if (config.isUseSenderAndEnvelopeFrom()) {
                                     msg.setSender(new InternetAddress(technicalSender, technicalSenderName));
@@ -638,7 +777,7 @@ public class MailService {
         }
     }
 
-    public Transport getSMTPTransport(Session session, SMTPConfiguration config) {
+    protected Transport getSMTPTransport(Session session, SMTPConfiguration config) {
         try {
             Transport transport = session.getTransport(SMTP);
             transport.connect(config.getMailHost(), config.getMailUser(), null);

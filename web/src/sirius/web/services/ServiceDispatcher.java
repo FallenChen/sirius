@@ -76,64 +76,58 @@ public class ServiceDispatcher implements WebDispatcher {
         // Cut /service/
         final String subpath = uri.substring(9);
         Async.executor("web-services")
-             .fork(new Runnable() {
-                 @Override
-                 public void run() {
-                     ServiceCall call = null;
-                     Tuple<String, String> callPath = Strings.split(subpath, "/");
-                     String type = callPath.getFirst();
-                     String service = callPath.getSecond();
-                     if ("xml".equals(type)) {
-                         call = new XMLServiceCall(ctx);
-                     } else if ("json".equals(type)) {
-                         call = new JSONServiceCall(ctx);
-                     } else {
-                         if (Strings.isFilled(service)) {
-                             service = type + "/" + service;
-                         } else {
-                             service = type;
-                         }
-                         call = new RawServiceCall(ctx);
-                     }
-
-                     if (call == null) {
-                         ctx.respondWith()
-                            .error(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
-                                   Exceptions.createHandled()
-                                             .withSystemErrorMessage(
-                                                     "Unknown or unsupported type: %s. Use 'xml' or 'json'",
-                                                     type)
-                                             .handle()
-                            );
-                         return;
-                     }
-
-                     StructuredService serv = gc.getPart(service, StructuredService.class);
-                     if (serv == null) {
-                         call.handle(null,
-                                     Exceptions.createHandled()
-                                               .withSystemErrorMessage(
-                                                       "Unknown service: %s. Try /services for a complete list of available services.",
-                                                       service)
-                                               .handle()
-                         );
-                     } else {
-                         for (String p : Permissions.computePermissionsFromAnnotations(serv.getClass())) {
-                             if (!UserContext.getCurrentUser().hasPermission(p)) {
-                                 ctx.respondWith().error(HttpResponseStatus.UNAUTHORIZED, "Missing permission: " + p);
-                                 return;
-                             }
-                         }
-                         call.invoke(serv);
-                     }
-                 }
-
-             })
+             .fork(() -> performServiceCall(ctx, subpath))
              .dropOnOverload(() -> ctx.respondWith()
                                       .error(HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                              "Request dropped - System overload!"))
              .execute();
         return true;
+    }
+
+    private void performServiceCall(WebContext ctx, String subpath) {
+        ServiceCall call = null;
+        Tuple<String, String> callPath = Strings.split(subpath, "/");
+        String type = callPath.getFirst();
+        String service = callPath.getSecond();
+        if ("xml".equals(type)) {
+            call = new XMLServiceCall(ctx);
+        } else if ("json".equals(type)) {
+            call = new JSONServiceCall(ctx);
+        } else {
+            if (Strings.isFilled(service)) {
+                service = type + "/" + service;
+            } else {
+                service = type;
+            }
+            call = new RawServiceCall(ctx);
+        }
+
+        if (call == null) {
+            ctx.respondWith()
+               .error(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
+                      Exceptions.createHandled()
+                                .withSystemErrorMessage("Unknown or unsupported type: %s. Use 'xml' or 'json'", type)
+                                .handle());
+            return;
+        }
+
+        StructuredService serv = gc.getPart(service, StructuredService.class);
+        if (serv == null) {
+            call.handle(null,
+                        Exceptions.createHandled()
+                                  .withSystemErrorMessage(
+                                          "Unknown service: %s. Try /services for a complete list of available services.",
+                                          service)
+                                  .handle());
+        } else {
+            for (String p : Permissions.computePermissionsFromAnnotations(serv.getClass())) {
+                if (!UserContext.getCurrentUser().hasPermission(p)) {
+                    ctx.respondWith().error(HttpResponseStatus.UNAUTHORIZED, "Missing permission: " + p);
+                    return;
+                }
+            }
+            call.invoke(serv);
+        }
     }
 
     private List<ComparableTuple<String, Collection<StructuredService>>> collectServiceInfo() {
