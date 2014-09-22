@@ -395,10 +395,6 @@ class WebServerHandler extends ChannelDuplexHandler implements ActiveHTTPConnect
      */
     private void processContent(ChannelHandlerContext ctx, HttpContent chunk) {
         try {
-            if (chunk.content().readableBytes() == 0) {
-                return;
-            }
-
             if (currentContext.getPostDecoder() != null) {
                 if (WebServer.LOG.isFINE()) {
                     WebServer.LOG.FINE("POST-CHUNK: " + currentContext.getRequestedURI() + " - " + chunk.content()
