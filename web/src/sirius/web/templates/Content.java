@@ -215,7 +215,12 @@ public class Content implements Initializable {
                     if (Strings.isFilled(handlerType)) {
                         ContentHandler handler = ctx.findPart(handlerType, ContentHandler.class);
                         if (!handler.generate(this, out)) {
-
+                            throw Exceptions.handle()
+                                            .to(LOG)
+                                            .withSystemErrorMessage("Error using '%s' to generate template '%s'.",
+                                                                    handlerType,
+                                                                    Strings.isEmpty(templateName) ? templateCode : templateName)
+                                            .handle();
                         }
                     }
                     for (ContentHandler handler : handlers) {

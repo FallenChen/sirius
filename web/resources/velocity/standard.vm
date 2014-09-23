@@ -3,3 +3,6 @@
 
 ## Converts the given value to a string representation matching the users locale settings.
 #macro(string $key)${nls.toUserString($key)}#end
+
+## Converts new lines to <br> tags
+#macro(nl2br $content)${helper.nl2br($content)}#end
