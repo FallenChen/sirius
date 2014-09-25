@@ -12,6 +12,7 @@ import sirius.kernel.Sirius
 import sirius.kernel.commons.ValueHolder
 import sirius.kernel.health.Counter
 import sirius.kernel.health.Exceptions
+import sirius.testtools.SiriusBaseSpecification
 import spock.lang.Specification
 
 import javax.xml.xpath.XPathExpressionException
@@ -19,7 +20,7 @@ import javax.xml.xpath.XPathExpressionException
 /**
  * Created by aha on 11.08.14.
  */
-class XMLReaderSpec extends Specification {
+class XMLReaderSpec extends SiriusBaseSpecification {
 
     def "XMLReader extracts XPATH expression"() {
         given:

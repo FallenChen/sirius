@@ -10,6 +10,7 @@ package sirius.kernel.nls
 
 import sirius.kernel.Sirius
 import sirius.kernel.async.CallContext
+import sirius.testtools.SiriusBaseSpecification
 import spock.lang.Specification
 
 import java.time.LocalDate
@@ -19,7 +20,7 @@ import java.time.LocalTime
 /**
  * Created by aha on 11.08.14.
  */
-class NLSSpec extends Specification {
+class NLSSpec extends SiriusBaseSpecification {
 
     def "toMachineString() formats a LocalDate as date without time"() {
         given:

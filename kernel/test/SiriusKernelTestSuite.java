@@ -11,7 +11,7 @@ import com.googlecode.junittoolbox.WildcardPatternSuite;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
-import sirius.kernel.Sirius;
+import sirius.testtools.SiriusBaseSpecification;
 
 /**
  * Created by mgu on 08.08.14.
@@ -20,16 +20,17 @@ import sirius.kernel.Sirius;
 @SuiteClasses({"**/*Test.class", "**/*Spec.class"})
 public class SiriusKernelTestSuite {
 
+    public static final String SUITE_NAME = "Sirius Kernel";
+
     @BeforeClass
     public static void setUp() {
-        System.out.println("Sirius Kernel Test Suite started");
-        Sirius.initializeTestEnvironment();
+        SiriusBaseSpecification.setupSiriusTestEnvironment(SUITE_NAME);
     }
 
 
     @AfterClass
     public static void tearDown() {
-        System.out.println("Sirius Kernel Test Suite finished");
+        SiriusBaseSpecification.cleanupSiriusTestEnvironment(SUITE_NAME);
     }
 
 
