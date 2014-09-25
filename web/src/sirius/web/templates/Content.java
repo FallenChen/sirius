@@ -231,6 +231,11 @@ public class Content implements Initializable {
                             }
                         }
                     }
+                    throw Exceptions.handle()
+                                    .to(LOG)
+                                    .withSystemErrorMessage("No handler was able to render the given template: %s",
+                                                            Strings.isEmpty(templateName) ? templateCode : templateName)
+                                    .handle();
                 } catch (HandledException e) {
                     throw e;
                 } catch (Throwable e) {

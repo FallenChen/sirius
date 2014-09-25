@@ -30,14 +30,26 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by aha on 23.09.14.
+ * Created by {@link TestRequest#execute()} or {@link TestRequest#executeAndBlock()} and represents a response
+ * generated for a test request.
+ * <p>
+ * Provides additional information like {@link #getStatus()} or {@link #getType()} to verify what kind of
+ * response was created.
+ * </p>
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/09
  */
 public class TestResponse extends Response {
+
     protected TestResponse(TestRequest testRequest) {
         super(testRequest);
         responsePromise = testRequest.testResponsePromise;
     }
 
+    /**
+     * Represents the types of result which can be captured.
+     */
     public static enum ResponseType {
         STATUS, TEMPORARY_REDIRECT, PERMANENT_REDIRECT, FILE, RESOURCE, ERROR, DIRECT, TEMPLATE, TUNNEL, STREAM;
     }
@@ -55,38 +67,84 @@ public class TestResponse extends Response {
     private JSONObject jsonContent;
     private XMLStructuredInput xmlContent;
 
+    /**
+     * Returns the HTTP status set by the application.
+     *
+     * @return the http status of the response
+     */
     public HttpResponseStatus getStatus() {
         return status;
     }
 
+    /**
+     * Returns the type of content created into the response
+     *
+     * @return the type of the response
+     */
     public ResponseType getType() {
         return type;
     }
 
+    /**
+     * Contains the name of the Rythm template used to generate the response
+     *
+     * @return the name of the template used to generate the response
+     */
     public String getTemplateName() {
         return templateName;
     }
 
+    /**
+     * Returns the template paramters passed to Rythm when rendering the template
+     *
+     * @return the template parameters used to render the response
+     */
     public List<Object> getTemplateParameters() {
         return templateParameters;
     }
 
+    /**
+     * Returns the value of the parameter at the given zero based index.
+     *
+     * @param index the zero based index of the parameter to fetch
+     * @return the value of the parameter or an empty value if fewer parameters where used
+     */
     public Value getTemplateParameter(int index) {
         return Value.indexOf(index, templateParameters);
     }
 
+    /**
+     * Returns the target URL if the response is a redirect.
+     *
+     * @return the target url of the redirect
+     */
     public String getRedirectUrl() {
         return redirectUrl;
     }
 
+    /**
+     * Returns the file which was sent as response for the request.
+     *
+     * @return the file when was sent as response
+     */
     public File getFile() {
         return file;
     }
 
+    /**
+     * Returns the error message which was reported by the application. (Only valid for responses of type ERROR).
+     *
+     * @return the error message
+     */
     public String getErrorMessage() {
         return errorMessage;
     }
 
+    /**
+     * Returns the target URL which would be tunnelled through if this response is a TUNNEL response.
+     *
+     * @return the target URL which is tunnelled through the server
+     */
     public String getTunnelTargetUrl() {
         return tunnelTargetUrl;
     }
@@ -174,6 +232,7 @@ public class TestResponse extends Response {
         type = ResponseType.ERROR;
         this.status = status;
         this.errorMessage = message;
+        responsePromise.success(this);
     }
 
     @Override

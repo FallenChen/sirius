@@ -507,6 +507,9 @@ public class Index {
             // other stopping lifecycles access until the very end...
             ready = false;
             client.close();
+            if (inMemoryNode != null) {
+                inMemoryNode.close();
+            }
         }
 
         @Override

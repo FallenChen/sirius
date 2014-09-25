@@ -234,14 +234,14 @@ public class NLS {
      * @param property the key for which a translation is requested
      * @param lang     a two-letter language code for which the translation is requested
      * @return a translated text in the requested language (or in the default language if no translation for the given
-     * language was found). Returns <tt>null</tt> if no translation for this property exists at all.
+     * language was found). Returns an empty optional if no translation for this property exists at all.
      */
-    public static String getIfExists(String property, String lang) {
+    public static Optional<String> getIfExists(String property, String lang) {
         Translation translation = blubb.get(property, null, false);
         if (translation == null) {
-            return null;
+            return Optional.empty();
         }
-        return translation.translate(lang);
+        return Optional.of(translation.translate(lang));
     }
 
     /**
