@@ -13,9 +13,6 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import sirius.testtools.SiriusBaseSpecification;
 
-/**
- * Created by mgu on 08.08.14.
- */
 @RunWith(WildcardPatternSuite.class)
 @SuiteClasses({"**/*Test.class", "**/*Spec.class"})
 public class SiriusKernelTestSuite {
