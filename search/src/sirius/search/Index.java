@@ -8,7 +8,12 @@
 
 package sirius.search;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import com.google.common.io.CharStreams;
 import com.typesafe.config.Config;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
@@ -26,6 +31,7 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.engine.VersionConflictEngineException;
+import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 import sirius.kernel.async.Async;
 import sirius.kernel.async.CallContext;
@@ -42,9 +48,19 @@ import sirius.kernel.health.*;
 import sirius.web.health.MetricProvider;
 import sirius.web.health.MetricState;
 import sirius.web.health.MetricsCollector;
+import sirius.web.templates.Content;
+import sirius.web.templates.Resource;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -89,6 +105,10 @@ public class Index {
      * Contains the ElasticSearch client
      */
     private static Client client;
+    /**
+     * Contains the ES-Node if started using {@link #generateEmptyInMemoryInstance()}
+     */
+    private static Node inMemoryNode;
 
     /**
      * To support multiple installations in parallel, an indexPrefix can be supplied, which is added to each index
@@ -437,8 +457,13 @@ public class Index {
                 return;
             }
 
+            boolean updateSchema = config.getBoolean("index.updateSchema");
+
             if ("embedded".equalsIgnoreCase(config.getString("index.type"))) {
-                client = NodeBuilder.nodeBuilder().client(true).data(true).local(true).build().client();
+                client = NodeBuilder.nodeBuilder().data(true).local(true).build().client();
+            } else if ("in-memory".equalsIgnoreCase(config.getString("index.type"))) {
+                generateEmptyInMemoryInstance();
+                updateSchema = true;
             } else {
                 Settings settings = ImmutableSettings.settingsBuilder()
                                                      .put("cluster.name", config.getString("index.cluster"))
@@ -457,7 +482,7 @@ public class Index {
             schema.load();
 
             // Send mappings to ES
-            if (config.getBoolean("index.updateSchema")) {
+            if (updateSchema) {
                 for (String msg : schema.createMappings()) {
                     LOG.INFO(msg);
                 }
@@ -1145,6 +1170,65 @@ public class Index {
      */
     public static void setIndexPrefix(String indexPrefix) {
         Index.indexPrefix = indexPrefix;
+    }
+
+    public static void generateEmptyInMemoryInstance() {
+        if (inMemoryNode != null) {
+            ready = false;
+            client.close();
+            inMemoryNode.close();
+        }
+
+        File tmpDir = new File(System.getProperty("java.io.tmpdir"),
+                               CallContext.getCurrent().getNodeName() + "_in_memory_es");
+        tmpDir.mkdirs();
+
+        Settings settings = ImmutableSettings.settingsBuilder()
+                                             .put("node.http.enabled", false)
+                                             .put("path.data", tmpDir.getAbsolutePath())
+                                             .put("index.gateway.type", "none")
+                                             .put("gateway.type", "none")
+                                             .put("index.store.type", "memory")
+                                             .put("index.number_of_shards", 1)
+                                             .put("index.number_of_replicas", 0)
+                                             .build();
+        inMemoryNode = NodeBuilder.nodeBuilder().data(true).settings(settings).local(true).node();
+        client = inMemoryNode.client();
+        if (schema != null) {
+            for (String msg : schema.createMappings()) {
+                LOG.FINE(msg);
+            }
+        }
+        ready = true;
+    }
+
+    @Part
+    private static Content content;
+
+    @SuppressWarnings("unchecked")
+    public static void loadDataset(String dataset) {
+        try {
+            Resource res = content.resolve(dataset)
+                                  .orElseThrow(() -> new IllegalArgumentException("Unknown dataset: " + dataset));
+            String contents = CharStreams.toString(new InputStreamReader(res.getUrl().openStream(), Charsets.UTF_8));
+            JSONArray json = JSON.parseArray(contents);
+            for (JSONObject obj : (List<JSONObject>) (Object) json) {
+                try {
+                    String type = obj.getString("_type");
+                    Class<? extends Entity> entityClass = Index.getType(type);
+                    EntityDescriptor descriptor = getDescriptor(entityClass);
+                    Entity entity = entityClass.newInstance();
+                    entity.setId(obj.getString("_id"));
+                    descriptor.readSource(entity, obj);
+                    update(entity);
+                } catch (Throwable e) {
+                    throw new IllegalArgumentException("Cannot load: " + obj, e);
+                }
+            }
+            blockThreadForUpdate();
+        } catch (IOException e) {
+            throw Exceptions.handle(e);
+        }
     }
 
 }

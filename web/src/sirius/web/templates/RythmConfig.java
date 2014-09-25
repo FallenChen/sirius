@@ -190,7 +190,10 @@ public class RythmConfig implements Lifecycle {
         @Override
         public void setRenderArgs(final ITemplate template) {
             CallContext ctx = CallContext.getCurrent();
-            String url = ((URLTemplateResource) template.__getTemplateClass(true).templateResource).getUrl();
+            String url = template.__getName();
+            if (template instanceof URLTemplateResource) {
+                url = ((URLTemplateResource) template.__getTemplateClass(true).templateResource).getUrl();
+            }
             ctx.addToMDC("template", url);
             WebContext wc = ctx.get(WebContext.class);
 

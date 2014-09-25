@@ -103,12 +103,22 @@ public class Sirius {
     }
 
     /**
+     * Determines if the framework was started as test run (JUNIT or the like).
+     *
+     * @return <tt>true</tt> if the framework was started as test ({@link #initializeTestEnvironment()},
+     * <tt>false</tt> otherwise
+     */
+    public static boolean isStartedAsTest() {
+        return startedAsTest;
+    }
+
+    /**
      * Determines if the framework is running in development or in production mode.
      *
      * @return <code>true</code> is the framework runs in production mode, false otherwise.
      */
     public static boolean isProd() {
-        return !dev;
+        return !isDev();
     }
 
     /*
@@ -216,12 +226,10 @@ public class Sirius {
 
         // Load component configurations
         classpath.find(Pattern.compile("component-(.*?)\\.conf")).forEach(value -> {
-                                                                              if (!"test".equals(value.group(1))) {
-                                                                                  config = config.withFallback(
-                                                                                          ConfigFactory.load(loader,
-                                                                                                             value.group()));
-                                                                              }
-                                                                          });
+            if (!"test".equals(value.group(1))) {
+                config = config.withFallback(ConfigFactory.load(loader, value.group()));
+            }
+        });
 
         // Setup log-system based on configuration
         setupLogLevels();
@@ -527,7 +535,7 @@ public class Sirius {
         }
         if (startedAsTest && Sirius.class.getResource("/test.conf") != null) {
             LOG.INFO("using test.conf from classpath...");
-            config = ConfigFactory.parseFile(new File("test.conf")).withFallback(config);
+            config = ConfigFactory.load(loader, "test.conf").withFallback(config);
         } else if (startedAsTest) {
             LOG.INFO("test.conf not present work directory");
         }

@@ -7,15 +7,8 @@
  */
 
 
-
-
-
-
-
 package sirius.web.controller
 
-import sirius.kernel.cache.ValueComputer
-import sirius.kernel.commons.Value
 import spock.lang.Specification
 
 /**
@@ -25,7 +18,7 @@ class PageSpec extends Specification {
 
     Page page = new Page()
 
-    def "createQueryStringForConfigurableStart() returns 'start=' if no filters are set" () {
+    def "createQueryStringForConfigurableStart() returns 'start=' if no filters are set"() {
         when:
         def result = page.createQueryStringForConfigurableStart()
         then:
@@ -35,13 +28,13 @@ class PageSpec extends Specification {
 
     def """createQueryStringForConfigurableStart() returns a query which
              - contains all specified parameters and
-             - ends with 'start='""" () {
+             - ends with 'start='"""() {
         given:
         page.withQuery("QUERY").
                 withFactes([
-                facet("field1", "value1"),
-                facet("field2", "value2")
-        ])
+                        facet("field1", "value1"),
+                        facet("field2", "value2")
+                ])
         when:
         def result = page.createQueryStringForConfigurableStart()
         then:
@@ -51,7 +44,7 @@ class PageSpec extends Specification {
         result.endsWith("&start=")
     }
 
-    static Facet facet(String field, String value){
+    static Facet facet(String field, String value) {
         return new Facet("", field, value, null)
     }
 

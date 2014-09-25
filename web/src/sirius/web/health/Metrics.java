@@ -14,6 +14,7 @@ import sirius.kernel.Sirius;
 import sirius.kernel.commons.DataCollector;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.Register;
+import sirius.kernel.health.Exceptions;
 import sirius.kernel.timer.EveryMinute;
 
 import java.util.Collection;
@@ -75,31 +76,35 @@ public class Metrics implements EveryMinute {
         synchronized (this) {
             final DataCollector<Metric> collector = DataCollector.create();
             for (MetricProvider provider : providers) {
-                provider.gather(new MetricsCollector() {
+                try {
+                    provider.gather(new MetricsCollector() {
 
-                    @Override
-                    public void metric(String title, double value, String unit, MetricState state) {
-                        collector.add(new Metric(title, value, state, unit));
-                    }
-
-                    @Override
-                    public void metric(String limitType, String title, double value, String unit) {
-                        collector.add(new Metric(title, value, computeState(limitType, value), unit));
-                    }
-
-                    @Override
-                    public void differentialMetric(String id,
-                                                   String limitType,
-                                                   String title,
-                                                   double currentValue,
-                                                   String unit) {
-                        Double lastValue = differentials.get(id);
-                        if (lastValue != null) {
-                            metric(limitType, title, currentValue - lastValue, unit);
+                        @Override
+                        public void metric(String title, double value, String unit, MetricState state) {
+                            collector.add(new Metric(title, value, state, unit));
                         }
-                        differentials.put(id, currentValue);
-                    }
-                });
+
+                        @Override
+                        public void metric(String limitType, String title, double value, String unit) {
+                            collector.add(new Metric(title, value, computeState(limitType, value), unit));
+                        }
+
+                        @Override
+                        public void differentialMetric(String id,
+                                                       String limitType,
+                                                       String title,
+                                                       double currentValue,
+                                                       String unit) {
+                            Double lastValue = differentials.get(id);
+                            if (lastValue != null) {
+                                metric(limitType, title, currentValue - lastValue, unit);
+                            }
+                            differentials.put(id, currentValue);
+                        }
+                    });
+                } catch (Exception e) {
+                    Exceptions.handle(e);
+                }
             }
             List<Metric> metricsList = collector.getData();
             Collections.sort(metricsList);

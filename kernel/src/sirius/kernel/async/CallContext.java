@@ -266,6 +266,20 @@ public class CallContext {
     }
 
     /**
+     * Installs the given sub context.
+     * <p>
+     * This should only be used if required (e.g. in test environments to replace/mock objects). Otherwise a
+     * call to {@link #get(Class)} will initialize the requested sub context.
+     * </p>
+     *
+     * @param contextType the type of the context to set
+     * @param instance    the instance to set
+     */
+    public <C> void set(Class<C> contextType, C instance) {
+        subContext.put(contextType, instance);
+    }
+
+    /**
      * Used to apply the MDC to the context used by Log4J. This is automatically called by
      * {@link sirius.kernel.health.Log}.
      */

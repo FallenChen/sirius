@@ -64,6 +64,51 @@ public class UserContext {
         return context.getPart(ext.get("manager").asString(), UserManagerFactory.class).createManager(scope, ext);
     }
 
+    /**
+     * Retrieves the current <b>UserContext</b> from the {@link sirius.kernel.async.CallContext}.
+     * @return the current user context.
+     */
+    public static UserContext get() {
+        return CallContext.getCurrent().get(UserContext.class);
+    }
+
+    public static UserInfo getCurrentUser() {
+        return get().getUser();
+    }
+
+
+    public static ScopeInfo getCurrentScope() {
+        return CallContext.getCurrent().get(UserContext.class).getScope();
+    }
+
+    /**
+     * Handles the given exception by passing it to {@link sirius.kernel.health.Exceptions} and by creating an
+     * appropriate message for the user.
+     *
+     * @param e the exception to handle
+     */
+    public static void handle(Throwable e) {
+        message(Message.error(e));
+    }
+
+    /**
+     * Adds a message to the current UserContext.
+     *
+     * @param msg the message to add
+     */
+    public static void message(Message msg) {
+        CallContext.getCurrent().get(UserContext.class).addMessage(msg);
+    }
+
+    /**
+     * Adds a field error to the current UserContext.
+     *
+     * @param field the field for which an error occurred
+     * @param value the value which was rejected
+     */
+    public static void setFieldError(String field, Object value) {
+        CallContext.getCurrent().get(UserContext.class).addFieldError(field, NLS.toUserString(value));
+    }
 
     /*
      * Loads the current user and scope from the given web context.
@@ -237,44 +282,6 @@ public class UserContext {
             bindToRequest(CallContext.getCurrent().get(WebContext.class));
         }
         return currentScope;
-    }
-
-    public static UserInfo getCurrentUser() {
-        return CallContext.getCurrent().get(UserContext.class).getUser();
-    }
-
-
-    public static ScopeInfo getCurrentScope() {
-        return CallContext.getCurrent().get(UserContext.class).getScope();
-    }
-
-    /**
-     * Handles the given exception by passing it to {@link sirius.kernel.health.Exceptions} and by creating an
-     * appropriate message for the user.
-     *
-     * @param e the exception to handle
-     */
-    public static void handle(Throwable e) {
-        message(Message.error(e));
-    }
-
-    /**
-     * Adds a message to the current UserContext.
-     *
-     * @param msg the message to add
-     */
-    public static void message(Message msg) {
-        CallContext.getCurrent().get(UserContext.class).addMessage(msg);
-    }
-
-    /**
-     * Adds a field error to the current UserContext.
-     *
-     * @param field the field for which an error occurred
-     * @param value the value which was rejected
-     */
-    public static void setFieldError(String field, Object value) {
-        CallContext.getCurrent().get(UserContext.class).addFieldError(field, NLS.toUserString(value));
     }
 
 }

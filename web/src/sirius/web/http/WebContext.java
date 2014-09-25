@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -79,7 +80,7 @@ public class WebContext {
     /*
      * The underlying request created by netty
      */
-    private HttpRequest request;
+    protected HttpRequest request;
 
     /*
      * The effective request uri (without the query string)
@@ -99,12 +100,12 @@ public class WebContext {
     /*
      * Contains cookies which will be sent to the client
      */
-    private Map<String, Cookie> cookiesOut;
+    protected Map<String, Cookie> cookiesOut;
 
     /*
      * Stores the decoder which was used to process a POST or PUT request
      */
-    private HttpPostRequestDecoder postDecoder;
+    protected HttpPostRequestDecoder postDecoder;
 
     /*
      * A list of files to deleted once this call is handled
@@ -498,8 +499,9 @@ public class WebContext {
         if (Strings.isFilled(encodedSession)) {
             Tuple<String, String> sessionInfo = Strings.split(encodedSession, ":");
             if (Strings.areEqual(sessionInfo.getFirst(),
-                                 Hashing.sha512().hashString(sessionInfo.getSecond() + getSessionSecret()).toString()
-            )) {
+                                 Hashing.sha512()
+                                        .hashString(sessionInfo.getSecond() + getSessionSecret())
+                                        .toString())) {
                 QueryStringDecoder qsd = new QueryStringDecoder(encodedSession);
                 for (Map.Entry<String, List<String>> entry : qsd.parameters().entrySet()) {
                     session.put(entry.getKey(), Iterables.getFirst(entry.getValue(), null));
@@ -662,6 +664,13 @@ public class WebContext {
      */
     public InetAddress getRemoteIP() {
         if (remoteIp == null) {
+            if (ctx == null) {
+                try {
+                    return InetAddress.getByName("127.0.0.1");
+                } catch (UnknownHostException e) {
+                    throw Exceptions.handle(e);
+                }
+            }
             remoteIp = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress();
             if (!WebServer.getProxyIPs().isEmpty()) {
                 if (WebServer.getProxyIPs().accepts(remoteIp)) {
@@ -688,6 +697,9 @@ public class WebContext {
      */
     public boolean isTrusted() {
         if (trusted == null) {
+            if (ctx == null) {
+                return true;
+            }
             trusted = WebServer.getTrustedRanges()
                                .accepts(((InetSocketAddress) ctx.channel().remoteAddress()).getAddress());
         }
