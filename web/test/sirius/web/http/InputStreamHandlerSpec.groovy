@@ -15,9 +15,6 @@ import spock.lang.Unroll
 
 import java.nio.charset.Charset
 
-/**
- * Created by mgu on 22.08.14.
- */
 class InputStreamHandlerSpec extends Specification {
 
     public static final Charset UTF_8 = Charset.forName("UTF-8")

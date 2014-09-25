@@ -12,13 +12,14 @@ package sirius.web.health
 import io.netty.handler.codec.http.HttpResponseStatus
 import sirius.kernel.async.CallContext
 import sirius.kernel.di.Injector
+import sirius.testtools.SiriusBaseSpecification
 import sirius.web.http.TestRequest
 import sirius.web.http.TestResponse
 import sirius.web.security.UserContext
 import sirius.web.security.UserInfo
 import spock.lang.Specification
 
-class NodeInfoServiceSpec extends Specification {
+class NodeInfoServiceSpec extends SiriusBaseSpecification {
 
     def "/service/xml/system/node-info returns XML"() {
         when:

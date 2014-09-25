@@ -12,13 +12,14 @@ import io.netty.handler.codec.http.HttpResponseStatus
 import sirius.kernel.async.CallContext
 import sirius.kernel.commons.Value
 import sirius.kernel.di.Injector
+import sirius.testtools.SiriusBaseSpecification
 import sirius.web.http.TestRequest
 import sirius.web.http.TestResponse
 import sirius.web.security.UserContext
 import sirius.web.security.UserInfo
 import spock.lang.Specification
 
-class SystemControllerSpec extends Specification {
+class SystemControllerSpec extends SiriusBaseSpecification {
 
     def "/system/ok returns 200 OK"() {
         when:

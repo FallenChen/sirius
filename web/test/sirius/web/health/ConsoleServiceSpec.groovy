@@ -12,13 +12,14 @@ package sirius.web.health
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import sirius.kernel.async.CallContext
+import sirius.testtools.SiriusBaseSpecification
 import sirius.web.http.TestRequest
 import sirius.web.http.TestResponse
 import sirius.web.security.UserContext
 import sirius.web.security.UserInfo
 import spock.lang.Specification
 
-class ConsoleServiceSpec extends Specification {
+class ConsoleServiceSpec extends SiriusBaseSpecification {
 
     def "/service/xml/console returns XML for help"() {
         when:
