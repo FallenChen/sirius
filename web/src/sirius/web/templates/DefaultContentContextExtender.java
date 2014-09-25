@@ -32,6 +32,7 @@ public class DefaultContentContextExtender implements ContentContextExtender {
         context.put("nls", NLS.class);
         context.put("strings", Strings.class);
         context.put("log", Content.LOG);
+        context.put("helper", ContentHelper.INSTANCE);
 
         context.put("now", LocalDateTime.now());
         context.put("today", LocalDate.now());

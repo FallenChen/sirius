@@ -1032,6 +1032,10 @@ public class Response {
                             .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
                             .handle();
         }
+        sendTemplateContent(name, content);
+    }
+
+    protected void sendTemplateContent(String name, String content) {
         try {
             if (name.endsWith("html")) {
                 setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
@@ -1085,17 +1089,7 @@ public class Response {
                             .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
                             .handle();
         }
-        try {
-            setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/html; charset=UTF-8");
-            setDateAndCacheHeaders(System.currentTimeMillis(),
-                                   cacheSeconds == null || Sirius.isDev() ? 0 : cacheSeconds,
-                                   isPrivate);
-            ByteBuf channelBuffer = wrapUTF8String(content);
-            HttpResponse response = createFullResponse(HttpResponseStatus.OK, true, channelBuffer);
-            complete(commit(response));
-        } catch (Throwable e) {
-            internalServerError(e);
-        }
+        sendTemplateContent(name,content);
     }
 
     protected static final AsyncHttpClient ASYNC_CLIENT = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setAllowPoolingConnection(
