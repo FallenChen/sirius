@@ -25,6 +25,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -303,6 +304,26 @@ public class Babelfish {
             String baseName = m.group(1);
             String lang = m.group(2);
             importProperties(name, baseName, lang);
+        }
+    }
+
+    /**
+     * Throws an exception if any unknown translations where encountered so far.
+     * <p>
+     * This is called by {@link sirius.kernel.Sirius#stop()} if the framework was initialized as test
+     * environment. The idea is to break unit-tests if unknown translations are encountered.
+     * </p>
+     *
+     * @throws sirius.kernel.health.HandledException if unknown translations where detected.
+     */
+    public void reportMissingTranslations() {
+        String missing = translationMap.values()
+                                       .stream()
+                                       .filter(Translation::isAutocreated)
+                                       .map(Translation::getKey)
+                                       .collect(Collectors.joining(", "));
+        if (Strings.isFilled(missing)) {
+            throw Exceptions.handle().withSystemErrorMessage("Missing translations found: %s", missing).handle();
         }
     }
 
