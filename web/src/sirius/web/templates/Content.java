@@ -175,10 +175,12 @@ public class Content implements Initializable {
          * </p>
          *
          * @param templateCode the template code to evaluate
+         * @param handlerType  String reference for the handler to be used (f.e. {@link VelocityContentHandler.VM})
          * @return the generator itself for fluent API calls
          */
-        public Generator direct(String templateCode) {
+        public Generator direct(String templateCode, String handlerType) {
             this.templateCode = templateCode;
+            handler(handlerType);
             return this;
         }
 
@@ -222,10 +224,11 @@ public class Content implements Initializable {
                                                                     Strings.isEmpty(templateName) ? templateCode : templateName)
                                             .handle();
                         }
-                    }
-                    for (ContentHandler handler : handlers) {
-                        if (handler.generate(this, out)) {
-                            return;
+                    } else {
+                        for (ContentHandler handler : handlers) {
+                            if (handler.generate(this, out)) {
+                                return;
+                            }
                         }
                     }
                 } catch (HandledException e) {

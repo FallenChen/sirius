@@ -29,6 +29,7 @@ import sirius.kernel.health.Log;
 import sirius.kernel.nls.NLS;
 import sirius.web.http.MimeHelper;
 import sirius.web.templates.Content;
+import sirius.web.templates.VelocityContentHandler;
 
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
@@ -557,7 +558,10 @@ public class MailService {
             }
             context.put("template", mailExtension);
             try {
-                subject(content.generator().direct(ex.get("subject").asString()).applyContext(context).generate());
+                subject(content.generator()
+                               .direct(ex.get("subject").asString("$subject"), VelocityContentHandler.VM)
+                               .applyContext(context)
+                               .generate());
                 textContent(content.generator()
                                    .useTemplate(ex.get("text").asString())
                                    .applyContext(context)
@@ -598,7 +602,7 @@ public class MailService {
                         String fileName = attachmentConfig.getString("id");
                         if (attachmentConfig.hasPath("fileName")) {
                             fileName = content.generator()
-                                              .direct(attachmentConfig.getString("fileName"))
+                                              .direct(attachmentConfig.getString("fileName"), VelocityContentHandler.VM)
                                               .applyContext(context)
                                               .generate();
                         } else {
