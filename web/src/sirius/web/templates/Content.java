@@ -215,27 +215,10 @@ public class Content implements Initializable {
             try {
                 try {
                     if (Strings.isFilled(handlerType)) {
-                        ContentHandler handler = ctx.findPart(handlerType, ContentHandler.class);
-                        if (!handler.generate(this, out)) {
-                            throw Exceptions.handle()
-                                            .to(LOG)
-                                            .withSystemErrorMessage("Error using '%s' to generate template '%s'.",
-                                                                    handlerType,
-                                                                    Strings.isEmpty(templateName) ? templateCode : templateName)
-                                            .handle();
-                        }
+                        generateContentUsingHandler(out);
                     } else {
-                        for (ContentHandler handler : handlers) {
-                            if (handler.generate(this, out)) {
-                                return;
-                            }
-                        }
+                        findAndInvokeContentHandler(out);
                     }
-                    throw Exceptions.handle()
-                                    .to(LOG)
-                                    .withSystemErrorMessage("No handler was able to render the given template: %s",
-                                                            Strings.isEmpty(templateName) ? templateCode : templateName)
-                                    .handle();
                 } catch (HandledException e) {
                     throw e;
                 } catch (Throwable e) {
@@ -248,6 +231,31 @@ public class Content implements Initializable {
                 }
             } finally {
                 CallContext.getCurrent().removeFromMDC("content-generator-template");
+            }
+        }
+
+        private void findAndInvokeContentHandler(OutputStream out) throws Exception {
+            for (ContentHandler handler : handlers) {
+                if (handler.generate(this, out)) {
+                    return;
+                }
+            }
+            throw Exceptions.handle()
+                            .to(LOG)
+                            .withSystemErrorMessage("No handler was able to render the given template: %s",
+                                                    Strings.isEmpty(templateName) ? templateCode : templateName)
+                            .handle();
+        }
+
+        private void generateContentUsingHandler(OutputStream out) throws Exception {
+            ContentHandler handler = ctx.findPart(handlerType, ContentHandler.class);
+            if (!handler.generate(this, out)) {
+                throw Exceptions.handle()
+                                .to(LOG)
+                                .withSystemErrorMessage("Error using '%s' to generate template '%s'.",
+                                                        handlerType,
+                                                        Strings.isEmpty(templateName) ? templateCode : templateName)
+                                .handle();
             }
         }
 
