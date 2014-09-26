@@ -829,6 +829,9 @@ public class Value {
             return LocalDateTime.ofInstant(Instant.ofEpochMilli(((java.sql.Timestamp) data).getTime()),
                                            ZoneId.systemDefault());
         }
+        if (is(long.class) || is(Long.class)) {
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli((long) data), ZoneId.systemDefault());
+        }
 
         return defaultValue;
     }
