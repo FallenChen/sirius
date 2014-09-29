@@ -221,6 +221,9 @@
                 <compilerarg value="-Xlint:deprecation"/>
             </javac>
         </groovyc>
+        <copy todir="${test.dir}/${module.name}">
+            <fileset dir="${module.home}/test" excludes="**/*.java"/>
+        </copy>
     </target>
 
     <target name="test-module">
