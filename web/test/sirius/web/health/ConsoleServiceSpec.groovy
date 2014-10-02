@@ -7,26 +7,29 @@
  */
 
 
-
 package sirius.web.health
 
+import com.alibaba.fastjson.JSONObject
+import com.google.common.collect.Lists
 import io.netty.handler.codec.http.HttpResponseStatus
-import sirius.kernel.async.CallContext
 import sirius.testtools.SiriusBaseSpecification
 import sirius.web.http.TestRequest
-import sirius.web.http.TestResponse
 import sirius.web.security.UserContext
 import sirius.web.security.UserInfo
-import spock.lang.Specification
 
 class ConsoleServiceSpec extends SiriusBaseSpecification {
 
     def "/service/xml/console returns XML for help"() {
         when:
         UserContext.get().setCurrentUser(UserInfo.GOD_LIKE);
-        def result = TestRequest.GET("/service/xml/console").executeAndBlock();
+        JSONObject data = new JSONObject();
+        data.put("method", "help");
+        data.put("params", Lists.newArrayList());
+        def result = TestRequest.POST("/service/xml/system/console", data).executeAndBlock();
         then:
         result.getStatus() == HttpResponseStatus.OK;
+        result.xmlContent().queryString("error/code") == null
+        result.xmlContent().queryString("result") != null
     }
 
 }

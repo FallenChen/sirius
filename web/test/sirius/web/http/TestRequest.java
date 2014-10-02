@@ -8,19 +8,33 @@
 
 package sirius.web.http;
 
+import com.alibaba.fastjson.JSONObject;
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.EmptyByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.multipart.Attribute;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
+import io.netty.handler.codec.http.multipart.InterfaceHttpData;
+import io.netty.handler.codec.http.multipart.MemoryAttribute;
 import sirius.kernel.async.Barrier;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.async.Promise;
 import sirius.kernel.commons.Strings;
+import sirius.kernel.di.std.Part;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.nls.NLS;
+import sirius.web.templates.Content;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -82,6 +96,9 @@ public class TestRequest extends WebContext implements HttpRequest {
         return result;
     }
 
+    @Part
+    private static Content contentBean;
+
     /**
      * Creates a mock request simulating a PUT on the given uri while sending the given resource.
      * <p>
@@ -96,8 +113,26 @@ public class TestRequest extends WebContext implements HttpRequest {
         TestRequest result = new TestRequest();
         result.testMethod = HttpMethod.PUT;
         result.testUri = uri;
+        installContent(result, getResourceAsStream(resource));
         return result;
     }
+
+    protected static InputStream getResourceAsStream(String resource) {
+        return contentBean.resolve(resource)
+                          .orElseThrow(() -> new IllegalArgumentException("Unknown Resource: " + resource))
+                          .openStream();
+    }
+
+    private static void installContent(TestRequest request, InputStream inputStream) {
+        try {
+            Attribute body = new MemoryAttribute("body");
+            body.setContent(inputStream);
+            request.content = body;
+        } catch (IOException e) {
+            throw Exceptions.handle(e);
+        }
+    }
+
 
     /**
      * Creates a mock request simulating a PUT on the given uri while sending the given data.
@@ -110,6 +145,7 @@ public class TestRequest extends WebContext implements HttpRequest {
         TestRequest result = new TestRequest();
         result.testMethod = HttpMethod.PUT;
         result.testUri = uri;
+        installContent(result, resource);
         return result;
     }
 
@@ -127,6 +163,7 @@ public class TestRequest extends WebContext implements HttpRequest {
         TestRequest result = new TestRequest();
         result.testMethod = HttpMethod.POST;
         result.testUri = uri;
+        installContent(result, getResourceAsStream(resource));
         return result;
     }
 
@@ -141,6 +178,7 @@ public class TestRequest extends WebContext implements HttpRequest {
         TestRequest result = new TestRequest();
         result.testMethod = HttpMethod.POST;
         result.testUri = uri;
+        installContent(result, resource);
         return result;
     }
 
@@ -155,6 +193,32 @@ public class TestRequest extends WebContext implements HttpRequest {
         TestRequest result = new TestRequest();
         result.testMethod = HttpMethod.POST;
         result.testUri = uri;
+        MutableHttpPostRequestDecoder dec = new MutableHttpPostRequestDecoder(result);
+        for (Map.Entry<String, Object> entry : formData.entrySet()) {
+            try {
+                dec.addHttpData(new MemoryAttribute(entry.getKey(),
+                                                    entry.getValue() == null ? "" : entry.getValue().toString()));
+            } catch (IOException e) {
+                throw Exceptions.handle(e);
+            }
+        }
+        dec.offer(new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER));
+        result.postDecoder = dec;
+        return result;
+    }
+
+    /**
+     * Creates a mock request simulating a POST on the given uri and JSON data
+     *
+     * @param uri  the relative uri to call
+     * @param json the JSON data be included in the post request
+     * @return an instance used to further specify the request to send
+     */
+    public static TestRequest POST(String uri, JSONObject json) {
+        TestRequest result = new TestRequest();
+        result.testMethod = HttpMethod.POST;
+        result.testUri = uri;
+        installContent(result, new ByteArrayInputStream(json.toJSONString().getBytes(Charsets.UTF_8)));
         return result;
     }
 
@@ -307,5 +371,16 @@ public class TestRequest extends WebContext implements HttpRequest {
     @Override
     public String toString() {
         return "TestRequest: " + getUri();
+    }
+
+    private static class MutableHttpPostRequestDecoder extends HttpPostRequestDecoder {
+        public MutableHttpPostRequestDecoder(TestRequest result) throws ErrorDataDecoderException, IncompatibleDataDecoderException {
+            super(result.getRequest());
+        }
+
+        @Override
+        public void addHttpData(InterfaceHttpData data) {
+            super.addHttpData(data);
+        }
     }
 }

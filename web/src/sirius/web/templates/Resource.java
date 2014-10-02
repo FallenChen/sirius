@@ -8,12 +8,15 @@
 
 package sirius.web.templates;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.ByteStreams;
 import sirius.kernel.Sirius;
 import sirius.kernel.commons.RateLimit;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.health.Exceptions;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Objects;
@@ -108,6 +111,43 @@ public class Resource {
      */
     public URL getUrl() {
         return url;
+    }
+
+    /**
+     * Returns the contents of the resource as {@link java.io.InputStream}.
+     *
+     * @return an input stream containing the contents of the resource
+     */
+    public InputStream openStream() {
+        try {
+            return getUrl().openConnection().getInputStream();
+        } catch (IOException e) {
+            throw Exceptions.handle(e);
+        }
+    }
+
+    /**
+     * Returns the contents of the resource as byte array.
+     *
+     * @return the contents of the resource
+     */
+    public byte[] getContent() {
+        try {
+            try (InputStream in = openStream()) {
+                return ByteStreams.toByteArray(in);
+            }
+        } catch (IOException e) {
+            throw Exceptions.handle(e);
+        }
+    }
+
+    /**
+     * Returns the contents of the resource as string.
+     *
+     * @return the contents of the resource as string (expecting UTF-8 as encoding).
+     */
+    public String getContentAsString() {
+        return new String(getContent(), Charsets.UTF_8);
     }
 
     /**
