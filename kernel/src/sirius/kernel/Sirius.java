@@ -531,20 +531,20 @@ public class Sirius {
             LOG.INFO("using develop.conf from filesystem...");
             config = ConfigFactory.parseFile(new File("develop.conf")).withFallback(config);
         } else if (Sirius.isDev()) {
-            LOG.INFO("develop.conf not present work directory");
+            LOG.INFO("develop.conf not present in work directory");
         }
         if (startedAsTest && Sirius.class.getResource("/test.conf") != null) {
             LOG.INFO("using test.conf from classpath...");
             config = ConfigFactory.load(loader, "test.conf").withFallback(config);
         } else if (startedAsTest) {
-            LOG.INFO("test.conf not present work directory");
+            LOG.INFO("test.conf not present in classpath");
         }
         Config instanceConfig = null;
         if (new File("instance.conf").exists()) {
             LOG.INFO("using instance.conf from filesystem...");
             instanceConfig = ConfigFactory.parseFile(new File("instance.conf"));
         } else {
-            LOG.INFO("instance.conf not present work directory");
+            LOG.INFO("instance.conf not present work in directory");
         }
 
         // Setup customer customizations
