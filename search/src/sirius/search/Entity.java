@@ -26,6 +26,8 @@ import sirius.search.properties.Property;
 import sirius.web.http.WebContext;
 import sirius.web.security.UserContext;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Map;
@@ -222,10 +224,10 @@ public abstract class Entity {
             if (previousError == null) {
                 try {
                     return Exceptions.createHandled()
-                                      .withNLSKey("Entity.fieldMustBeUnique")
-                                      .set("field", NLS.get(getClass().getSimpleName() + "." + p.getName()))
-                                      .set("value", NLS.toUserString(p.getField().get(this)))
-                                      .handle();
+                                     .withNLSKey("Entity.fieldMustBeUnique")
+                                     .set("field", NLS.get(getClass().getSimpleName() + "." + p.getName()))
+                                     .set("value", NLS.toUserString(p.getField().get(this)))
+                                     .handle();
                 } catch (Throwable e) {
                     Exceptions.handle(e);
                 }
@@ -267,7 +269,26 @@ public abstract class Entity {
         }
     }
 
-    public HandledException checkNullability(HandledException previousError, String field, Object value) {
+    /**
+     * Can be used to perform a null check for the given field and value.
+     * <p>
+     * This is internally used to check all properties which must not be null
+     * ({@link sirius.search.properties.Property#isNullAllowed()}). If a field accepts a <tt>null</tt> value but
+     * still must be field, this method can be called in {@link #beforeSaveChecks()}.
+     * </p>
+     *
+     * @param previousError Can be used to signal that an error was already found. In this case the given exception
+     *                      will be returned as result even if the value was <tt>null</tt>. In most cases this
+     *                      parameter will be <tt>null</tt>.
+     * @param field         the field to check. This is used to mark the field as invalid and also to fetch an
+     *                      internationalized name of the field (using Classname.fieldname).
+     * @param value         the value to check. If the value is <tt>null</tt> an error will be generated.
+     * @return an error if either the given <tt>previousError</tt> was non null or if the given value was <tt>null</tt>
+     */
+    @Nullable
+    protected HandledException checkNullability(@Nullable HandledException previousError,
+                                                @Nonnull String field,
+                                                @Nullable Object value) {
         if (Strings.isEmpty(value)) {
             UserContext.setFieldError(field, null);
             if (previousError == null) {
