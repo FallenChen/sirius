@@ -21,6 +21,7 @@ import sirius.kernel.nls.NLS;
 import sirius.web.controller.Message;
 import sirius.web.http.WebContext;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,7 @@ public class UserContext {
 
     /**
      * Retrieves the current <b>UserContext</b> from the {@link sirius.kernel.async.CallContext}.
+     *
      * @return the current user context.
      */
     public static UserContext get() {
@@ -85,9 +87,13 @@ public class UserContext {
      * Handles the given exception by passing it to {@link sirius.kernel.health.Exceptions} and by creating an
      * appropriate message for the user.
      *
-     * @param e the exception to handle
+     * @param e the exception to handle. If the given exception is <tt>null</tt> nothing will happen.
      */
-    public static void handle(Throwable e) {
+    public static void handle(@Nullable Throwable e) {
+        if (e == null) {
+            return;
+        }
+
         message(Message.error(e));
     }
 

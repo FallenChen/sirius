@@ -187,96 +187,121 @@ public abstract class Entity {
         HandledException error = null;
         EntityDescriptor descriptor = Index.getDescriptor(getClass());
         for (Property p : descriptor.getProperties()) {
-            // Automatically fill RefFields....
+
             if (p.getField().isAnnotationPresent(RefField.class)) {
-                try {
-                    RefField ref = p.getField().getAnnotation(RefField.class);
-                    Property entityRef = descriptor.getProperty(ref.localRef());
-                    EntityDescriptor remoteDescriptor = Index.getDescriptor(entityRef.getField()
-                                                                                     .getAnnotation(RefType.class)
-                                                                                     .type());
-
-                    EntityRef<?> value = (EntityRef<?>) entityRef.getField().get(this);
-                    if (value.isValueLoaded() && value.getValue() != null) {
-                        p.getField()
-                         .set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(value.getValue()));
-                    }
-                } catch (Throwable e) {
-                    Exceptions.handle()
-                              .to(Index.LOG)
-                              .error(e)
-                              .withSystemErrorMessage(
-                                      "Error updating an RefField for an RefType: Property %s in class %s: %s (%s)",
-                                      p.getName(),
-                                      this.getClass().getName())
-                              .handle();
-                }
-
+                fillRefField(descriptor, p);
             }
+
             Object value = p.writeToSource(this);
-            if (!p.isNullAllowed() && Strings.isEmpty(value)) {
-                UserContext.setFieldError(p.getName(), null);
-                if (error == null) {
-                    error = Exceptions.createHandled()
-                                      .withNLSKey("Entity.fieldMustBeFilled")
-                                      .set("field", NLS.get(getClass().getSimpleName() + "." + p.getName()))
-                                      .handle();
-                }
+            if (!p.isNullAllowed()) {
+                error = checkNullability(error, p.getName(), value);
             }
+
             if (p.getField().isAnnotationPresent(Unique.class) && !Strings.isEmpty(value)) {
-                Query<?> qry = Index.select(getClass()).eq(p.getName(), value);
-                if (!isNew()) {
-                    qry.notEq(Index.ID_FIELD, id);
-                }
-                Unique unique = p.getField().getAnnotation(Unique.class);
-                if (Strings.isFilled(unique.within())) {
-                    qry.eq(unique.within(), descriptor.getProperty(unique.within()).writeToSource(this));
-                    try {
-                        if (descriptor.hasRouting()) {
-                            Object routingKey = descriptor.getProperty(descriptor.getRouting()).writeToSource(this);
-                            if (routingKey != null) {
-                                qry.routing(routingKey.toString());
-                            } else {
-                                qry.deliberatelyUnrouted();
-                                Exceptions.handle()
-                                          .to(Index.LOG)
-                                          .withSystemErrorMessage(
-                                                  "Performing a unique check on %s without any routing. This will be slow!",
-                                                  this.getClass().getName())
-                                          .handle();
-                            }
-                        }
-                    } catch (Exception e) {
-                        Exceptions.handle()
-                                  .to(Index.LOG)
-                                  .error(e)
-                                  .withSystemErrorMessage("Cannot determine routing key for '%s' of type %s",
-                                                          this,
-                                                          this.getClass().getName())
-                                  .handle();
-                        qry.deliberatelyUnrouted();
-                    }
-                } else {
-                    qry.deliberatelyUnrouted();
-                }
-                if (qry.exists()) {
-                    UserContext.setFieldError(p.getName(), NLS.toUserString(value));
-                    if (error == null) {
-                        try {
-                            error = Exceptions.createHandled()
-                                              .withNLSKey("Entity.fieldMustBeUnique")
-                                              .set("field", NLS.get(getClass().getSimpleName() + "." + p.getName()))
-                                              .set("value", NLS.toUserString(p.getField().get(this)))
-                                              .handle();
-                        } catch (Throwable e) {
-                            Exceptions.handle(e);
-                        }
-                    }
-                }
+                error = checkUniqueness(error, descriptor, p, value);
             }
+
         }
         if (error != null) {
             throw error;
+        }
+    }
+
+    protected HandledException checkUniqueness(HandledException previousError,
+                                               EntityDescriptor descriptor,
+                                               Property p,
+                                               Object value) {
+        Query<?> qry = Index.select(getClass()).eq(p.getName(), value);
+        if (!isNew()) {
+            qry.notEq(Index.ID_FIELD, id);
+        }
+        Unique unique = p.getField().getAnnotation(Unique.class);
+        setupRoutingForUniquenessCheck(descriptor, qry, unique);
+        if (qry.exists()) {
+            UserContext.setFieldError(p.getName(), NLS.toUserString(value));
+            if (previousError == null) {
+                try {
+                    return Exceptions.createHandled()
+                                      .withNLSKey("Entity.fieldMustBeUnique")
+                                      .set("field", NLS.get(getClass().getSimpleName() + "." + p.getName()))
+                                      .set("value", NLS.toUserString(p.getField().get(this)))
+                                      .handle();
+                } catch (Throwable e) {
+                    Exceptions.handle(e);
+                }
+            }
+        }
+        return previousError;
+    }
+
+    private void setupRoutingForUniquenessCheck(EntityDescriptor descriptor, Query<?> qry, Unique unique) {
+        if (Strings.isFilled(unique.within())) {
+            qry.eq(unique.within(), descriptor.getProperty(unique.within()).writeToSource(this));
+            try {
+                if (descriptor.hasRouting()) {
+                    Object routingKey = descriptor.getProperty(descriptor.getRouting()).writeToSource(this);
+                    if (routingKey != null) {
+                        qry.routing(routingKey.toString());
+                    } else {
+                        qry.deliberatelyUnrouted();
+                        Exceptions.handle()
+                                  .to(Index.LOG)
+                                  .withSystemErrorMessage(
+                                          "Performing a unique check on %s without any routing. This will be slow!",
+                                          this.getClass().getName())
+                                  .handle();
+                    }
+                }
+            } catch (Exception e) {
+                Exceptions.handle()
+                          .to(Index.LOG)
+                          .error(e)
+                          .withSystemErrorMessage("Cannot determine routing key for '%s' of type %s",
+                                                  this,
+                                                  this.getClass().getName())
+                          .handle();
+                qry.deliberatelyUnrouted();
+            }
+        } else {
+            qry.deliberatelyUnrouted();
+        }
+    }
+
+    public HandledException checkNullability(HandledException previousError, String field, Object value) {
+        if (Strings.isEmpty(value)) {
+            UserContext.setFieldError(field, null);
+            if (previousError == null) {
+                return Exceptions.createHandled()
+                                 .withNLSKey("Entity.fieldMustBeFilled")
+                                 .set("field", NLS.get(getClass().getSimpleName() + "." + field))
+                                 .handle();
+            }
+        }
+        return previousError;
+    }
+
+    protected void fillRefField(EntityDescriptor descriptor, Property p) {
+        try {
+            RefField ref = p.getField().getAnnotation(RefField.class);
+            Property entityRef = descriptor.getProperty(ref.localRef());
+            EntityDescriptor remoteDescriptor = Index.getDescriptor(entityRef.getField()
+                                                                             .getAnnotation(RefType.class)
+                                                                             .type());
+
+            EntityRef<?> value = (EntityRef<?>) entityRef.getField().get(this);
+            if (value.isValueLoaded() && value.getValue() != null) {
+                p.getField()
+                 .set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(value.getValue()));
+            }
+        } catch (Throwable e) {
+            Exceptions.handle()
+                      .to(Index.LOG)
+                      .error(e)
+                      .withSystemErrorMessage(
+                              "Error updating an RefField for an RefType: Property %s in class %s: %s (%s)",
+                              p.getName(),
+                              this.getClass().getName())
+                      .handle();
         }
     }
 
