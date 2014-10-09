@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.SpanNearQueryBuilder;
 import parsii.tokenizer.LookaheadReader;
 import sirius.search.constraints.Wrapper;
 
@@ -36,16 +37,16 @@ class RobustQueryParser {
 
     private String defaultField;
     private String input;
-    private Function<String, Iterable<String>> tokenizer;
+    private Function<String, Iterable<List<String>>> tokenizer;
 
     /**
-     * Creates a parser using the given query, defaultField and analyer.
+     * Creates a parser using the given query, defaultField and analyzer.
      *
      * @param defaultField the default field to search in, if no field is given.
      * @param input        the query to parse
      * @param tokenizer    the function to used for tokenization of the input
      */
-    RobustQueryParser(String defaultField, String input, Function<String, Iterable<String>> tokenizer) {
+    RobustQueryParser(String defaultField, String input, Function<String, Iterable<List<String>>> tokenizer) {
         this.defaultField = defaultField;
         this.input = input;
         this.tokenizer = tokenizer;
@@ -219,8 +220,7 @@ class RobustQueryParser {
                     return Collections.singletonList(qry);
                 } else {
                     return Collections.singletonList(QueryBuilders.prefixQuery(field,
-                                                                               value.substring(0, value.length() - 1)
-                    ));
+                                                                               value.substring(0, value.length() - 1)));
                 }
             }
 
@@ -228,11 +228,12 @@ class RobustQueryParser {
             BoolQueryBuilder qry = QueryBuilders.boolQuery();
 
             if (field.equals(defaultField)) {
-                for (String token : tokenizer.apply(value)) {
+                for (List<String> tokens : tokenizer.apply(value)) {
+                    QueryBuilder qb = transformTokenList(field, tokens);
                     if (negate) {
-                        qry.mustNot(QueryBuilders.termQuery(field, token));
+                        qry.mustNot(qb);
                     } else {
-                        result.add(QueryBuilders.termQuery(field, token));
+                        result.add(qb);
                     }
                 }
             } else {
@@ -259,6 +260,19 @@ class RobustQueryParser {
         }
 
         return Collections.emptyList();
+    }
+
+    private QueryBuilder transformTokenList(String field, List<String> tokens) {
+        if (tokens.size() == 1) {
+            return QueryBuilders.termQuery(field, tokens.get(0));
+        } else {
+            SpanNearQueryBuilder builder = QueryBuilders.spanNearQuery();
+            builder.slop(3);
+            for (String token : tokens) {
+                builder.clause(QueryBuilders.spanTermQuery(field, token));
+            }
+            return builder;
+        }
     }
 
 }

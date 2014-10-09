@@ -43,10 +43,7 @@ import sirius.web.security.UserContext;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -211,7 +208,7 @@ public class Query<E extends Entity> {
      * @param tokenizer    the function to use for tokenization
      * @return the query itself for fluent method calls
      */
-    public Query<E> query(String query, String defaultField, Function<String, Iterable<String>> tokenizer) {
+    public Query<E> query(String query, String defaultField, Function<String, Iterable<List<String>>> tokenizer) {
         if (Strings.isFilled(query)) {
             this.query = query;
             RobustQueryParser rqp = new RobustQueryParser(defaultField, query, tokenizer);
@@ -232,14 +229,15 @@ public class Query<E extends Entity> {
      */
     public Query<E> query(String query) {
         return query(query, DEFAULT_FIELD, s -> {
-            List<String> result = Lists.newArrayList();
+            List<List<String>> result = Lists.newArrayList();
             StandardAnalyzer std = new StandardAnalyzer(Version.LUCENE_46);
             try {
                 TokenStream stream = std.tokenStream("std", s);
                 stream.reset();
                 while (stream.incrementToken()) {
                     CharTermAttribute attr = stream.getAttribute(CharTermAttribute.class);
-                    result.add(new String(attr.buffer(), 0, attr.length()));
+                    String token = new String(attr.buffer(), 0, attr.length());
+                    result.add(Collections.singletonList(token));
                 }
             } catch (IOException e) {
                 Exceptions.handle(Index.LOG, e);
