@@ -48,6 +48,7 @@ class MemoryServerSession implements ServerSession {
     }
 
     private SessionManager.MemorySessionStorage sessionStorage;
+    private boolean userAttached = false;
     private long created = System.currentTimeMillis();
     private Map<String, Object> values = Maps.newHashMap();
     private long lastAccessed = System.currentTimeMillis();
@@ -59,6 +60,9 @@ class MemoryServerSession implements ServerSession {
 
     @ConfigValue("http.serverSessionLifetime")
     private static Duration sessionLifetime;
+
+    @ConfigValue("http.serverUserSessionLifetime")
+    private static Duration userSessionLifetime;
 
     @Override
     public long getCreationTime() {
@@ -79,6 +83,8 @@ class MemoryServerSession implements ServerSession {
     public int getMaxInactiveInterval() {
         if (numAccesses < 2) {
             return (int) miniSessionLifetime.getSeconds();
+        } else if (userAttached) {
+            return (int) userSessionLifetime.getSeconds();
         } else {
             return (int) sessionLifetime.getSeconds();
         }
@@ -118,6 +124,11 @@ class MemoryServerSession implements ServerSession {
     @Override
     public boolean isNew() {
         return numAccesses == 0;
+    }
+
+    @Override
+    public void markAsUserSession() {
+        userAttached = true;
     }
 
     /*

@@ -580,6 +580,7 @@ public class WebContext {
         if (serverSession != null) {
             return Optional.of(serverSession);
         }
+
         if (serverSessionSource == null) {
             requestedSessionId = getParameter(serverSessionParameterName);
             serverSessionSource = ServerSessionSource.PARAMETER;
@@ -591,13 +592,23 @@ public class WebContext {
                 }
             }
         }
-        if (Strings.isFilled(requestedSessionId) || create) {
-            serverSession = sessionManager.getSession(requestedSessionId).orElseGet(() -> sessionManager.create());
-            if (serverSession.isNew()) {
-                serverSession.putValue(ServerSession.INITIAL_URI, getRequestedURI());
-                serverSession.putValue(ServerSession.USER_AGENT, getHeader(HttpHeaders.Names.USER_AGENT));
+
+        if (Strings.isFilled(requestedSessionId)) {
+            Optional<ServerSession> sessionOptional = sessionManager.getSession(requestedSessionId);
+            if (sessionOptional.isPresent()) {
+                serverSession = sessionOptional.get();
+                return sessionOptional;
             }
         }
+
+        if (!create) {
+            return Optional.empty();
+        }
+
+        serverSession = sessionManager.create();
+        serverSession.putValue(ServerSession.INITIAL_URI, getRequestedURI());
+        serverSession.putValue(ServerSession.USER_AGENT, getHeader(HttpHeaders.Names.USER_AGENT));
+        serverSession.putValue(ServerSession.REMOTE_IP, getRemoteIP().toString());
         return Optional.ofNullable(serverSession);
     }
 

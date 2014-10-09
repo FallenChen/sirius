@@ -281,6 +281,8 @@ public abstract class GenericUserManager implements UserManager {
             sess.putValue(scope.getScopeId() + "-user-id", user.getUserId());
             sess.putValue(scope.getScopeId() + "-user-name", user.getUserName());
             sess.putValue(scope.getScopeId() + "-user-email", user.getEmail());
+            sess.putValue(ServerSession.USER, user.getUserName() + "(" + user.getEmail() + ")");
+            sess.markAsUserSession();
         } else if (sessionStorage == SESSION_STORAGE_TYPE_CLIENT) {
             ctx.setSessionValue(scope.getScopeId() + "-tenant-id", user.getTenantId());
             ctx.setSessionValue(scope.getScopeId() + "-tenant-name", user.getTenantName());

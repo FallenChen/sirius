@@ -94,14 +94,14 @@
                     <tr>
                         <td>Session-ID</td>
                         <td style="text-align: right">
-                            @if (call.getServerSession(false) != null) {
+                            @if (call.getServerSession(false).isPresent()) {
                                 @call.getServerSession().getId()
                             } else {
                                 -
                             }
                         </td>
                     </tr>
-                    @if (call.getServerSession(false) != null) {
+                    @if (call.getServerSession(false).isPresent()) {
                         <tr>
                             <td>Created At</td>
                             <td style="text-align: right">

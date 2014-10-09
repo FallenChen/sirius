@@ -48,6 +48,11 @@ public interface ServerSession {
     public static final String USER = "_USER";
 
     /**
+     * Fixed field storing the IP which was used to create the session
+     */
+    public static final String REMOTE_IP = "_REMOTE_IP";
+
+    /**
      * Returns the timestamp of the sessions creation
      *
      * @return the timestamp in milliseconds when the session was created
@@ -133,5 +138,11 @@ public interface ServerSession {
      * @return <tt>true</tt> if the session was created by this request, <tt>false</tt> otherwise.
      */
     boolean isNew();
+
+    /**
+     * Signals the system that this session belongs to a user which logged in. This will normally enhance the
+     * session live time over a session without an attached user.
+     */
+    void markAsUserSession();
 
 }
