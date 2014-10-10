@@ -1152,14 +1152,13 @@ public class Response {
                                 entry.getKey())) {
                             for (String value : entry.getValue()) {
                                 if (HttpHeaders.Names.CONTENT_TYPE.equals(entry.getKey())) {
-                                    addHeaderIfNotExists(entry.getKey(), value);
-                                }
-                                if (HttpHeaders.Names.LAST_MODIFIED.equals(entry.getKey())) {
                                     try {
                                         lastModified = getHTTPDateFormat().parse(value).getTime();
                                     } catch (Throwable e) {
                                         Exceptions.ignore(e);
                                     }
+                                } else {
+                                    addHeaderIfNotExists(entry.getKey(), value);
                                 }
                             }
                             if (HttpHeaders.Names.CONTENT_LENGTH.equals(entry.getKey())) {
