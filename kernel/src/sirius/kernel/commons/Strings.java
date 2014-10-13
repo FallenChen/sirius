@@ -365,4 +365,28 @@ public class Strings {
         return object.toString().trim();
     }
 
+
+    /**
+     * shortens a string to the given number of chars, cutting of at most half of the string and adding ... if something
+     * has been cut of.
+     * @param string      string to be cut of
+     * @param numChars    new maximum length of string
+     * @return the shortened string
+     */
+    public static String shorten(String string, int numChars) {
+        if (isEmpty(string)) {
+            return "";
+        }
+        if (string.length() <= numChars) {
+            return string;
+        }
+        int index = numChars - 1;
+        int maxCutoff = Math.min(string.length() / 2, 10);
+        while (numChars > 0 && Character.isLetterOrDigit(string.charAt(index)) && maxCutoff > 0) {
+            index--;
+            maxCutoff--;
+        }
+        return string.substring(0, index) + "...";
+    }
+
 }
