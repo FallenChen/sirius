@@ -13,10 +13,10 @@
 <!-- JSR305 annotations like @Nonnull etc. -->
 <dependency org="com.google.code.findbugs" name="jsr305" rev="2.0.2" conf="compile" />
 
-<!-- Include JUNIT for testing -->
+<!-- Include JUnit binding for Ant for testing -->
 <dependency org="org.apache.ant" name="ant-junit" rev="1.8.4" conf="test"/>
 
-<!-- Include JUNIT for testing -->
+<!-- Include JUNIT-Toolbox for testing -->
 <dependency org="com.googlecode.junit-toolbox" name="junit-toolbox" rev="2.0" conf="test"/>
 
 <!-- Include Spock for testing -->

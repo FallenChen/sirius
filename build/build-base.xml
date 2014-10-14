@@ -61,6 +61,10 @@
         <fileset dir="${build.dir}/testlib" includes="*.jar"/>
     </path>
 
+    <path id="test.path.systemtest">
+        <fileset dir="${build.dir}/testlib" includes="*.jar"/>
+    </path>
+
     <path id="test.path.kernel">
         <path refid="compile.path"/>
         <fileset dir="${build.dir}/testlib" includes="*.jar"/>
@@ -192,7 +196,7 @@
         <classpath refid="test.path"/>
     </taskdef>
 
-    <target name="test" depends="test-kernel, test-web, test-app, test-search, test-main-app" description="run all automated tests"/>
+    <target name="test" depends="test-kernel, test-web, test-app, test-search, test-main-app" description="run all automated module tests"/>
 
     <target name="test-prepare-module">
         <delete failonerror="false">
@@ -222,7 +226,24 @@
             </javac>
         </groovyc>
         <copy todir="${test.dir}/${module.name}">
-            <fileset dir="${module.home}/test" excludes="**/*.java"/>
+            <fileset dir="${module.home}/test" excludes="**/*.java **/*.groovy"/>
+        </copy>
+    </target>
+
+    <target name="src-compile-module">
+        <groovyc fork="true"
+                 destdir="${test.dir}/${module.name}"
+                 includeantruntime="false"
+                 encoding="UTF-8"
+                 failonerror="true"
+                 classpathref="module.test.path" >
+            <src path="${module.home}/src"/>
+            <javac debug="on">
+                <compilerarg value="-Xlint:deprecation"/>
+            </javac>
+        </groovyc>
+        <copy todir="${test.dir}/${module.name}">
+            <fileset dir="${module.home}/src" excludes="**/*.java **/*.groovy"/>
         </copy>
     </target>
 
@@ -594,6 +615,31 @@
         <antcall target="test-module">
             <param name="module.name" value="main-app"/>
             <reference refid="test.path.main-app" torefid="module.test.path"/>
+        </antcall>
+    </target>
+
+    <!-- =========================================================================================================== -->
+    <!-- run the automated systemtests -->
+    <!-- =========================================================================================================== -->
+    <target name="test-prepare-systemtest" depends="test-prepare" description="prepare directory structure for system tests">
+        <antcall target="test-prepare-module">
+            <param name="module.name" value="systemtest"/>
+        </antcall>
+    </target>
+
+    <target name="test-compile-systemtest" depends="test-prepare-systemtest"  description="compiles the systemtest classes">
+
+        <antcall target="src-compile-module">
+            <param name="module.name" value="systemtest"/>
+            <param name="module.home" value="${sirius.dir}/../systemtest"/>
+            <reference refid="test.path.systemtest" torefid="module.test.path"/>
+        </antcall>
+    </target>
+
+    <target name="test-run-systemtest" depends="test-compile-systemtest" description="run automated systemtest against test system">
+        <antcall target="test-module">
+            <param name="module.name" value="systemtest"/>
+            <reference refid="test.path.systemtest" torefid="module.test.path"/>
         </antcall>
     </target>
 
