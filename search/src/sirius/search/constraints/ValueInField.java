@@ -40,7 +40,7 @@ public class ValueInField implements Constraint {
      * @param field the field to check
      * @return the newly created constraint
      */
-    public static Constraint on(Object value, String field) {
+    public static ValueInField on(Object value, String field) {
         return new ValueInField(value, field);
     }
 
