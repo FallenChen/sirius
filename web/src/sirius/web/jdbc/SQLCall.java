@@ -26,7 +26,7 @@ import java.util.TreeMap;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/11
  */
-public class JDBCCall {
+public class SQLCall {
 
     private static final String RETURN_VALUE = "_RETVAL";
     private final Database ds;
@@ -40,7 +40,7 @@ public class JDBCCall {
     /*
      * Use Databases.createFunctionCall or Databases.createFunctionCall to create an instance
      */
-    protected JDBCCall(Database ds, String fun, Integer returnType) {
+    protected SQLCall(Database ds, String fun, Integer returnType) {
         this.ds = ds;
         this.fun = fun;
         this.returnType = returnType;
@@ -55,7 +55,7 @@ public class JDBCCall {
      * @param value the value to pass in
      * @return the call itself to perform fluent calls
      */
-    public JDBCCall addInParam(Object value) {
+    public SQLCall addInParam(Object value) {
         names.add("");
         data.add(value);
         types.add(null);
@@ -69,7 +69,7 @@ public class JDBCCall {
      * @param type      the SQL type ({@link java.sql.Types}) of the parameter
      * @return the call itself to perform fluent calls
      */
-    public JDBCCall addOutParam(String parameter, int type) {
+    public SQLCall addOutParam(String parameter, int type) {
         names.add(parameter);
         data.add(null);
         types.add(type);
@@ -82,7 +82,7 @@ public class JDBCCall {
      * @return the call itself to perform fluent calls in order to read the result
      * @throws SQLException in case of a database error
      */
-    public JDBCCall call() throws SQLException {
+    public SQLCall call() throws SQLException {
         Connection c = ds.getConnection();
         Watch w = Watch.start();
         try {

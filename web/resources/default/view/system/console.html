@@ -1,8 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>@product - Console</title>
-    <script language="javascript" type="text/javascript" src="@prefix/assets/system/js/jquery-1.5.min.js"></script>
+@extends(view.system.page.html, title: product+" - Console"))
+@section(head) {
     <script language="javascript" type="text/javascript" src="@prefix/assets/system/js/jquery.terminal.js"></script>
     <link href="@prefix/assets/system/css/jquery.terminal.css" rel="stylesheet" />
     <script>
@@ -26,8 +23,8 @@
             font-size: 16px;
         }
     </style>
-</head>
-<body>
-    <div id="term"></div>
-</body>
-</html>
+}
+
+@section(maindiv) {
+}
+<div id="term"></div>

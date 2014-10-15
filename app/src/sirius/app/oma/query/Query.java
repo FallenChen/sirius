@@ -15,7 +15,7 @@ import sirius.app.oma.*;
 import sirius.kernel.commons.*;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
-import sirius.web.jdbc.JDBCQuery;
+import sirius.web.jdbc.SQLQuery;
 import sirius.web.jdbc.Row;
 
 import java.util.Arrays;
@@ -139,7 +139,7 @@ public class Query<T extends Entity> implements QueryPathCompiler {
 
         try {
             OMA.LOG.FINE(sql);
-            JDBCQuery qry = OMA.getDatabase().createQuery(sql.toString());
+            SQLQuery qry = OMA.getDatabase().createQuery(sql.toString());
             if (parameters != null) {
                 qry.set(parameters);
             }
@@ -162,7 +162,7 @@ public class Query<T extends Entity> implements QueryPathCompiler {
 
         try {
             OMA.LOG.FINE(sql);
-            JDBCQuery qry = OMA.getDatabase().createQuery(sql.toString());
+            SQLQuery qry = OMA.getDatabase().createQuery(sql.toString());
             if (parameters != null) {
                 qry.set(parameters);
             }
@@ -172,7 +172,7 @@ public class Query<T extends Entity> implements QueryPathCompiler {
             }
             ValueHolder<Integer> skipCount = ValueHolder.of(0);
             final ValueHolder<Integer> finalSkipCount = skipCount;
-            qry.perform(new JDBCQuery.RowHandler() {
+            qry.perform(new SQLQuery.RowHandler() {
                 @Override
                 public boolean handle(Row row) {
                     try {

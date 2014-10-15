@@ -18,6 +18,7 @@ import org.rythmengine.extension.ISourceCodeEnhancer;
 import org.rythmengine.resource.ITemplateResource;
 import org.rythmengine.resource.ResourceLoaderBase;
 import org.rythmengine.template.ITemplate;
+import org.rythmengine.template.JavaTagBase;
 import sirius.kernel.Sirius;
 import sirius.kernel.async.CallContext;
 import sirius.kernel.commons.Strings;
@@ -103,6 +104,22 @@ public class RythmConfig implements Lifecycle {
         config.put(RythmConfigurationKey.RESOURCE_LOADER_IMPLS.getKey(), new SiriusResourceLoader());
         config.put(RythmConfigurationKey.CODEGEN_SOURCE_CODE_ENHANCER.getKey(), new SiriusSourceCodeEnhancer());
         Rythm.init(config);
+        Rythm.engine().registerFastTag(new IncludeExtensions());
+    }
+
+    private static class IncludeExtensions extends JavaTagBase {
+
+        @Override
+        public String __getName() {
+            return "includeExtensions";
+        }
+
+        @Override
+        protected void call(__ParameterList params, __Body body) {
+            for(String ext : sirius.web.templates.Content.getExtensions((String)params.get(0).value)) {
+                p(__engine.render("view/" + ext));
+            }
+        }
     }
 
     @Override

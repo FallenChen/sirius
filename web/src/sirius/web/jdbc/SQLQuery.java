@@ -41,7 +41,7 @@ import java.util.Optional;
  * @author Andreas Haufler (aha@scireum.de)
  * @since 2013/11
  */
-public class JDBCQuery {
+public class SQLQuery {
 
     public interface RowHandler {
         boolean handle(Row row);
@@ -54,7 +54,7 @@ public class JDBCQuery {
     /*
      * Create a new instance using Databases.createQuery(sql)
      */
-    protected JDBCQuery(Database ds, String sql) {
+    protected SQLQuery(Database ds, String sql) {
         this.ds = ds;
         this.sql = sql;
     }
@@ -66,7 +66,7 @@ public class JDBCQuery {
      * @param value     the value of the parameter
      * @return the query itself to support fluent calls
      */
-    public JDBCQuery set(String parameter, Object value) {
+    public SQLQuery set(String parameter, Object value) {
         params.put(parameter, value);
         return this;
     }
@@ -77,7 +77,7 @@ public class JDBCQuery {
      * @param ctx the containing pairs of names and values to add to the query
      * @return the query itself to support fluent calls
      */
-    public JDBCQuery set(Map<String, Object> ctx) {
+    public SQLQuery set(Map<String, Object> ctx) {
         params.putAll(ctx);
         return this;
     }

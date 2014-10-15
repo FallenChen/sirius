@@ -146,7 +146,7 @@ class StatementCompiler {
         while (index >= 0) {
             int endIndex = sql.indexOf("}", index);
             if (endIndex < 0) {
-                throw new SQLException(NLS.fmtr("scireum.db.query.ErrorUnbalancedCurlyBracket")
+                throw new SQLException(NLS.fmtr("StatementCompiler.errorUnbalancedCurlyBracket")
                                           .set("index", index)
                                           .set("query", originalSQL)
                                           .format());
@@ -165,7 +165,7 @@ class StatementCompiler {
                                                                                                              accessPath))
                             .getValue(paramValue);
                 } catch (Throwable e) {
-                    throw new SQLException(NLS.fmtr("scireum.StatementCompiler.cannotEvalAccessPath")
+                    throw new SQLException(NLS.fmtr("StatementCompiler.cannotEvalAccessPath")
                                               .set("name", parameterName)
                                               .set("path", accessPath)
                                               .set("value", paramValue)

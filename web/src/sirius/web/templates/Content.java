@@ -9,6 +9,7 @@
 package sirius.web.templates;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.typesafe.config.ConfigValue;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.runtime.RuntimeConstants;
@@ -23,6 +24,8 @@ import sirius.kernel.di.Initializable;
 import sirius.kernel.di.std.Parts;
 import sirius.kernel.di.std.PriorityParts;
 import sirius.kernel.di.std.Register;
+import sirius.kernel.extensions.Extension;
+import sirius.kernel.extensions.Extensions;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.health.Log;
@@ -32,10 +35,7 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Content generator which generates output based on templates.
@@ -453,6 +453,48 @@ public class Content implements Initializable {
         } catch (Throwable e) {
             Exceptions.handle(LOG, e);
         }
+    }
+
+    /**
+     * Returns a list of all extensions provided for the given key.
+     * <p>This can be used to provide templates that contain sections which can be extended by other
+     * components. Think of a generic template containing a menu. Items can be added to this menu
+     * using this mechanism.</p>
+     * <p>
+     * Internally the {@link sirius.kernel.extensions.Extensions} framework is used. Therefore all extensions
+     * for the key X have to be defined in <tt>content.extensions.X</tt> like this:
+     * <pre>
+     *   content.extensions {
+     *       X {
+     *           extension-a {
+     *               priority = 110
+     *               template = "a.html"
+     *           }
+     *           extension-b {
+     *               priority = 120
+     *               template = "b.html"
+     *           }
+     *       }
+     *   }
+     * </pre>
+     * </p>
+     * <p>
+     * To utilize these extensions in Rythm, use the includeExtensions("name") tag. For Velocity a macro with
+     * the same name is provided.
+     * </p>
+     *
+     * @param key the name of the list of content extensions to retrieve
+     * @return a list of templates registered for the given extension using the system config and the Extensions
+     * framework
+     * @see sirius.kernel.extensions.Extensions
+     */
+    public static List<String> getExtensions(String key) {
+        List<String> result = Lists.newArrayList();
+        for (Extension e : Extensions.getExtensions("content.extensions." + key)) {
+            result.add(e.get("template").asString());
+        }
+
+        return result;
     }
 
 }

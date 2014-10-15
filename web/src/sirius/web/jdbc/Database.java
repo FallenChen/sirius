@@ -177,12 +177,12 @@ public class Database {
      * </p>
      *
      * @param sql the SQL to send to the database. For syntax help concerning parameter names and optional query parts,
-     *            see {@link JDBCQuery}
+     *            see {@link SQLQuery}
      * @return a new query which can be supplied with parameters and executed against the database
-     * @see JDBCQuery
+     * @see SQLQuery
      */
-    public JDBCQuery createQuery(String sql) {
-        return new JDBCQuery(this, sql);
+    public SQLQuery createQuery(String sql) {
+        return new SQLQuery(this, sql);
     }
 
     /**
@@ -192,8 +192,8 @@ public class Database {
      * @param returnType the SQL type ({@link Types}) of the return value of this function
      * @return a new call which can be supplied with parameters and executed against the database
      */
-    public JDBCCall createFunctionCall(String fun, Integer returnType) {
-        return new JDBCCall(this, fun, returnType);
+    public SQLCall createFunctionCall(String fun, Integer returnType) {
+        return new SQLCall(this, fun, returnType);
     }
 
     /**
@@ -202,8 +202,8 @@ public class Database {
      * @param fun name of the procedure to call
      * @return a new call which can be supplied with parameters and executed against the database
      */
-    public JDBCCall createProcedureCall(String fun) {
-        return new JDBCCall(this, fun, null);
+    public SQLCall createProcedureCall(String fun) {
+        return new SQLCall(this, fun, null);
     }
 
     /**
