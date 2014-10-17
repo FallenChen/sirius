@@ -78,7 +78,7 @@ public class EntityDescriptor {
         if (properties == null) {
             List<Property> props = new ArrayList<Property>();
             List<ForeignKey> keys = new ArrayList<ForeignKey>();
-            addProperties(clazz, props, keys);
+            addProperties(clazz, clazz, props, keys);
             properties = props;
             foreignKeys = keys;
         }
@@ -89,18 +89,27 @@ public class EntityDescriptor {
     /*
      * Adds all properties of the given class (and its superclasses)
      */
-    private void addProperties(Class<?> clazz, List<Property> props, List<ForeignKey> keys) {
+    private void addProperties(Class<?> rootClass, Class<?> clazz, List<Property> props, List<ForeignKey> keys) {
         for (Field field : clazz.getDeclaredFields()) {
             if (!field.isAnnotationPresent(Transient.class) && !Modifier.isStatic(field.getModifiers())) {
                 Property p = null;
                 for (PropertyFactory f : Schema.factories.getParts()) {
                     if (f.accepts(field)) {
                         p = f.create(field);
+                        if (propertyAlreadyExists(props, p)) {
+                            Index.LOG.SEVERE(Strings.apply(
+                                    "A property named '%s' already exists for the type '%s'. Cannot transform field %s",
+                                    p.getName(),
+                                    rootClass.getSimpleName(),
+                                    field));
+                            p = null;
+                            break;
+                        }
                         props.add(p);
                         if (!p.acceptsSetter() && hasSetter(field)) {
                             Index.LOG.WARN("Property %s in type %s does not accept a setter method to be present",
                                            field.getName(),
-                                           clazz.getSimpleName());
+                                           rootClass.getSimpleName());
                         }
                         break;
                     }
@@ -125,8 +134,18 @@ public class EntityDescriptor {
             }
         }
         if (clazz.getSuperclass() != null && !Object.class.equals(clazz.getSuperclass())) {
-            addProperties(clazz.getSuperclass(), props, keys);
+            addProperties(rootClass, clazz.getSuperclass(), props, keys);
         }
+    }
+
+    private boolean propertyAlreadyExists(List<Property> props, Property check) {
+        for (Property prop : props) {
+            if (Strings.areEqual(prop.getName(), check.getName())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /*
