@@ -102,10 +102,12 @@ public class Facet {
      * @return the facet itself for fluent method calls
      */
     public Facet addItem(String key, String title, long count) {
-        items.add(new FacetItem(key,
-                                translator == null ? title : translator.compute(key),
-                                count,
-                                Strings.areEqual(value, key)));
+        if (!"".equals(key)) {
+            items.add(new FacetItem(key,
+                                    translator == null ? title : translator.compute(key),
+                                    count,
+                                    Strings.areEqual(value, key)));
+        }
         return this;
     }
 
