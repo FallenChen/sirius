@@ -12,6 +12,7 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -94,6 +95,15 @@ public abstract class AbstractStructuredOutput implements StructuredOutput {
             nesting.get(0).setEmpty(false);
         }
         nesting.add(0, new Element(ElementType.ARRAY, name));
+    }
+
+    @Override
+    public void array(@Nonnull String name, @Nonnull String elementName, @Nonnull Collection<?> array) {
+        beginArray(name);
+        for(Object o : array) {
+            property(elementName, o);
+        }
+        endArray();
     }
 
     /**

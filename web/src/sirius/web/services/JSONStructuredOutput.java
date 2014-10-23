@@ -13,8 +13,10 @@ import sirius.kernel.health.Exceptions;
 import sirius.kernel.xml.AbstractStructuredOutput;
 import sirius.kernel.xml.Attribute;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.*;
+import java.util.Collection;
 
 /**
  * Encoder to generate JSON via the {@link sirius.kernel.xml.StructuredOutput} interface.

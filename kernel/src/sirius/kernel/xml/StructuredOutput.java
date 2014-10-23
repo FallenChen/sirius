@@ -10,6 +10,7 @@ package sirius.kernel.xml;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 
 /**
  * Interface for writing structured outputs like XML or JSON.
@@ -75,5 +76,15 @@ public interface StructuredOutput {
      * Ends the currently open array.
      */
     void endArray();
+
+    /**
+     * Outputs the given collection as array.
+     * <p>This will create a property with the given name and the given array as value</p>
+     *
+     * @param name        the name of the property
+     * @param elementName the name used to generate inner elements (if required, e.g. XML)
+     * @param array       the array to output
+     */
+    void array(@Nonnull String name, @Nonnull String elementName, @Nonnull Collection<?> array);
 
 }
