@@ -806,8 +806,7 @@ public class Response {
         addHeaderIfNotExists("Content-Disposition",
                              (download ? "attachment;" : "inline;") + "filename=\"" + name.replaceAll(
                                      "[^A-Za-z0-9\\-_\\.]",
-                                     "_") + "\""
-        );
+                                     "_") + "\"");
     }
 
     /*
@@ -1089,7 +1088,7 @@ public class Response {
                             .withSystemErrorMessage("Failed to render the template '%s': %s (%s)", name)
                             .handle();
         }
-        sendTemplateContent(name,content);
+        sendTemplateContent(name + ".html", content);
     }
 
     protected static final AsyncHttpClient ASYNC_CLIENT = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setAllowPoolingConnection(
@@ -1238,8 +1237,10 @@ public class Response {
                                 complete(commit(response));
                             } else {
                                 HttpResponse response = contentLengthKnown ? createResponse(HttpResponseStatus.valueOf(
-                                                                                                    responseCode), true
-                                ) : createChunkedResponse(HttpResponseStatus.valueOf(responseCode), true);
+                                                                                                    responseCode),
+                                                                                            true) : createChunkedResponse(
+                                        HttpResponseStatus.valueOf(responseCode),
+                                        true);
                                 commit(response, false);
                                 if (responseChunked) {
                                     ctx.channel()
