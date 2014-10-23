@@ -9,7 +9,9 @@
 package sirius.kernel.commons;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -47,9 +49,11 @@ public class Lambdas {
      * @return a {@link java.util.stream.Collector} inserting all elements into the given collection
      */
     public static <T, C extends Collection<T>> Collector<T, ?, C> into(C collection) {
-        return Collector.of(() -> collection, Collection::add, (a, b) -> {
-            throw new UnsupportedOperationException();
-        }, Function.identity(), Collector.Characteristics.IDENTITY_FINISH);
+        return Collector.of(() -> collection,
+                            Collection::add,
+                            Lambdas::unsupportedBiOperation,
+                            Function.identity(),
+                            Collector.Characteristics.IDENTITY_FINISH);
     }
 
     /**
@@ -72,6 +76,30 @@ public class Lambdas {
             }
         }
         return collection;
+    }
+
+    /**
+     * Can be used to group a given stream by identity and count the occurrences of each entity.
+     *
+     * @return a Collector which can be supplied to {@link java.util.stream.Stream#collect(java.util.stream.Collector)}.
+     */
+    public static <K> Collector<K, Map<K, Integer>, Map<K, Integer>> groupAndCount() {
+        return Collector.of(() -> new HashMap<>(),
+                            Lambdas::increment,
+                            Lambdas::unsupportedBiOperation,
+                            Function.identity(),
+                            Collector.Characteristics.IDENTITY_FINISH);
+    }
+
+    /**
+     * Can be used as lambda for unsupported BiOperations.
+     */
+    public static <O> O unsupportedBiOperation(O a, O b) {
+        throw new UnsupportedOperationException();
+    }
+
+    private static <K> void increment(Map<K, Integer> map, K value) {
+        map.put(value, map.computeIfAbsent(value, k -> 0) + 1);
     }
 
 }
