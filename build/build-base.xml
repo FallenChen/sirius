@@ -22,7 +22,8 @@
 
     You can provide: no-app, no-web or no-kernel to disable the respective modules.
 -->
-<project name="sirius" default="ivy" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+<project name="sirius" default="ivy" xmlns:ivy="antlib:org.apache.ivy.ant"
+         xmlns:artifact="antlib:org.apache.maven.artifact.ant">
 
 
     <!-- =========================================================================================================== -->
@@ -52,7 +53,7 @@
     <!-- Prepare classpath -->
     <path id="compile.path">
         <fileset dir="${dist.dir}/lib" includes="*.jar"/>
-        <pathelement path="${dist.dir}/app" />
+        <pathelement path="${dist.dir}/app"/>
     </path>
 
     <!-- Prepare test classpaths -->
@@ -131,17 +132,17 @@
                 <include name="**/*"/>
             </fileset>
         </delete>
-        <ivy:resolve file="${build.dir}/ivy.xml" />
-        <ivy:retrieve conf="compile" />
+        <ivy:resolve file="${build.dir}/ivy.xml"/>
+        <ivy:retrieve conf="compile"/>
         <ivy:retrieve pattern="${build.dir}/testlib/[artifact].[ext]" conf="test"/>
-        <ivy:report todir="${build.dir}/lib/report" conf="compile" graph="false" />
+        <ivy:report todir="${build.dir}/lib/report" conf="compile" graph="false"/>
     </target>
 
     <!-- =========================================================================================================== -->
     <!-- Test -->
     <!-- =========================================================================================================== -->
     <target name="build-prepare" depends="ivy" description="prepare directory structure for build">
-        <mkdir dir="${dist.dir}" />
+        <mkdir dir="${dist.dir}"/>
         <delete failonerror="false">
             <fileset dir="${dist.dir}">
                 <include name="**/*"/>
@@ -149,7 +150,7 @@
         </delete>
 
         <!-- Copy libraries there -->
-        <mkdir dir="${dist.dir}/lib" />
+        <mkdir dir="${dist.dir}/lib"/>
         <copy todir="${dist.dir}/lib">
             <fileset dir="${build.dir}/lib">
                 <include name="**/*"/>
@@ -167,99 +168,139 @@
                 <include name="**/*"/>
             </fileset>
         </copy>
-        <mkdir dir="${dist.dir}/app" />
+        <mkdir dir="${dist.dir}/app"/>
     </target>
 
-    <target name="test-prepare" depends="ivy, build-prepare" description="prepare directory structure for automated tests">
+    <target name="test-prepare" depends="ivy, build-prepare"
+            description="prepare directory structure for automated tests">
         <!-- Initialize destination for test classes + resources -->
         <delete failonerror="false">
             <fileset dir="${test.dir}">
                 <include name="**/*"/>
             </fileset>
         </delete>
-        <mkdir dir="${test.dir}" />
+        <mkdir dir="${test.dir}"/>
         <delete failonerror="false">
             <fileset dir="${test.report.dir}">
                 <include name="**/*"/>
             </fileset>
         </delete>
-        <mkdir dir="${test.report.dir}" />
+        <mkdir dir="${test.report.dir}"/>
     </target>
 
     <taskdef
             name="groovyc"
             classname="org.codehaus.groovy.ant.Groovyc"
-            classpathref="test.path" />
+            classpathref="test.path"/>
 
     <taskdef name="junit"
              classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
         <classpath refid="test.path"/>
     </taskdef>
 
-    <target name="test" depends="test-kernel, test-web, test-app, test-search, test-main-app" description="run all automated module tests"/>
+    <target name="test" depends="test-kernel, test-web, test-app, test-search, test-main-app"
+            description="run all automated module tests (but not the sytsem tests)"/>
 
-    <target name="test-prepare-module">
+    <!--Base target for targets preparing things like the common file system structures for module tests.
+         Not to be called directly!
+         when calling this from within another target, specify the module name as shown in this example:
+            <antcall target="test-prepare-module">
+                <param name="module.name" value="kernel"/>
+            </antcall>
+    -->
+    <target name="test-prepare-module" description="prepares the directory structure for module tests. See comments.">
         <delete failonerror="false">
             <fileset dir="${test.dir}/${module.name}">
                 <include name="**/*"/>
             </fileset>
         </delete>
-        <mkdir dir="${test.dir}/${module.name}" />
+        <mkdir dir="${test.dir}/${module.name}"/>
         <delete failonerror="false">
             <fileset dir="${test.report.dir}/${module.name}">
                 <include name="**/*"/>
             </fileset>
         </delete>
-        <mkdir dir="${test.report.dir}/${module.name}" />
+        <mkdir dir="${test.report.dir}/${module.name}"/>
     </target>
 
+    <!--Base target for targets compliling the classes in the specified modules /test/unit directory and copying them to
+        their destination directory (${test.dir}/${module.name}).
+        Not to be called directly!
+        when calling this from within another target, specify the module name, module home and
+        a reference to the classpath as shown in this example:
+           <antcall target="unittest-compile-module">
+                <param name="module.name" value="main-app"/>
+                <param name="module.home" value="${main.dir}"/>
+                <reference refid="test.path.main-app" torefid="module.test.path"/>
+            </antcall>
+    -->
+    <target name="unittest-compile-module">
+        <antcall target="compile-module">
+            <param name="src.path" value="test/unit"/>
+            <!--unlike params, references must be relayed explicitly-->
+            <reference refid="module.test.path" torefid="module.test.path"/>
+        </antcall>
+    </target>
+
+    <!--Base target for targets compliling the classes in the specified modules /test directory and copying them to
+        their destination directory (${test.dir}/${module.name}).
+        Not to be called directly!
+        when calling this from within another target, specify the module name, module home and
+        a reference to the classpath as shown in this example:
+            <antcall target="test-compile-module">
+                <param name="module.name" value="kernel"/>
+                <param name="module.home" value="${sirius.dir}/kernel"/>
+                <reference refid="test.path.kernel" torefid="module.test.path"/>
+            </antcall>
+    -->
     <target name="test-compile-module">
-        <groovyc fork="true"
-                 destdir="${test.dir}/${module.name}"
-                 includeantruntime="false"
-                 encoding="UTF-8"
-                 failonerror="true"
-                 classpathref="module.test.path" >
-            <src path="${module.home}/test"/>
-            <javac debug="on">
-                <compilerarg value="-Xlint:deprecation"/>
-            </javac>
-        </groovyc>
-        <copy todir="${test.dir}/${module.name}">
-            <fileset dir="${module.home}/test" excludes="**/*.java **/*.groovy"/>
-        </copy>
+        <antcall target="compile-module">
+            <param name="src.path" value="test"/>
+            <!--unlike params, references must be relayed explicitly-->
+            <reference refid="module.test.path" torefid="module.test.path"/>
+        </antcall>
     </target>
 
-    <target name="src-compile-module">
+    <!--Base target for targets compliling classes in the specified modules /test directory and copying them to
+        their destination directory (${test.dir}/${module.name}).
+        Not to be called directly!
+        when calling this from within another target, specify the module name, module home, the realktive source path
+        within the module home and a reference to the classpath as shown in this example:
+            <antcall target="compile-module">
+                <param name="module.name" value="systemtest"/>
+                <param name="module.home" value="${main.dir}"/>
+                <param name="src.path" value="test/systemtest"/>
+              <reference refid="test.path.systemtest" torefid="module.test.path"/>
+            </antcall>
+    -->
+    <target name="compile-module">
         <groovyc fork="true"
                  destdir="${test.dir}/${module.name}"
                  includeantruntime="false"
                  encoding="UTF-8"
                  failonerror="true"
-                 classpathref="module.test.path" >
-            <src path="${module.home}/src"/>
+                 classpathref="module.test.path">
+            <src path="${module.home}/${src.path}"/>
             <javac debug="on">
                 <compilerarg value="-Xlint:deprecation"/>
             </javac>
         </groovyc>
         <copy todir="${test.dir}/${module.name}">
-            <fileset dir="${module.home}/src" excludes="**/*.java **/*.groovy"/>
+            <fileset dir="${module.home}/${src.path}" excludes="**/*.java **/*.groovy"/>
         </copy>
     </target>
 
     <target name="test-module">
         <junit fork="yes" dir="${dist.dir}" printsummary="yes" haltonfailure="yes">
-            <formatter type="brief" usefile="false" />
+            <formatter type="brief" usefile="false"/>
             <formatter type="xml"/>
-            <classpath >
+            <classpath>
                 <path refid="module.test.path"/>
-                <pathelement location="${test.dir}/${module.name}" />
+                <pathelement location="${test.dir}/${module.name}"/>
             </classpath>
-            <batchtest fork="yes" todir="${test.report.dir}/${module.name}" >
+            <batchtest fork="yes" todir="${test.report.dir}/${module.name}">
                 <fileset dir="${test.dir}/${module.name}">
-                    <include name="**/*Suite.class" />
-                    <!--<include name="**/*Test.class" />-->
-                    <!--<include name="**/*Spec.class" />-->
+                    <include name="**/*Suite.class"/>
                 </fileset>
             </batchtest>
         </junit>
@@ -270,7 +311,7 @@
     <target name="make" depends="ivy" description="Builds and bundles the complete application for distribution ">
 
         <!-- Create distribution directory -->
-        <mkdir dir="${dist.dir}" />
+        <mkdir dir="${dist.dir}"/>
         <delete>
             <fileset dir="${dist.dir}">
                 <include name="**/*"/>
@@ -278,7 +319,7 @@
         </delete>
 
         <!-- Copy libraries there -->
-        <mkdir dir="${dist.dir}/lib" />
+        <mkdir dir="${dist.dir}/lib"/>
         <copy todir="${dist.dir}/lib">
             <fileset dir="${build.dir}/lib">
                 <include name="**/*"/>
@@ -297,81 +338,81 @@
         </copy>
 
         <!-- Create destination for classes + resources -->
-        <mkdir dir="${dist.dir}/app" />
-        <antcall target="make-kernel" />
-        <antcall target="make-web" />
-        <antcall target="make-app" />
-        <antcall target="make-search" />
-        <antcall target="make-main-app" />
+        <mkdir dir="${dist.dir}/app"/>
+        <antcall target="make-kernel"/>
+        <antcall target="make-web"/>
+        <antcall target="make-app"/>
+        <antcall target="make-search"/>
+        <antcall target="make-main-app"/>
 
         <!-- Replace version number and product name in config and html files -->
         <replace dir="${dist.dir}/app"
                  token="@PRODUCT@"
                  value="${app.name}">
-            <include name="*.conf" />
-            <include name="**/*.html" />
-         </replace>
+            <include name="*.conf"/>
+            <include name="**/*.html"/>
+        </replace>
         <!-- Determine Build parameters -->
         <tstamp>
-            <format property="app.version" pattern="yyww" />
+            <format property="app.version" pattern="yyww"/>
         </tstamp>
         <tstamp>
-            <format property="app.date" pattern="yyyy-MM-dd" />
+            <format property="app.date" pattern="yyyy-MM-dd"/>
         </tstamp>
-        <property name="app.build" value="-" />
-        <property name="app.vcs" value="-" />
+        <property name="app.build" value="-"/>
+        <property name="app.vcs" value="-"/>
 
         <replace dir="${dist.dir}/app"
                  token="@VERSION@"
                  value="${app.version}">
-            <include name="*.conf" />
-            <include name="**/*.html" />
+            <include name="*.conf"/>
+            <include name="**/*.html"/>
         </replace>
         <replace dir="${dist.dir}/app"
                  token="@DATE@"
                  value="${app.date}">
-            <include name="*.conf" />
-            <include name="**/*.html" />
+            <include name="*.conf"/>
+            <include name="**/*.html"/>
         </replace>
         <replace dir="${dist.dir}/app"
                  token="@BUILD@"
                  value="${app.build}">
-            <include name="*.conf" />
-            <include name="**/*.html" />
+            <include name="*.conf"/>
+            <include name="**/*.html"/>
         </replace>
         <replace dir="${dist.dir}/app"
                  token="@VCS@"
                  value="${app.vcs}">
-            <include name="*.conf" />
-            <include name="**/*.html" />
+            <include name="*.conf"/>
+            <include name="**/*.html"/>
         </replace>
         <replace dir="${dist.dir}/app"
                  token="@PRODUCT_FILE_NAME@"
                  value="${app.filename}"
                  includes="conf">
-            <include name="*.conf" />
-            <include name="**/*.html" />
+            <include name="*.conf"/>
+            <include name="**/*.html"/>
         </replace>
 
         <!-- Make love (and a .zip) -->
-        <zip destfile="${dist.dir}/${app.filename}.zip" basedir="${dist.dir}" />
-        <copy file="${dist.dir}/${app.filename}.zip" todir="${site.dir}" />
+        <zip destfile="${dist.dir}/${app.filename}.zip" basedir="${dist.dir}"/>
+        <copy file="${dist.dir}/${app.filename}.zip" todir="${site.dir}"/>
 
         <!-- Replace version number and product name in the generate site -->
         <replace dir="${site.dir}"
                  token="@PRODUCT@"
                  value="${app.name}">
-            <include name="**/*.html" />
+            <include name="**/*.html"/>
         </replace>
         <replace dir="${site.dir}"
                  token="@VERSION@"
                  value="${app.version}">
-            <include name="**/*.html" />
+            <include name="**/*.html"/>
         </replace>
         <replace dir="${site.dir}"
                  token="@PRODUCT_FILE_NAME@"
                  value="${app.filename}">
-            <include name="**/*.html" />
+            <include name="**/*.html"/>
         </replace>
     </target>
 
@@ -393,10 +434,10 @@
             <fileset dir="${sirius.dir}/kernel/resources" excludes="**/*.java"/>
         </copy>
         <copy todir="${dist.dir}">
-            <fileset file="${dist.dir}/app/IPL.class" />
+            <fileset file="${dist.dir}/app/IPL.class"/>
         </copy>
         <copy todir="${dist.dir}">
-            <fileset dir="${sirius.dir}/kernel/dist" />
+            <fileset dir="${sirius.dir}/kernel/dist"/>
         </copy>
     </target>
 
@@ -404,13 +445,15 @@
     <!-- Tests the kernel module -->
     <!-- =========================================================================================================== -->
     <!-- test-prepare does not run with 'unless="no-kernel"' so builds can refer to each other in classpath-->
-    <target name="test-prepare-kernel" depends="test-prepare" description="prepare directory structure for kernel tests">
+    <target name="test-prepare-kernel" depends="test-prepare"
+            description="prepare directory structure for kernel tests">
         <antcall target="test-prepare-module">
             <param name="module.name" value="kernel"/>
         </antcall>
     </target>
 
-    <target name="test-compile-kernel" depends="test-prepare-kernel, make-kernel"  unless="no-kernel" description="compiles the kernel test classes">
+    <target name="test-compile-kernel" depends="test-prepare-kernel, make-kernel" unless="no-kernel"
+            description="compiles the kernel test classes">
         <antcall target="test-compile-module">
             <param name="module.name" value="kernel"/>
             <param name="module.home" value="${sirius.dir}/kernel"/>
@@ -418,7 +461,8 @@
         </antcall>
     </target>
 
-    <target name="test-kernel" depends="test-compile-kernel" unless="no-kernel" description="run automated tests for kernel">
+    <target name="test-kernel" depends="test-compile-kernel" unless="no-kernel"
+            description="run automated tests for kernel">
         <antcall target="test-module">
             <param name="module.name" value="kernel"/>
             <reference refid="test.path.kernel" torefid="module.test.path"/>
@@ -443,7 +487,7 @@
             <fileset dir="${sirius.dir}/web/resources" excludes="**/*.java"/>
         </copy>
         <copy todir="${dist.dir}">
-            <fileset dir="${sirius.dir}/web/dist" />
+            <fileset dir="${sirius.dir}/web/dist"/>
         </copy>
     </target>
 
@@ -457,7 +501,8 @@
         </antcall>
     </target>
 
-    <target name="test-compile-web" depends="test-prepare-web, make-web"  unless="no-web" description="compiles the web test classes">
+    <target name="test-compile-web" depends="test-prepare-web, make-web" unless="no-web"
+            description="compiles the web test classes">
         <antcall target="test-compile-module">
             <param name="module.name" value="web"/>
             <param name="module.home" value="${sirius.dir}/web"/>
@@ -495,7 +540,7 @@
             <fileset dir="${sirius.dir}/app/resources" excludes="**/*.java"/>
         </copy>
         <copy todir="${dist.dir}">
-            <fileset dir="${sirius.dir}/app/dist" />
+            <fileset dir="${sirius.dir}/app/dist"/>
         </copy>
     </target>
 
@@ -509,7 +554,8 @@
         </antcall>
     </target>
 
-    <target name="test-compile-app" depends="test-prepare-app, make-app"  unless="no-app" description="compiles the app test classes">
+    <target name="test-compile-app" depends="test-prepare-app, make-app" unless="no-app"
+            description="compiles the app test classes">
         <antcall target="test-compile-module">
             <param name="module.name" value="app"/>
             <param name="module.home" value="${sirius.dir}/app"/>
@@ -546,13 +592,15 @@
     <!-- Tests the search module -->
     <!-- =========================================================================================================== -->
     <!-- test-prepare does not run with 'unless="no-search"' so builds can refer to each other in classpath-->
-    <target name="test-prepare-search" depends="test-prepare" description="prepare directory structure for search tests">
+    <target name="test-prepare-search" depends="test-prepare"
+            description="prepare directory structure for search tests">
         <antcall target="test-prepare-module">
             <param name="module.name" value="search"/>
         </antcall>
     </target>
 
-    <target name="test-compile-search" depends="test-prepare-search, make-search"  unless="no-search" description="compiles the search test classes">
+    <target name="test-compile-search" depends="test-prepare-search, make-search" unless="no-search"
+            description="compiles the search test classes">
         <antcall target="test-compile-module">
             <param name="module.name" value="search"/>
             <param name="module.home" value="${sirius.dir}/search"/>
@@ -560,7 +608,8 @@
         </antcall>
     </target>
 
-    <target name="test-search" depends="test-compile-search" unless="no-search" description="run automated tests for search">
+    <target name="test-search" depends="test-compile-search" unless="no-search"
+            description="run automated tests for search">
         <antcall target="test-module">
             <param name="module.name" value="search"/>
             <reference refid="test.path.search" torefid="module.test.path"/>
@@ -585,26 +634,28 @@
             <fileset dir="${main.dir}/resources" excludes="**/*.java"/>
         </copy>
         <copy todir="${dist.dir}" failonerror="false">
-            <fileset dir="${main.dir}/dist" />
+            <fileset dir="${main.dir}/dist"/>
         </copy>
         <copy todir="${site.dir}" failonerror="false">
-            <fileset dir="${main.dir}/site" />
+            <fileset dir="${main.dir}/site"/>
         </copy>
-        <mkdir dir="${site.dir}/docs" />
-        <javadoc sourcepath="${main.dir}/src" destdir="${site.dir}/docs" classpathref="compile.path" />
+        <mkdir dir="${site.dir}/docs"/>
+        <javadoc sourcepath="${main.dir}/src" destdir="${site.dir}/docs" classpathref="compile.path"/>
     </target>
 
     <!-- =========================================================================================================== -->
     <!-- Tests the main application module -->
     <!-- =========================================================================================================== -->
-    <target name="test-prepare-main-app" depends="test-prepare" description="prepare directory structure for main-app tests">
+    <target name="test-prepare-main-app" depends="test-prepare"
+            description="prepare directory structure for main-app tests">
         <antcall target="test-prepare-module">
             <param name="module.name" value="main-app"/>
         </antcall>
     </target>
 
-    <target name="test-compile-main-app" depends="test-prepare-main-app, make-main-app"  description="compiles the main-app test classes">
-        <antcall target="test-compile-module">
+    <target name="test-compile-main-app" depends="test-prepare-main-app, make-main-app"
+            description="compiles the main-app test classes">
+        <antcall target="unittest-compile-module">
             <param name="module.name" value="main-app"/>
             <param name="module.home" value="${main.dir}"/>
             <reference refid="test.path.main-app" torefid="module.test.path"/>
@@ -621,27 +672,29 @@
     <!-- =========================================================================================================== -->
     <!-- run the automated systemtests -->
     <!-- =========================================================================================================== -->
-    <target name="test-prepare-systemtest" depends="test-prepare" description="prepare directory structure for system tests">
+    <target name="test-prepare-systemtest" depends="test-prepare"
+            description="prepare directory structure for system tests">
         <antcall target="test-prepare-module">
             <param name="module.name" value="systemtest"/>
         </antcall>
     </target>
 
-    <target name="test-compile-systemtest" depends="test-prepare-systemtest"  description="compiles the systemtest classes">
-
-        <antcall target="src-compile-module">
+    <target name="test-compile-systemtest" depends="test-prepare-systemtest"
+            description="compiles the systemtest classes">
+        <antcall target="compile-module">
             <param name="module.name" value="systemtest"/>
-            <param name="module.home" value="${sirius.dir}/../systemtest"/>
+            <param name="module.home" value="${main.dir}"/>
+            <param name="src.path" value="test/systemtest"/>
             <reference refid="test.path.systemtest" torefid="module.test.path"/>
         </antcall>
     </target>
 
-    <target name="test-run-systemtest" depends="test-compile-systemtest" description="run automated systemtest against test system">
+    <target name="test-run-systemtest" depends="test-compile-systemtest"
+            description="run automated systemtest against test system">
         <antcall target="test-module">
             <param name="module.name" value="systemtest"/>
             <reference refid="test.path.systemtest" torefid="module.test.path"/>
         </antcall>
     </target>
-
 
 </project>
