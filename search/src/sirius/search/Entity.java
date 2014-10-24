@@ -329,7 +329,11 @@ public abstract class Entity {
                     e = value.getValue();
                 }
 
-                p.getField().set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(e));
+                if (e == null) {
+                    p.getField().set(this, null);
+                } else {
+                    p.getField().set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(e));
+                }
             }
         } catch (Throwable e) {
             Exceptions.handle()
