@@ -18,10 +18,7 @@ import sirius.kernel.di.std.Part;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.nls.NLS;
-import sirius.search.annotations.RefField;
-import sirius.search.annotations.RefType;
-import sirius.search.annotations.Transient;
-import sirius.search.annotations.Unique;
+import sirius.search.annotations.*;
 import sirius.search.properties.Property;
 import sirius.web.http.WebContext;
 import sirius.web.security.UserContext;
@@ -301,6 +298,7 @@ public abstract class Entity {
         return previousError;
     }
 
+    @SuppressWarnings("unchecked")
     protected void fillRefField(EntityDescriptor descriptor, Property p) {
         try {
             RefField ref = p.getField().getAnnotation(RefField.class);
@@ -311,8 +309,27 @@ public abstract class Entity {
 
             EntityRef<?> value = (EntityRef<?>) entityRef.getField().get(this);
             if (value.isValueLoaded() && value.getValue() != null) {
-                p.getField()
-                 .set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(value.getValue()));
+                p.getField().set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(value.getValue()));
+            } else {
+                // um das nachzufüllen müssen wir eine Datenbankabfrage machen.
+                Class remoteClass = value.remoteClass();
+                Indexed indexedAnnotation = (Indexed) remoteClass.getAnnotation(Indexed.class);
+                final Entity e;
+
+                // wenn es routing gibt, nutze das auch.
+                if (indexedAnnotation != null && Strings.isFilled(indexedAnnotation.routing())) {
+                    // get the entity used for routing.
+                    String routingElement = ref.routingField();
+                    EntityRef<?> routingRef = (EntityRef<?>) descriptor.getProperty(routingElement).getField().get(this);
+
+                    // find the entity
+                    e = value.getValue(routingRef.getId());
+                } else {
+                    // FIXME in some cases this surpresses routing for cases when we don't know better.
+                    e = value.getValue();
+                }
+
+                p.getField().set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(e));
             }
         } catch (Throwable e) {
             Exceptions.handle()

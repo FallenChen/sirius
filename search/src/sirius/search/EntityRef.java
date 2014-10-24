@@ -205,6 +205,13 @@ public class EntityRef<E extends Entity> {
     }
 
     /**
+     * @return the type of the class referenced by this EntityRef
+     */
+    public Class remoteClass() {
+        return clazz;
+    }
+
+    /**
      * Determines if an entity is referenced by this field or not.
      * <p>
      * This is not be confused with {@link #isValueLoaded()} which indicates if the value has already been
