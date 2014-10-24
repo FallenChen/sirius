@@ -973,9 +973,6 @@ public class NLS {
                 result.append(", ");
             }
             long value = duration / MINUTE;
-            if (duration % MINUTE > 0) {
-                value++;
-            }
             if (value == 1) {
                 result.append(NLS.apply("NLS.minute", value));
             } else {
