@@ -28,6 +28,7 @@ public class EntityRef<E extends Entity> {
     private boolean valueFromCache;
     private Class<E> clazz;
     private String id;
+    private Boolean dirty = null;
 
 
     /**
@@ -175,6 +176,16 @@ public class EntityRef<E extends Entity> {
         this.value = value;
         this.valueFromCache = false;
         this.id = value == null ? null : value.id;
+
+        setDirtyState();
+    }
+
+    protected void setDirtyState() {
+        if (dirty == null) {
+            dirty = false;
+        } else {
+            this.dirty = true;
+        }
     }
 
     /**
@@ -202,6 +213,8 @@ public class EntityRef<E extends Entity> {
         this.id = id;
         this.value = null;
         this.valueFromCache = false;
+        setDirtyState();
+
     }
 
     /**
@@ -222,6 +235,13 @@ public class EntityRef<E extends Entity> {
      */
     public boolean isFilled() {
         return Strings.isFilled(id);
+    }
+
+    /**
+     * @return true when the reference has changed since being loaded last, false otherwise
+     */
+    boolean isDirty() {
+        return dirty;
     }
 
     /**

@@ -310,10 +310,10 @@ public abstract class Entity {
             EntityRef<?> value = (EntityRef<?>) entityRef.getField().get(this);
             if (value.isValueLoaded() && value.getValue() != null) {
                 p.getField().set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(value.getValue()));
-            } else {
+            } else if (value.isDirty()) {
                 // um das nachzufüllen müssen wir eine Datenbankabfrage machen.
-                Class remoteClass = value.remoteClass();
-                Indexed indexedAnnotation = (Indexed) remoteClass.getAnnotation(Indexed.class);
+                Class<Entity> remoteClass = value.remoteClass();
+                Indexed indexedAnnotation = remoteClass.getAnnotation(Indexed.class);
                 final Entity e;
 
                 // wenn es routing gibt, nutze das auch.
@@ -325,8 +325,7 @@ public abstract class Entity {
                     // find the entity
                     e = value.getValue(routingRef.getId());
                 } else {
-                    // FIXME in some cases this surpresses routing for cases when we don't know better.
-                    e = value.getValue();
+                    e = Index.select(remoteClass).deliberatelyUnrouted().eq(Entity.ID, value.getId()).queryFirst();
                 }
 
                 if (e == null) {
