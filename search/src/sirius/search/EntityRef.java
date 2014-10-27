@@ -176,7 +176,6 @@ public class EntityRef<E extends Entity> {
         this.value = value;
         this.valueFromCache = false;
         this.id = value == null ? null : value.id;
-
         setDirtyState();
     }
 
@@ -214,7 +213,6 @@ public class EntityRef<E extends Entity> {
         this.value = null;
         this.valueFromCache = false;
         setDirtyState();
-
     }
 
     /**
