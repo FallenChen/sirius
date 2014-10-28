@@ -9,6 +9,7 @@
 package sirius.search;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Lists;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.index.engine.DocumentMissingException;
 import sirius.kernel.async.Async;
@@ -18,7 +19,6 @@ import sirius.search.annotations.RefType;
 import sirius.search.properties.Property;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -43,7 +43,9 @@ public class ForeignKey {
     private String otherType;
     private String localType;
     private Field field;
-    private List<Reference> references = new ArrayList<Reference>();
+    private List<Reference> references = Lists.newArrayList();
+    private Class<? extends Entity> localClass;
+
 
     /**
      * Contains all metadata to take care of a {@link sirius.search.annotations.RefField}
@@ -109,9 +111,12 @@ public class ForeignKey {
     /**
      * Creates a new foreign key for the underlying java Field
      *
-     * @param field the field which originates the foreign key
+     * @param field      the field which originates the foreign key
+     * @param localClass contains the entity class to which this foreign key belongs. This is not necessarily
+     *                   the declaring class of <tt>field</tt> as this might be an abstract super class
      */
-    public ForeignKey(Field field) {
+    public ForeignKey(Field field, Class<? extends Entity> localClass) {
+        this.localClass = localClass;
         this.refType = field.getAnnotation(RefType.class);
         this.field = field;
     }
@@ -149,9 +154,8 @@ public class ForeignKey {
      *
      * @return the class of the entity where the foreign key was declared
      */
-    @SuppressWarnings("unchecked")
     public Class<? extends Entity> getLocalClass() {
-        return (Class<? extends Entity>) field.getDeclaringClass();
+        return localClass;
     }
 
     /**

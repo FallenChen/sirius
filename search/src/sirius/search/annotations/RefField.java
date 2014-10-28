@@ -39,10 +39,4 @@ public @interface RefField {
      * @return the name of the field being copied in the referenced entity
      */
     String remoteField();
-
-    /**
-     * contains the field used for routing when querying the referenced entity
-     * @return name of the field used for routing when querying the entity.
-     */
-    String routingField() default "";
 }

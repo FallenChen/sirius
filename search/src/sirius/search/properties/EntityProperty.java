@@ -88,7 +88,9 @@ public class EntityProperty extends Property {
     @Override
     public void readFromSource(Entity entity, Object value) {
         try {
-            ((EntityRef<?>) field.get(entity)).setId((String) value);
+            EntityRef<?> entityRef = (EntityRef<?>) field.get(entity);
+            entityRef.setId((String) value);
+            entityRef.clearDirty();
         } catch (IllegalAccessException e) {
             Exceptions.handle(Index.LOG, e);
         }

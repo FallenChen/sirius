@@ -18,7 +18,10 @@ import sirius.kernel.di.std.Part;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.HandledException;
 import sirius.kernel.nls.NLS;
-import sirius.search.annotations.*;
+import sirius.search.annotations.RefField;
+import sirius.search.annotations.RefType;
+import sirius.search.annotations.Transient;
+import sirius.search.annotations.Unique;
 import sirius.search.properties.Property;
 import sirius.web.http.WebContext;
 import sirius.web.security.UserContext;
@@ -308,24 +311,40 @@ public abstract class Entity {
                                                                              .type());
 
             EntityRef<?> value = (EntityRef<?>) entityRef.getField().get(this);
-            if (value.isValueLoaded() && value.getValue() != null) {
-                p.getField().set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(value.getValue()));
-            } else if (value.isDirty()) {
-                // um das nachzufüllen müssen wir eine Datenbankabfrage machen.
-                Class<Entity> remoteClass = value.remoteClass();
-                Indexed indexedAnnotation = remoteClass.getAnnotation(Indexed.class);
-                final Entity e;
-
-                // wenn es routing gibt, nutze das auch.
-                if (indexedAnnotation != null && Strings.isFilled(indexedAnnotation.routing())) {
-                    // get the entity used for routing.
-                    String routingElement = ref.routingField();
-                    EntityRef<?> routingRef = (EntityRef<?>) descriptor.getProperty(routingElement).getField().get(this);
-
-                    // find the entity
-                    e = value.getValue(routingRef.getId());
+            if (value.isValueLoaded() && !value.isDirty()) {
+                // Update using value if present and not from cache
+                if (value.isFilled()) {
+                    p.getField()
+                     .set(this, remoteDescriptor.getProperty(ref.remoteField()).getField().get(value.getValue()));
                 } else {
-                    e = Index.select(remoteClass).deliberatelyUnrouted().eq(Entity.ID, value.getId()).queryFirst();
+                    p.getField().set(this, null);
+                }
+            } else if (value.isDirty()) {
+                // Value hase changed - force load...
+                Entity e = null;
+                if (remoteDescriptor.getRouting() != null) {
+                    // We need routing information to load the value....use the value provided in the
+                    // RefType annotation...
+                    Object routingValue = null;
+                    String routingField = entityRef.getField().getAnnotation(RefType.class).localRouting();
+                    if (Strings.isFilled(routingField)) {
+                        routingValue = descriptor.getProperty(routingField).getField().get(this);
+                    }
+                    if (routingValue != null && routingValue instanceof EntityRef<?>) {
+                        e = value.getValue(((EntityRef) routingValue).getId());
+                    } else {
+                        // No routing available or value was null -> fail
+                        Exceptions.handle()
+                                  .to(Index.LOG)
+                                  .withSystemErrorMessage(
+                                          "Error updating an RefField for an RefType: Property %s in class %s: No routing information was available to load the referenced value!",
+                                          p.getName(),
+                                          this.getClass().getName())
+                                  .handle();
+                    }
+                } else {
+                    // We need no routing -> simply load the value
+                    e = value.getValue();
                 }
 
                 if (e == null) {

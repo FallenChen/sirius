@@ -51,4 +51,16 @@ public @interface RefType {
      */
     String onDeleteErrorMsg() default "";
 
+    /**
+     * Determines the local field used as routing value in order to determine the routing used for the lookup of the
+     * referenced value.
+     * <p>
+     * This is required if RefFields point to this referenced entity.
+     * </p>
+     *
+     * @return the name of the property / field containing the routing value to be used when fetching the referenced
+     * value.
+     */
+    String localRouting() default "";
+
 }

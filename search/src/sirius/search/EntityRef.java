@@ -28,8 +28,7 @@ public class EntityRef<E extends Entity> {
     private boolean valueFromCache;
     private Class<E> clazz;
     private String id;
-    private Boolean dirty = null;
-
+    private boolean dirty = false;
 
     /**
      * Creates a new reference.
@@ -97,6 +96,7 @@ public class EntityRef<E extends Entity> {
                 value = Index.find(clazz, id);
             }
             valueFromCache = false;
+            clearDirty();
         }
         return value;
     }
@@ -132,6 +132,8 @@ public class EntityRef<E extends Entity> {
         Tuple<E, Boolean> tuple = Index.fetch(routing, clazz, id, localCache);
         value = tuple.getFirst();
         valueFromCache = tuple.getSecond();
+        markDirty();
+
         return value;
     }
 
@@ -164,6 +166,8 @@ public class EntityRef<E extends Entity> {
         Tuple<E, Boolean> tuple = Index.fetch(routing, clazz, id);
         value = tuple.getFirst();
         valueFromCache = tuple.getSecond();
+        markDirty();
+
         return value;
     }
 
@@ -176,15 +180,34 @@ public class EntityRef<E extends Entity> {
         this.value = value;
         this.valueFromCache = false;
         this.id = value == null ? null : value.id;
-        setDirtyState();
+        clearDirty();
     }
 
-    protected void setDirtyState() {
-        if (dirty == null) {
-            dirty = false;
-        } else {
-            this.dirty = true;
-        }
+    /**
+     * Clears the dirty flag for this reference.
+     */
+    public void clearDirty() {
+        this.dirty = false;
+    }
+
+    /**
+     * Sets the dirty flag for this reference.
+     */
+    protected void markDirty() {
+        this.dirty = true;
+    }
+
+    /**
+     * Determines whether the id stored by this entity differs from state stored in the database.
+     * <p>
+     * Used to determine if RefField referencing this entity must be updated. This is also set to <tt>true</tt>
+     * if the current value was fetched from a cache instead from the database.
+     * </p>
+     *
+     * @return <tt>true</tt> if the id has changed or <tt>false</tt> otherwise
+     */
+    protected boolean isDirty() {
+        return dirty;
     }
 
     /**
@@ -212,14 +235,7 @@ public class EntityRef<E extends Entity> {
         this.id = id;
         this.value = null;
         this.valueFromCache = false;
-        setDirtyState();
-    }
-
-    /**
-     * @return the type of the class referenced by this EntityRef
-     */
-    public Class remoteClass() {
-        return clazz;
+        markDirty();
     }
 
     /**
@@ -233,13 +249,6 @@ public class EntityRef<E extends Entity> {
      */
     public boolean isFilled() {
         return Strings.isFilled(id);
-    }
-
-    /**
-     * @return true when the reference has changed since being loaded last, false otherwise
-     */
-    boolean isDirty() {
-        return dirty;
     }
 
     /**

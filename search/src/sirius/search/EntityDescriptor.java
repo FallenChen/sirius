@@ -118,7 +118,7 @@ public class EntityDescriptor {
                     Index.LOG.WARN("Cannot create property %s in type %s", field.getName(), clazz.getSimpleName());
                 } else {
                     if (field.isAnnotationPresent(RefType.class)) {
-                        keys.add(new ForeignKey(field));
+                        keys.add(new ForeignKey(field, (Class<? extends Entity>) rootClass));
                     }
                     if (field.isAnnotationPresent(RefField.class)) {
                         ForeignKey key = findForeignKey(keys, field.getAnnotation(RefField.class).localRef());
