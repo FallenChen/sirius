@@ -41,6 +41,7 @@ public class ScopeInfo {
         return scopeName;
     }
 
+    @SuppressWarnings("unchecked")
     public <T> T getScopeObject(Class<T> clazz) {
         if (scopeSupplier == null) {
             return null;

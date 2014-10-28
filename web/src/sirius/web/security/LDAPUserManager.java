@@ -42,6 +42,7 @@ public class LDAPUserManager extends GenericUserManager {
 
     }
 
+    @SuppressWarnings("unchecked")
     protected LDAPUserManager(ScopeInfo scope, Extension config) {
         super(scope, config);
         this.authPrefix = config.get("authPrefix").asString(config.get("prefix").asString());
@@ -82,6 +83,7 @@ public class LDAPUserManager extends GenericUserManager {
     private String searchBase;
     private final List<String> requiredRoles;
 
+    @SuppressWarnings("unchecked")
     @Override
     protected UserInfo findUserByCredentials(WebContext wc, String user, String password) {
         try {

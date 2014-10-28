@@ -104,6 +104,7 @@ public class ConfigUserManager extends GenericUserManager {
                             u -> e);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected Set<String> computeRoles(WebContext ctx, String userId) {
         Set<String> roles = userRoles.get(userId);

@@ -91,6 +91,7 @@ public class UserInfo {
         return hasPermission(PERMISSION_LOGGED_IN);
     }
 
+    @SuppressWarnings("unchecked")
     public <T> T getUserObject(Class<T> clazz) {
         if (userSupplier == null) {
             return null;
