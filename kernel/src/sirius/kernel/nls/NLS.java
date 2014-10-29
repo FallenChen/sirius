@@ -25,10 +25,7 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
@@ -526,6 +523,10 @@ public class NLS {
             return data.toString();
         }
         if (data instanceof Temporal) {
+            // Convert Instant to LocalDateTime to permit a "normal" time format
+            if (data instanceof Instant) {
+                data = LocalDateTime.ofInstant((Instant) data, ZoneId.systemDefault());
+            }
             Temporal temporal = (Temporal) data;
             if (ChronoUnit.HOURS.isSupportedBy(temporal)) {
                 if (!ChronoField.DAY_OF_MONTH.isSupportedBy(temporal)) {
@@ -611,6 +612,10 @@ public class NLS {
             }
         }
         if (data instanceof Temporal) {
+            // Convert Instant to LocalDateTime to permit a "normal" time format
+            if (data instanceof Instant) {
+                data = LocalDateTime.ofInstant((Instant) data, ZoneId.systemDefault());
+            }
             Temporal temporal = (Temporal) data;
             if (ChronoUnit.HOURS.isSupportedBy(temporal)) {
                 if (!ChronoField.DAY_OF_MONTH.isSupportedBy(temporal)) {
