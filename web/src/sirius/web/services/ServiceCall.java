@@ -35,13 +35,17 @@ public abstract class ServiceCall {
         this.ctx = ctx;
     }
 
+    /**
+     * Handles the given exception by creating an error response.
+     *
+     * @param errorCode the error code to send
+     * @param error     the exception to report
+     */
     public void handle(String errorCode, Throwable error) {
         HandledException he = Exceptions.handle(LOG, error);
         StructuredOutput out = createOutput();
         out.beginResult();
-        out.property("success", false);
-        out.property("error", true);
-        out.property("message", he.getMessage());
+        markCallFailed(out, he.getMessage());
         Throwable cause = error.getCause();
         while (cause != null && cause.getCause() != null && !cause.getCause().equals(cause)) {
             cause = cause.getCause();
@@ -59,10 +63,48 @@ public abstract class ServiceCall {
         out.endResult();
     }
 
+    /**
+     * Marks the call as failed by adding the well known <tt>error</tt>, success<tt>false</tt> and <tt>message</tt>
+     * properties to the given output.
+     *
+     * @param out     the output to write to
+     * @param message the message to report
+     */
+    public void markCallFailed(StructuredOutput out, String message) {
+        out.property("success", false);
+        out.property("error", true);
+        out.property("message", message);
+    }
+
+    /**
+     * Marks the call as failed by adding the well known <tt>error</tt> and success<tt>false</tt>
+     * properties to the given output.
+     *
+     * @param out the output to write to
+     */
+    public void markCallSuccessful(StructuredOutput out) {
+        out.property("success", true);
+        out.property("error", false);
+    }
+
+    /**
+     * Provides access to the underlying request.
+     *
+     * @return the request which created the service call
+     */
     public WebContext getContext() {
         return ctx;
     }
 
+    /**
+     * Returns the value provided for the given key(s).
+     * <p>
+     * The fist non empty value is used. If all values are empty, an empty value is returned.
+     * </p>
+     *
+     * @param keys the keys to check for a value
+     * @return the first non empty value found for one of the given keys
+     */
     public Value get(String... keys) {
         for (String key : keys) {
             Value result = ctx.get(key);
@@ -73,6 +115,13 @@ public abstract class ServiceCall {
         return Value.of(null);
     }
 
+    /**
+     * Returns the value provided for the given key(s) or reports an error if no non empty value was found.
+     * <p>The first non empty value is used. If all values are empty, an exception is thrown.</p>
+     *
+     * @param keys the keys to check for a value
+     * @return the first non empty value found for one of the given keys
+     */
     public Value require(String... keys) {
         for (String key : keys) {
             Value result = ctx.get(key);
@@ -87,7 +136,12 @@ public abstract class ServiceCall {
                         .handle();
     }
 
-    public void invoke(StructuredService serv) {
+    /**
+     * Calls the given service.
+     *
+     * @param serv the service to call
+     */
+    protected void invoke(StructuredService serv) {
         try {
             serv.call(this, createOutput());
         } catch (Throwable t) {
@@ -95,5 +149,10 @@ public abstract class ServiceCall {
         }
     }
 
+    /**
+     * Creates the output used to render the result of the service call.
+     *
+     * @return the created output
+     */
     protected abstract StructuredOutput createOutput();
 }
