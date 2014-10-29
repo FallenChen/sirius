@@ -56,11 +56,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -977,6 +972,82 @@ public class Index {
                             .error(t)
                             .withSystemErrorMessage("Failed to find '%s' (%s): %s (%s)", id, clazz.getName())
                             .handle();
+        }
+    }
+
+    /**
+     * Tries to load a "fresh" (updated) instance of the given entity from the cluster.
+     * <p>Will return <tt>null</tt> if <tt>null</tt> was passed in. If a non persisted entity was given. This
+     * entity will be returned. If the entity is no longer available in the cluster,
+     * <tt>null</tt> will be returned</p>.
+     *
+     * @param entity the entity to refresh
+     * @return a refreshed instance of the entity or <tt>null</tt> if either the given entity was <tt>null</tt> or if
+     * the given entity cannot be found in the cluster.
+     */
+    @SuppressWarnings("unchecked")
+    @Nullable
+    public static <T extends Entity> T refreshOrNull(@Nullable T entity) {
+        if (entity == null) {
+            return null;
+        }
+        if (entity.isNew()) {
+            return entity;
+        }
+        Class<T> type = (Class<T>) entity.getClass();
+        EntityDescriptor descriptor = getDescriptor(type);
+        if (descriptor.hasRouting()) {
+            Object routing = descriptor.getProperty(descriptor.getRouting()).writeToSource(entity);
+            return Index.find(routing == null ? null : routing.toString(), type, entity.getId());
+        } else {
+            return Index.find(type, entity.getId());
+        }
+    }
+
+    /**
+     * Boilerplate method for {@link #refreshOrNull(Entity)}.
+     * <p>
+     * Returns <tt>null</tt> if the given entity was <tt>null</tt>. Otherweise either a refreshed instance will
+     * be returned or an exception will be thrown.
+     * </p>
+     *
+     * @param entity the entity to refresh
+     * @return a fresh instance of the given entity or <tt>null</tt> if <tt>null</tt> was passed in
+     * @throws sirius.kernel.health.HandledException if the entity is no longer available in the cluster
+     */
+    @Nullable
+    public static <T extends Entity> T refreshOrFail(@Nullable T entity) {
+        T freshEntity = refreshOrNull(entity);
+        if (entity != null && freshEntity == null) {
+            throw Exceptions.handle()
+                            .to(LOG)
+                            .withSystemErrorMessage("Failed to refresh the entity '%s' of type %s with id '%s'",
+                                                    entity,
+                                                    entity.getClass().getSimpleName(),
+                                                    entity.getId())
+                            .handle();
+        } else {
+            return freshEntity;
+        }
+    }
+
+    /**
+     * Boilerplate method for {@link #refreshOrNull(Entity)}.
+     * <p>
+     * Returns <tt>null</tt> if the given entity was <tt>null</tt>. Otherwise either a refreshed instance will
+     * be returned or the original given instance.
+     * </p>
+     *
+     * @param entity the entity to refresh
+     * @return a fresh instance of the given entity or <tt>null</tt> if <tt>null</tt> was passed in
+     */
+    @Nullable
+    public static <T extends Entity> T refreshIfPossible(@Nullable T entity) {
+        T freshEntity = refreshOrNull(entity);
+        if (freshEntity == null) {
+            return entity;
+        } else {
+            return freshEntity;
         }
     }
 

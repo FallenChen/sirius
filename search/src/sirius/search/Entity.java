@@ -328,11 +328,9 @@ public abstract class Entity {
                     Object routingValue = null;
                     String routingField = entityRef.getField().getAnnotation(RefType.class).localRouting();
                     if (Strings.isFilled(routingField)) {
-                        routingValue = descriptor.getProperty(routingField).getField().get(this);
+                        routingValue = descriptor.getProperty(routingField).writeToSource(this);
                     }
-                    if (routingValue != null && routingValue instanceof EntityRef<?>) {
-                        e = value.getValue(((EntityRef) routingValue).getId());
-                    } else {
+                    if (routingValue == null) {
                         // No routing available or value was null -> fail
                         Exceptions.handle()
                                   .to(Index.LOG)
