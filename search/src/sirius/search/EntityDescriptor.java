@@ -89,6 +89,7 @@ public class EntityDescriptor {
     /*
      * Adds all properties of the given class (and its superclasses)
      */
+    @SuppressWarnings("unchecked")
     private void addProperties(Class<?> rootClass, Class<?> clazz, List<Property> props, List<ForeignKey> keys) {
         for (Field field : clazz.getDeclaredFields()) {
             if (!field.isAnnotationPresent(Transient.class) && !Modifier.isStatic(field.getModifiers())) {
