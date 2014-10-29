@@ -11,6 +11,7 @@ package sirius.kernel.nls
 import sirius.kernel.async.CallContext
 import sirius.testtools.SiriusBaseSpecification
 
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -66,6 +67,19 @@ class NLSSpec extends SiriusBaseSpecification {
         def result = NLS.toUserString(date);
         then:
         result == "09.08.2014";
+    }
+
+    def "toUserString() formats an Instant successfully"() {
+        given:
+        def date = LocalDateTime.now();
+        def instant = Instant.now();
+        and:
+        CallContext.getCurrent().setLang("de");
+        when:
+        def dateFormatted = NLS.toUserString(date);
+        def instantFormatted = NLS.toUserString(instant);
+        then:
+        dateFormatted == instantFormatted;
     }
 
     def "toUserString() formats null as empty string"() {
