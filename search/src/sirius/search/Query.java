@@ -862,7 +862,7 @@ public class Query<E extends Entity> {
      *
      * @param handler the handler used to process each result item
      */
-    public void iterate(ResultHandler<E> handler) {
+    public void iterate(ResultHandler<? super E> handler) {
         try {
             if (forceFail) {
                 return;
