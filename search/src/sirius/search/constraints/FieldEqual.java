@@ -39,7 +39,7 @@ public class FieldEqual implements Constraint {
         } else {
             this.field = field;
         }
-        this.value = FieldOperator.convertTimeToDates(value);
+        this.value = FieldOperator.convertJava8Times(value);
         if (value != null && value.getClass().isEnum()) {
             this.value = ((Enum<?>) value).name();
         }

@@ -9,9 +9,7 @@
 package sirius.search.constraints;
 
 import org.elasticsearch.index.query.*;
-import sirius.kernel.commons.Strings;
 import sirius.search.Entity;
-import sirius.search.EntityRef;
 import sirius.search.Index;
 
 import java.util.Collection;
@@ -91,7 +89,7 @@ public class OneInField implements Constraint {
             }
             BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
             for (Object value : values) {
-                boolQueryBuilder.should(QueryBuilders.termQuery(field, FieldOperator.convertTimeToDates(value)));
+                boolQueryBuilder.should(QueryBuilders.termQuery(field, FieldOperator.convertJava8Times(value)));
             }
             return boolQueryBuilder;
         }
@@ -106,7 +104,7 @@ public class OneInField implements Constraint {
             }
             BoolFilterBuilder boolFilterBuilder = FilterBuilders.boolFilter();
             for (Object value : values) {
-                boolFilterBuilder.should(FilterBuilders.termFilter(field, FieldOperator.convertTimeToDates(value)));
+                boolFilterBuilder.should(FilterBuilders.termFilter(field, FieldOperator.convertJava8Times(value)));
             }
             if (orEmpty) {
                 boolFilterBuilder.should(FilterBuilders.missingFilter(field));

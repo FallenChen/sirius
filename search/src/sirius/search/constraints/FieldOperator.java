@@ -9,11 +9,13 @@
 package sirius.search.constraints;
 
 import org.elasticsearch.index.query.*;
+import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import sirius.kernel.commons.Value;
 
 import java.time.Instant;
+import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
-import java.util.Date;
 
 /**
  * Represents a relational filter which can be used to filter &lt; or &lt;=, along with &gt; or &gt;=
@@ -50,19 +52,23 @@ public class FieldOperator implements Constraint {
     public static FieldOperator less(String field, Object value) {
         FieldOperator result = new FieldOperator(field);
         result.bound = Bound.LT;
-        result.value = convertTimeToDates(value);
+        result.value = convertJava8Times(value);
 
         return result;
     }
 
     /*
-     * Converts Java 8 Time API objects down to the classic API which is used by Elasticsearch
+     * Converts Java 8 Time API objects JodaTime which is used by Elasticsearch
      */
-    protected static Object convertTimeToDates(Object value) {
+    protected static Object convertJava8Times(Object value) {
         if (value != null && value instanceof Instant) {
-            return new Date(((Instant) value).toEpochMilli());
+            return new org.joda.time.Instant(((Instant) value).toEpochMilli());
         } else if (value != null && value instanceof TemporalAccessor) {
-            return new Date(Value.of(value).asInstant(null).toEpochMilli());
+            if (((TemporalAccessor) value).isSupported(ChronoField.HOUR_OF_DAY)) {
+                return new DateTime(Value.of(value).asInstant(null).toEpochMilli());
+            } else {
+                return new LocalDate(Value.of(value).asInstant(null).toEpochMilli());
+            }
         }
 
         return value;
