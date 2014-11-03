@@ -949,7 +949,7 @@ public class Value {
         if (epochSeconds < 0) {
             return defaultValue;
         }
-        return Instant.ofEpochSecond(epochSeconds);
+        return Instant.ofEpochMilli(epochSeconds);
     }
 
     public LocalDateTime asLocalDateTimeOfEpochMillis(LocalDateTime defaultValue) {

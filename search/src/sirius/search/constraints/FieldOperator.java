@@ -84,7 +84,7 @@ public class FieldOperator implements Constraint {
     public static FieldOperator greater(String field, Object value) {
         FieldOperator result = new FieldOperator(field);
         result.bound = Bound.GT;
-        result.value = value;
+        result.value = convertJava8Times(value);
         return result;
     }
 
