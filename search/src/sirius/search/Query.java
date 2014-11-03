@@ -344,7 +344,7 @@ public class Query<E extends Entity> {
      * @return the query itself for fluent method calls
      */
     public Query<E> orderByAsc(String field) {
-        orderBys.add(new Tuple<String, Boolean>(field, true));
+        orderBys.add(Tuple.create(field, true));
         return this;
     }
 
