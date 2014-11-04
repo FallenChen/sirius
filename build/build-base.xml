@@ -198,7 +198,7 @@
 
     <taskdef name="junit"
              classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
-        <classpath refid="test.path"/>
+        <classpath refid="testlib.path"/>
     </taskdef>
 
     <target name="test" depends="test-kernel, test-web, test-app, test-search, test-main-app"
