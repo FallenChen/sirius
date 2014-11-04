@@ -128,6 +128,17 @@ public class RedisSessionStorage implements SessionStorage {
         public boolean isNew() {
             return false;
         }
+
+        @Override
+        public void markAsUserSession() {
+            try {
+                try (RedisConnection c = RedisConnector.getClient(redisServer)) {
+                    c.getClient().set(PREFIX + id + "-user-session", "true");
+                }
+            } catch (Exception e) {
+                throw Exceptions.handle(e);
+            }
+        }
     }
 
     @Override

@@ -52,23 +52,26 @@
 
     <!-- Prepare classpath -->
     <path id="compile.path">
-        <fileset dir="${dist.dir}/lib" includes="*.jar"/>
+        <fileset dir="${build.dir}/lib" includes="*.jar"/>
         <pathelement path="${dist.dir}/app"/>
     </path>
 
     <!-- Prepare test classpaths -->
+    <path id="testlib.path">
+        <fileset dir="${build.dir}/testlib" includes="*.jar"/>
+    </path>
     <path id="test.path">
         <path refid="compile.path"/>
-        <fileset dir="${build.dir}/testlib" includes="*.jar"/>
+        <path refid="testlib.path"/>
     </path>
 
     <path id="test.path.systemtest">
-        <fileset dir="${build.dir}/testlib" includes="*.jar"/>
+        <path refid="testlib.path"/>
     </path>
 
     <path id="test.path.kernel">
         <path refid="compile.path"/>
-        <fileset dir="${build.dir}/testlib" includes="*.jar"/>
+        <path refid="testlib.path"/>
     </path>
 
     <path id="test.path.web">
@@ -191,7 +194,7 @@
     <taskdef
             name="groovyc"
             classname="org.codehaus.groovy.ant.Groovyc"
-            classpathref="test.path"/>
+            classpathref="testlib.path"/>
 
     <taskdef name="junit"
              classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
