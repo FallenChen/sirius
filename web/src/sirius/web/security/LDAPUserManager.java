@@ -150,9 +150,7 @@ public class LDAPUserManager extends GenericUserManager {
                         }
                     }
 
-                    LdapName name = new LdapName(sr.getName());
-                    String rdn = String.valueOf(name.getRdn(name.size() - 1).getValue());
-                    return new UserInfo(null, null, rdn, rdn, null, permissions, null);
+                    return new UserInfo(null, null, user, user, null, permissions, null);
                 }
             } finally {
                 ctx.close();
