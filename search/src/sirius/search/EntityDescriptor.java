@@ -290,4 +290,13 @@ public class EntityDescriptor {
     public String getRouting() {
         return routing;
     }
+
+    /**
+     * Determines if entities have foreign keys.
+     *
+     * @return <tt>true</tt> if there are foreign keys, <tt>false</tt> otherwise
+     */
+    public boolean hasForeignKeys() {
+        return !foreignKeys.isEmpty();
+    }
 }

@@ -25,10 +25,7 @@ import org.elasticsearch.search.facet.FacetBuilders;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
 import sirius.kernel.cache.ValueComputer;
-import sirius.kernel.commons.Monoflop;
-import sirius.kernel.commons.Strings;
-import sirius.kernel.commons.Tuple;
-import sirius.kernel.commons.Watch;
+import sirius.kernel.commons.*;
 import sirius.kernel.health.Exceptions;
 import sirius.kernel.health.Microtiming;
 import sirius.kernel.nls.NLS;
@@ -990,41 +987,65 @@ public class Query<E extends Entity> {
             }
             Watch w = Watch.start();
             EntityDescriptor ed = Index.getDescriptor(clazz);
-            DeleteByQueryRequestBuilder builder = Index.getClient()
-                                                       .prepareDeleteByQuery(index != null ? index : Index.getIndex(
-                                                               clazz))
-                                                       .setTypes(ed.getType());
-            if (Strings.isFilled(routing)) {
-                if (!ed.hasRouting()) {
-                    Exceptions.handle()
-                              .to(Index.LOG)
-                              .withSystemErrorMessage(
-                                      "Performing a delete on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
-                                      clazz.getName())
-                              .handle();
-                }
-                builder.setRouting(routing);
-            } else if (ed.hasRouting() && !deliberatelyUnrouted) {
-                Exceptions.handle()
-                          .to(Index.LOG)
-                          .withSystemErrorMessage(
-                                  "Performing a delete on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
-                                  clazz.getName())
-                          .handle();
+            // If there are foreign keys we cannot use delete by query...
+            if (ed.hasForeignKeys()) {
+                deleteByIteration();
+            } else {
+                deleteByQuery(ed);
             }
-            QueryBuilder qb = buildQuery();
-            if (qb != null) {
-                builder.setQuery(qb);
-            }
-            if (Index.LOG.isFINE()) {
-                Index.LOG.FINE("DELETE: %s.%s: %s", Index.getIndex(clazz), ed.getType(), buildQuery());
-            }
-            builder.execute().actionGet();
             if (Microtiming.isEnabled()) {
                 w.submitMicroTiming("ES", "DELETE: " + toString(true));
             }
         } catch (Throwable e) {
             throw Exceptions.handle(Index.LOG, e);
+        }
+    }
+
+    protected void deleteByQuery(EntityDescriptor ed) {
+        DeleteByQueryRequestBuilder builder = Index.getClient()
+                                                   .prepareDeleteByQuery(index != null ? index : Index.getIndex(
+                                                           clazz))
+                                                   .setTypes(ed.getType());
+        if (Strings.isFilled(routing)) {
+            if (!ed.hasRouting()) {
+                throw Exceptions.handle()
+                                .to(Index.LOG)
+                                .withSystemErrorMessage(
+                                        "Performing a delete on %s with a routing - but entity has no routing attribute (in @Indexed)! This will most probably FAIL!",
+                                        clazz.getName())
+                                .handle();
+            }
+            builder.setRouting(routing);
+        } else if (ed.hasRouting() && !deliberatelyUnrouted) {
+            throw Exceptions.handle()
+                            .to(Index.LOG)
+                            .withSystemErrorMessage(
+                                    "Performing a delete on %s without providing a routing. Consider providing a routing for better performance or call deliberatelyUnrouted() to signal that routing was intentionally skipped.",
+                                    clazz.getName())
+                            .handle();
+        }
+        QueryBuilder qb = buildQuery();
+        if (qb != null) {
+            builder.setQuery(qb);
+        }
+        if (Index.LOG.isFINE()) {
+            Index.LOG.FINE("DELETE: %s.%s: %s", Index.getIndex(clazz), ed.getType(), buildQuery());
+        }
+        builder.execute().actionGet();
+    }
+
+    protected void deleteByIteration() throws Throwable {
+        ValueHolder<Throwable> error = ValueHolder.of(null);
+        iterate(e -> {
+            try {
+                Index.delete(e);
+            } catch (Throwable ex) {
+                error.set(ex);
+            }
+            return true;
+        });
+        if (error.get() != null) {
+            throw error.get();
         }
     }
 
