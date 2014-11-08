@@ -149,6 +149,12 @@ public class Index {
     private static Counter optimisticLockErrors = new Counter();
 
     /**
+     * Can be used as routing value for one of the fetch methods to signal that no routing value is available
+     * and a lookup by select is deliberately called.
+     */
+    public static final String FETCH_DELIBERATELY_UNROUTED = "_DELIBERATELY_UNROUTED";
+
+    /**
      * Fetches the entity of given type with the given id.
      * <p>
      * May use a given cache to load the entity.
@@ -179,9 +185,11 @@ public class Index {
             if (Strings.isFilled(routing)) {
                 value = find(routing, type, id);
             } else {
-                LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
-                         type.getName(),
-                         id);
+                if (!FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
+                    LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                             type.getName(),
+                             id);
+                }
                 value = select(type).eq(ID_FIELD, id).queryFirst();
             }
         } else {
@@ -242,9 +250,11 @@ public class Index {
             if (Strings.isFilled(routing)) {
                 value = find(routing, type, id);
             } else {
-                LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
-                         type.getName(),
-                         id);
+                if (!FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
+                    LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
+                             type.getName(),
+                             id);
+                }
                 value = select(type).eq(ID_FIELD, id).queryFirst();
             }
         } else {
