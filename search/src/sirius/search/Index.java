@@ -182,15 +182,14 @@ public class Index {
             return Tuple.create(value, true);
         }
         if (descriptor.hasRouting()) {
-            if (Strings.isFilled(routing)) {
+            if (Strings.isFilled(routing) && !FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
                 value = find(routing, type, id);
             } else {
-                if (!FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
-                    LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
-                             type.getName(),
-                             id);
+                if (FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
+                    value = select(type).deliberatelyUnrouted().eq(ID_FIELD, id).queryFirst();
+                } else {
+                    value = select(type).eq(ID_FIELD, id).queryFirst();
                 }
-                value = select(type).eq(ID_FIELD, id).queryFirst();
             }
         } else {
             value = find(type, id);
@@ -247,15 +246,14 @@ public class Index {
             return Tuple.create(value, true);
         }
         if (descriptor.hasRouting()) {
-            if (Strings.isFilled(routing)) {
+            if (Strings.isFilled(routing) && !FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
                 value = find(routing, type, id);
             } else {
-                if (!FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
-                    LOG.WARN("Fetching an entity of type %s (%s) without routing! Using SELECT which might be slower!",
-                             type.getName(),
-                             id);
+                if (FETCH_DELIBERATELY_UNROUTED.equals(routing)) {
+                    value = select(type).deliberatelyUnrouted().eq(ID_FIELD, id).queryFirst();
+                } else {
+                    value = select(type).eq(ID_FIELD, id).queryFirst();
                 }
-                value = select(type).eq(ID_FIELD, id).queryFirst();
             }
         } else {
             value = find(type, id);
