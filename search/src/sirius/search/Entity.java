@@ -196,7 +196,7 @@ public abstract class Entity {
 
             Object value = p.writeToSource(this);
             if (!p.isNullAllowed()) {
-                error = checkNullability(error, p.getName(), value);
+                error = checkNullability(error, p.getName(), p.getFieldTitle(), value);
             }
 
             if (p.getField().isAnnotationPresent(Unique.class) && !Strings.isEmpty(value)) {
@@ -225,7 +225,7 @@ public abstract class Entity {
                 try {
                     return Exceptions.createHandled()
                                      .withNLSKey("Entity.fieldMustBeUnique")
-                                     .set("field", NLS.get(getClass().getSimpleName() + "." + p.getName()))
+                                     .set("field", p.getFieldTitle())
                                      .set("value", NLS.toUserString(p.getField().get(this)))
                                      .handle();
                 } catch (Throwable e) {
@@ -280,21 +280,22 @@ public abstract class Entity {
      * @param previousError Can be used to signal that an error was already found. In this case the given exception
      *                      will be returned as result even if the value was <tt>null</tt>. In most cases this
      *                      parameter will be <tt>null</tt>.
-     * @param field         the field to check. This is used to mark the field as invalid and also to fetch an
-     *                      internationalized name of the field (using Classname.fieldname).
+     * @param fieldName     name of the field to check. This is used to mark the field as invalid.
+     * @param fieldTitle    label of the field to check. This is used to generate a readable error message
      * @param value         the value to check. If the value is <tt>null</tt> an error will be generated.
      * @return an error if either the given <tt>previousError</tt> was non null or if the given value was <tt>null</tt>
      */
     @Nullable
     protected HandledException checkNullability(@Nullable HandledException previousError,
-                                                @Nonnull String field,
+                                                @Nonnull String fieldName,
+                                                @Nonnull String fieldTitle,
                                                 @Nullable Object value) {
         if (Strings.isEmpty(value)) {
-            UserContext.setFieldError(field, null);
+            UserContext.setFieldError(fieldName, null);
             if (previousError == null) {
                 return Exceptions.createHandled()
                                  .withNLSKey("Entity.fieldMustBeFilled")
-                                 .set("field", NLS.get(getClass().getSimpleName() + "." + field))
+                                 .set("field", fieldTitle)
                                  .handle();
             }
         }

@@ -236,4 +236,14 @@ public class Property {
     public Field getField() {
         return field;
     }
+
+    /**
+     * Returns a translated title for the property by resolving
+     * <tt>SimpleClassName.fieldName</tt> via {@link sirius.kernel.nls.NLS}.
+     *
+     * @return the translated name or label for this property.
+     */
+    public String getFieldTitle() {
+        return NLS.get(field.getDeclaringClass().getSimpleName() + "." + getName());
+    }
 }
