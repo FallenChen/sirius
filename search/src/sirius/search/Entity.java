@@ -338,6 +338,8 @@ public abstract class Entity {
                                           p.getName(),
                                           this.getClass().getName())
                                   .handle();
+                    } else {
+                        e = value.getValue((String) routingValue);
                     }
                 } else {
                     // We need no routing -> simply load the value
