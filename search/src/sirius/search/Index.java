@@ -1290,6 +1290,11 @@ public class Index {
     @SuppressWarnings("unchecked")
     public static void loadDataset(String dataset) {
         try {
+            if (inMemoryNode == null) {
+                throw Exceptions.createHandled()
+                                .withSystemErrorMessage("Cannot load datasets when not running as 'in-memory'")
+                                .handle();
+            }
             Resource res = content.resolve(dataset)
                                   .orElseThrow(() -> new IllegalArgumentException("Unknown dataset: " + dataset));
             String contents = CharStreams.toString(new InputStreamReader(res.getUrl().openStream(), Charsets.UTF_8));
