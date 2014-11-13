@@ -175,14 +175,12 @@ public class Schema {
                       Sirius.getConfig()
                             .getInt(Sirius.getConfig()
                                           .hasPath("index.settings." + ed.getIndex() + ".numberOfShards") ? "index.settings." + ed
-                                    .getIndex() + ".numberOfShards" : "index.settings.default.numberOfShards")
-        );
+                                    .getIndex() + ".numberOfShards" : "index.settings.default.numberOfShards"));
         builder.field("number_of_replicas",
                       Sirius.getConfig()
                             .getInt(Sirius.getConfig()
                                           .hasPath("index.settings." + ed.getIndex() + ".numberOfReplicas") ? "index.settings." + ed
-                                    .getIndex() + ".numberOfReplicas" : "index.settings.default.numberOfReplicas")
-        );
+                                    .getIndex() + ".numberOfReplicas" : "index.settings.default.numberOfReplicas"));
         return builder.endObject().endObject();
     }
 

@@ -8,8 +8,10 @@
 
 package sirius.search;
 
+import sirius.kernel.Sirius;
 import sirius.kernel.di.ClassLoadAction;
 import sirius.kernel.di.MutableGlobalContext;
+import sirius.search.annotations.Indexed;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
@@ -31,7 +33,17 @@ public class EntityLoadAction implements ClassLoadAction {
     @Override
     public void handle(MutableGlobalContext ctx, Class<?> clazz) throws Exception {
         if (Entity.class.isAssignableFrom(clazz) && !Modifier.isAbstract(clazz.getModifiers())) {
-            ctx.registerPart(clazz.newInstance(), Entity.class);
+            if (acceptedByFrameworkFilter(clazz)) {
+                ctx.registerPart(clazz.newInstance(), Entity.class);
+            }
         }
+    }
+
+    protected boolean acceptedByFrameworkFilter(Class<?> clazz) {
+        if (!clazz.isAnnotationPresent(Indexed.class)) {
+            // This will be rejected later by the Schema class...
+            return true;
+        }
+        return Sirius.isFrameworkEnabled(clazz.getAnnotation(Indexed.class).framework());
     }
 }

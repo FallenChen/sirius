@@ -179,13 +179,13 @@ public abstract class Entity {
     /**
      * Invoked immediately before {@link #performSaveChecks()} and permits to fill missing values.
      */
-    public void beforeSaveChecks() {
+    protected void beforeSaveChecks() {
     }
 
     /**
      * Performs consistency checks before an entity is saved into the database.
      */
-    public void performSaveChecks() {
+    protected void performSaveChecks() {
         HandledException error = null;
         EntityDescriptor descriptor = Index.getDescriptor(getClass());
         for (Property p : descriptor.getProperties()) {
@@ -365,21 +365,95 @@ public abstract class Entity {
     }
 
     /**
-     * Cascades the delete of an entity of this class.
+     * Invoked before an entity is deleted from the database.
+     * <p>
+     * This method is not intended to be overridden. Override {@link #onDelete()} or {@link #internalOnDelete()}.
+     * </p>
      */
-    protected void cascadeDelete() {
+    protected final void beforeDelete() {
+        executeDeleteChecksOnForeignKeys();
+        internalOnDelete();
+        onDelete();
+    }
+
+    /**
+     * Executes the {@link sirius.search.ForeignKey#checkDelete(Entity)} handlers on all foreign keys...
+     */
+    protected void executeDeleteChecksOnForeignKeys() {
+        for (ForeignKey fk : Index.getDescriptor(getClass()).remoteForeignKeys) {
+            fk.checkDelete(this);
+        }
+    }
+
+    /**
+     * Intended for classes providing additional before delete handlers.
+     * Will be invoked before the entity will be deleted.
+     * <p>
+     * This method SHOULD call <code>super.onDelete</code> to ensure that all save handlers are called. However,
+     * frameworks should rely on internalOnDelete, which should not be overridden by application classes.
+     * </p>
+     */
+    protected void onDelete() {
+
+    }
+
+    /**
+     * Intended for classes providing additional before delete handlers.
+     * Will be invoked before the entity will be deleted.
+     * <p>
+     * This method MUST call <code>super.internalOnDelete</code> to ensure that all save handlers are called. This is
+     * intended to be overridden by framework classes. Application classes should simply override
+     * <code>onDelete()</code>.
+     * </p>
+     */
+    protected void internalOnDelete() {
+
+    }
+
+    /**
+     * Invoked after an entity is deleted from the database.
+     * <p>
+     * This method is not intended to be overridden. Override {@link #onAfterDelete()} or {@link #internalOnAfterDelete()}.
+     * </p>
+     */
+    protected final void afterDelete() {
+        executeDeleteChecksOnForeignKeys();
+        internalOnAfterDelete();
+        onAfterDelete();
+    }
+
+    /**
+     * Executes the {@link sirius.search.ForeignKey#onDelete(Entity)} handlers on all foreign keys...
+     */
+    protected void executeDeleteOnForeignKeys() {
         for (ForeignKey fk : Index.getDescriptor(getClass()).remoteForeignKeys) {
             fk.onDelete(this);
         }
     }
 
     /**
-     * Checks if an entity can be consistently deleted.
+     * Intended for classes providing additional after delete handlers.
+     * Will be invoked after the entity deleted.
+     * <p>
+     * This method SHOULD call <code>super.onAfterDelete</code> to ensure that all save handlers are called. However,
+     * frameworks should rely on internalOnAfterDelete, which should not be overridden by application classes.
+     * </p>
      */
-    protected void performDeleteChecks() {
-        for (ForeignKey fk : Index.getDescriptor(getClass()).remoteForeignKeys) {
-            fk.checkDelete(this);
-        }
+    protected void onAfterDelete() {
+
+    }
+
+    /**
+     * Intended for classes providing additional after save handlers.
+     * Will be invoked after the entity will was persisted.
+     * <p>
+     * This method MUST call <code>super.internalOnAfterDelete</code> to ensure that all save handlers are called. This is
+     * intended to be overridden by framework classes. Application classes should simply override
+     * <code>onAfterDelete()</code>.
+     * </p>
+     */
+    protected void internalOnAfterDelete() {
+
     }
 
     @Override
@@ -429,12 +503,47 @@ public abstract class Entity {
     }
 
     /**
-     * Invoked once an entity was completely saved.
+     * Invoked after an entity is saved into the database.
+     * <p>
+     * This method is not intended to be overridden. Override {@link #onAfterSave()} or {@link #internalOnAfterSave()}.
+     * </p>
      */
-    public void afterSave() {
+    protected final void afterSave() {
+        executeSaveOnForeignKeys();
+        internalOnAfterSave();
+        onAfterSave();
+    }
+
+    /**
+     * Executes the {@link sirius.search.ForeignKey#onSave(Entity)} handlers on all foreign keys...
+     */
+    protected void executeSaveOnForeignKeys() {
         for (ForeignKey fk : Index.getDescriptor(getClass()).remoteForeignKeys) {
             fk.onSave(this);
         }
+    }
+
+    /**
+     * Intended for classes providing additional after save handlers.
+     * Will be invoked after the entity was persisted.
+     * <p>
+     * This method MUST call <code>super.internalOnAfterSave</code> to ensure that all save handlers are called. This is
+     * intended to be overridden by framework classes. Application classes should simply override
+     * <code>onAfterSave()</code>.
+     * </p>
+     */
+    protected void internalOnAfterSave() {
+    }
+
+    /**
+     * Intended for classes providing additional after save handlers.
+     * Will be invoked after the entity was persisted.
+     * <p>
+     * This method SHOULD call <code>super.onAfterSave</code> to ensure that all save handlers are called. However,
+     * frameworks should rely on internalOnAfterSave, which should not be overridden by application classes.
+     * </p>
+     */
+    protected void onAfterSave() {
     }
 
     /**
@@ -468,7 +577,9 @@ public abstract class Entity {
      * This method is not intended to be overridden. Override {@link #onSave()} or {@link #internalOnSave()}.
      * </p>
      */
-    public final void beforeSave() {
+    protected final void beforeSave() {
+        beforeSaveChecks();
+        performSaveChecks();
         internalOnSave();
         onSave();
     }
@@ -490,7 +601,7 @@ public abstract class Entity {
      * Intended for classes providing on save handlers. Will be invoked before the entity will be saved,
      * but after it has been validated.
      * <p>
-     * This method SHOULD call <code>super.internalOnSave</code> to ensure that all save handlers are called. However,
+     * This method SHOULD call <code>super.onSave</code> to ensure that all save handlers are called. However,
      * frameworks should rely on internalOnSave, which should not be overridden by application classes.
      * </p>
      */

@@ -216,6 +216,9 @@ public class MultiMap<K, V> {
 
     @Override
     public String toString() {
+        if (base == null) {
+            return "(empty)";
+        }
         return base.toString();
     }
 

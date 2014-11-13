@@ -171,7 +171,7 @@ public class TimerService implements Lifecycle {
 
     @Override
     public void started() {
-        if (Sirius.isFrameworkEnabled("timer")) {
+        if (Sirius.isFrameworkEnabled("kernel.timer")) {
             startTimer();
         }
         if (Sirius.isDev()) {

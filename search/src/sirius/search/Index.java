@@ -13,6 +13,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
 import com.typesafe.config.Config;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -435,6 +436,22 @@ public class Index {
     }
 
     /**
+     * If an optimistic lock error occurs, there's often no point in immediately retrying. Therefore we wait a
+     * certain period of time and retry then.
+     */
+    public static void waitToUnwindOptimisticLock(long minWaitInMillis) {
+        // In 50% of all calls, only wait minWaitInMillis. Otherwise we wait up to 500ms more until we continue...
+        long pause = minWaitInMillis + Math.round((Math.random() * 1000d) - 500d);
+        if (pause > 0) {
+            try {
+                Thread.sleep(pause);
+            } catch (InterruptedException e) {
+                Exceptions.ignore(e);
+            }
+        }
+    }
+
+    /**
      * Determines if the framework is completely initialized.
      *
      * @return <tt>true</tt> if the framework is completely initialized, <tt>false</tt> otherwise
@@ -529,7 +546,8 @@ public class Index {
      */
     public static void retry(UnitOfWork uow) {
         int retries = 3;
-        while (retries-- > 0) {
+        while (retries > 0) {
+            retries--;
             try {
                 uow.execute();
                 return;
@@ -542,7 +560,8 @@ public class Index {
                                     .to(LOG)
                                     .handle();
                 }
-                continue;
+                // Wait 0, 200ms, 400ms + some random amount computed by waitToUnwindOptimisticLock...
+                waitToUnwindOptimisticLock((2 - retries) * 200);
             } catch (HandledException e) {
                 throw e;
             } catch (Throwable e) {
@@ -778,11 +797,7 @@ public class Index {
                                                  final boolean performVersionCheck,
                                                  final boolean forceCreate) throws OptimisticLockException {
         try {
-            entity.beforeSaveChecks();
-
-            final Map<String, Object> source = new TreeMap<String, Object>();
-
-            entity.performSaveChecks();
+            final Map<String, Object> source = Maps.newTreeMap();
             entity.beforeSave();
             EntityDescriptor descriptor = getDescriptor(entity.getClass());
             descriptor.writeTo(entity, source);
@@ -1162,7 +1177,7 @@ public class Index {
                          descriptor.getType(),
                          entity.getId());
             }
-            entity.performDeleteChecks();
+            entity.beforeDelete();
             Watch w = Watch.start();
             DeleteRequestBuilder drb = getClient().prepareDelete(getIndex(entity),
                                                                  descriptor.getType(),
@@ -1184,7 +1199,7 @@ public class Index {
             entity.deleted = true;
             queryDuration.addValue(w.elapsedMillis());
             w.submitMicroTiming("ES", "DELETE " + entity.getClass().getName());
-            entity.cascadeDelete();
+            entity.afterDelete();
             if (LOG.isFINE()) {
                 LOG.FINE("DELETE: %s.%s: %s SUCCESS",
                          getIndex(entity.getClass()),

@@ -10,6 +10,7 @@ package sirius.web.health.console;
 
 import sirius.kernel.cache.Cache;
 import sirius.kernel.cache.CacheManager;
+import sirius.kernel.commons.Value;
 import sirius.kernel.di.std.Register;
 
 /**
@@ -24,9 +25,16 @@ public class CacheCommand implements Command {
     @Override
     public void execute(Output output, String... params) {
         if (params.length > 0) {
-            output.apply("Flushing: %s", params[0]);
-            output.blankLine();
+            for (Cache<?, ?> c : CacheManager.getCaches()) {
+                if (Value.indexOf(0, params).equals(c.getName())) {
+                    output.apply("Flushing: %s", params[0]);
+                    c.clear();
+                }
+            }
+        } else {
+            output.line("Use cache <name> to flush the given cache...");
         }
+        output.blankLine();
         output.apply("%-53s %8s %8s %8s", "NAME", "SIZE", "MAX-SIZE", "HIT-RATE");
         output.separator();
         for (Cache<?, ?> c : CacheManager.getCaches()) {

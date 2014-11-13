@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 /**
  * Created by aha on 06.06.14.
  */
-@Register(framework = "server-scripting")
+@Register(framework = "web.server-scripting")
 public class ServerScriptEngine implements Initializable {
 
     @ConfigValue("content.script-engine")
