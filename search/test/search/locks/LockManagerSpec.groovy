@@ -60,7 +60,7 @@ class LockManagerSpec extends SiriusBaseSpecification {
         result == false
     }
 
-    def "tryLock succeeds with in-memory index"() {
+/*    def "tryLock succeeds with in-memory index"() {
         given:
         def lm = Injector.context().getPart(LockManager.class);
         when:
@@ -70,9 +70,9 @@ class LockManagerSpec extends SiriusBaseSpecification {
         }
         then:
         result == true
-    }
+    }*/
 
-    def "tryLock fails on duplicate lock with in-memory index"() {
+/*    def "tryLock fails on duplicate lock with in-memory index"() {
         given:
         def lm = Injector.context().getPart(LockManager.class);
         when:
@@ -88,7 +88,7 @@ class LockManagerSpec extends SiriusBaseSpecification {
         then:
         result == true
         result1 == false
-    }
+    }*/
 
     def "unlock fails with in-memory index when using wrong section"() {
         given:
