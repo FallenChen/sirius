@@ -214,18 +214,17 @@ public class Sirius {
      * Discovers all components in the class path and initializes the {@link Injector}
      */
     private static void init(final ClassLoader loader) {
-
         initialized = true;
         classpath = new Classpath(loader, "component.marker", customizations);
 
         if (startedAsTest) {
             // Load test configurations (will override component configs)
-            classpath.find(Pattern.compile("component-test\\.conf"))
+            classpath.find(Pattern.compile("component-test-([^\\-]*?)\\.conf"))
                      .forEach(value -> config = config.withFallback(ConfigFactory.load(loader, value.group())));
         }
 
         // Load component configurations
-        classpath.find(Pattern.compile("component-(.*?)\\.conf")).forEach(value -> {
+        classpath.find(Pattern.compile("component-([^\\-]*?)\\.conf")).forEach(value -> {
             if (!"test".equals(value.group(1))) {
                 config = config.withFallback(ConfigFactory.load(loader, value.group()));
             }
