@@ -10,6 +10,7 @@ package search.locks
 
 import sirius.kernel.di.Injector
 import sirius.kernel.health.HandledException
+import sirius.search.Index
 import sirius.search.IndexAccess
 import sirius.search.OptimisticLockException
 import sirius.search.locks.CriticalSection
@@ -74,7 +75,7 @@ class LockManagerSpec extends SiriusBaseSpecification {
         when:
         def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         if (result) {
-            lm.unlock(LOCK);
+            lm.unlock(SECTION_TEST);
         }
         then:
         result == true
@@ -90,7 +91,7 @@ class LockManagerSpec extends SiriusBaseSpecification {
             try {
                 result1 = lm.tryLock(SECTION_XXX, 1, TimeUnit.MILLISECONDS);
             } finally {
-                lm.unlock(LOCK);
+                lm.unlock(SECTION_TEST);
             }
         }
         then:
