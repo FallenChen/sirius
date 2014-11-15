@@ -415,11 +415,11 @@ public class NLS {
     }
 
     /**
-     * Returns a three letter abbreviation of the name of the given month, like <code>"Mo"</code>.
+     * Returns a three letter abbreviation of the name of the given month, like <tt>"Jan"</tt>.
      *
-     * @param month the month to be translated. Use constants {@link Calendar#JANUARY} etc.
+     * @param month the month to be translated (January is 1, December is 12).
      * @return returns the first three letters of the name
-     * or <code>""</code> if the given index was invalid.
+     * or <tt>""</tt> if the given index was invalid.
      */
     public static String getMonthNameShort(int month) {
         String result = getMonthName(month);

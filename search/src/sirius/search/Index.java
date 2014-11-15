@@ -41,6 +41,7 @@ import sirius.kernel.cache.Cache;
 import sirius.kernel.cache.CacheManager;
 import sirius.kernel.commons.Strings;
 import sirius.kernel.commons.Tuple;
+import sirius.kernel.commons.Wait;
 import sirius.kernel.commons.Watch;
 import sirius.kernel.di.Lifecycle;
 import sirius.kernel.di.std.Part;
@@ -293,12 +294,12 @@ public class Index {
     /**
      * Used to delay an action for at least one second
      */
-    private static class Wait {
+    private static class WaitingBlock {
         private long waitline;
         private Runnable cmd;
         private CallContext context;
 
-        public Wait(Runnable cmd) {
+        public WaitingBlock(Runnable cmd) {
             this.cmd = cmd;
             this.waitline = System.currentTimeMillis() + 1000;
             this.context = CallContext.getCurrent();
@@ -325,7 +326,7 @@ public class Index {
     /**
      * Queue of actions which need to be delayed one second
      */
-    private static List<Wait> oneSecondDelayLine = Lists.newArrayList();
+    private static List<WaitingBlock> oneSecondDelayLine = Lists.newArrayList();
 
     /**
      * Adds an action to the delay line, which ensures that it is at least delayed for one second
@@ -336,7 +337,7 @@ public class Index {
         synchronized (oneSecondDelayLine) {
             if (oneSecondDelayLine.size() < 100) {
                 delays.inc();
-                oneSecondDelayLine.add(new Wait(cmd));
+                oneSecondDelayLine.add(new WaitingBlock(cmd));
                 return;
             }
         }
@@ -402,9 +403,9 @@ public class Index {
         public void run() {
             try {
                 synchronized (oneSecondDelayLine) {
-                    Iterator<Wait> iter = oneSecondDelayLine.iterator();
+                    Iterator<WaitingBlock> iter = oneSecondDelayLine.iterator();
                     while (iter.hasNext()) {
-                        Wait next = iter.next();
+                        WaitingBlock next = iter.next();
                         if (next.isRunnable()) {
                             next.execute();
                             iter.remove();
@@ -427,28 +428,8 @@ public class Index {
      * </p>
      */
     public static void blockThreadForUpdate() {
-        try {
-            blocks.inc();
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Exceptions.ignore(e);
-        }
-    }
-
-    /**
-     * If an optimistic lock error occurs, there's often no point in immediately retrying. Therefore we wait a
-     * certain period of time and retry then.
-     */
-    public static void waitToUnwindOptimisticLock(long minWaitInMillis) {
-        // In 50% of all calls, only wait minWaitInMillis. Otherwise we wait up to 500ms more until we continue...
-        long pause = minWaitInMillis + Math.round((Math.random() * 1000d) - 500d);
-        if (pause > 0) {
-            try {
-                Thread.sleep(pause);
-            } catch (InterruptedException e) {
-                Exceptions.ignore(e);
-            }
-        }
+        blocks.inc();
+        Wait.seconds(1);
     }
 
     /**
@@ -560,8 +541,10 @@ public class Index {
                                     .to(LOG)
                                     .handle();
                 }
-                // Wait 0, 200ms, 400ms + some random amount computed by waitToUnwindOptimisticLock...
-                waitToUnwindOptimisticLock((2 - retries) * 200);
+                // Wait 0, 200ms, 400ms
+                Wait.millis((2 - retries) * 200);
+                // Wait 0..200ms in 50% of all calls...
+                Wait.randomMillis(-200, 200);
             } catch (HandledException e) {
                 throw e;
             } catch (Throwable e) {

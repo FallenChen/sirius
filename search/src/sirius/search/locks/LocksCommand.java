@@ -37,10 +37,10 @@ public class LocksCommand implements Command {
             output.line("Use locks <name> to forcefully kill that lock...");
         }
         output.blankLine();
-        output.apply("%-30s %15s %15s %19s", "NAME", "NODE", "SECTION", "SINCE");
+        output.apply("%-28s %15s %15s %19s", "NAME", "NODE", "SECTION", "SINCE");
         output.separator();
         for (LockInfo li : lm.getLocks()) {
-            output.apply("%-30s %15s %15s %19s", li.getId(), li.getCurrentOwnerNode(), li.getCurrentOwnerSection(),
+            output.apply("%-28s %15s %15s %19s", li.getId(), li.getCurrentOwnerNode(), li.getCurrentOwnerSection(),
                          NLS.toUserString(li.getLockedSince()));
         }
         output.separator();

@@ -12,20 +12,28 @@ import sirius.kernel.di.Injector
 import sirius.kernel.health.HandledException
 import sirius.search.IndexAccess
 import sirius.search.OptimisticLockException
+import sirius.search.locks.CriticalSection
+import sirius.search.locks.Lock
 import sirius.search.locks.LockInfo
 import sirius.search.locks.LockManager
 import sirius.testtools.SiriusBaseSpecification
+import spock.lang.Shared
 
 import java.util.concurrent.TimeUnit
 
 class LockManagerSpec extends SiriusBaseSpecification {
+
+    @Shared
+    def Lock LOCK = Lock.named("L");
+    def CriticalSection SECTION_TEST = LOCK.forSection("TEST");
+    def CriticalSection SECTION_XXX = LOCK.forSection("XXX");
 
     def "lock succeeds on available lock"() {
         given:
         def lm = new LockManager();
         lm.index = Mock(IndexAccess);
         when:
-        def result = lm.tryLock("L", "TEST", 1, TimeUnit.MILLISECONDS);
+        def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         then:
         1 * lm.index.find(LockInfo.class, "L") >> null;
         1 * lm.index.tryUpdate(_) >> new LockInfo();
@@ -37,7 +45,7 @@ class LockManagerSpec extends SiriusBaseSpecification {
         def lm = new LockManager();
         lm.index = Mock(IndexAccess);
         when:
-        def result = lm.tryLock("L", "TEST", 1, TimeUnit.MILLISECONDS);
+        def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         then:
         _ * lm.index.find(LockInfo.class, "L") >> new LockInfo();
         0 * lm.index.tryUpdate(_);
@@ -49,7 +57,7 @@ class LockManagerSpec extends SiriusBaseSpecification {
         def lm = new LockManager();
         lm.index = Mock(IndexAccess);
         when:
-        def result = lm.tryLock("L", "TEST", 1, TimeUnit.MILLISECONDS);
+        def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         then:
         _ * lm.index.find(LockInfo.class, "L") >> null;
         _ * lm.index.tryUpdate(_) >> { LockInfo l ->
@@ -64,9 +72,9 @@ class LockManagerSpec extends SiriusBaseSpecification {
         given:
         def lm = Injector.context().getPart(LockManager.class);
         when:
-        def result = lm.tryLock("L", "TEST", 1, TimeUnit.MILLISECONDS);
+        def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         if (result) {
-            lm.unlock("L", "TEST");
+            lm.unlock(LOCK);
         }
         then:
         result == true
@@ -76,13 +84,13 @@ class LockManagerSpec extends SiriusBaseSpecification {
         given:
         def lm = Injector.context().getPart(LockManager.class);
         when:
-        def result = lm.tryLock("L", "TEST", 1, TimeUnit.MILLISECONDS);
+        def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         def result1 = null;
         if (result) {
             try {
-                result1 = lm.tryLock("L", "TEST1", 1, TimeUnit.MILLISECONDS);
+                result1 = lm.tryLock(SECTION_XXX, 1, TimeUnit.MILLISECONDS);
             } finally {
-                lm.unlock("L", "TEST");
+                lm.unlock(LOCK);
             }
         }
         then:
@@ -94,12 +102,12 @@ class LockManagerSpec extends SiriusBaseSpecification {
         given:
         def lm = Injector.context().getPart(LockManager.class);
         when:
-        def result = lm.tryLock("L", "TEST", 1, TimeUnit.MILLISECONDS);
+        def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         if (result) {
             try {
-                lm.unlock("L", "X")
+                lm.unlock(SECTION_XXX)
             } finally {
-                lm.unlock("L", "TEST");
+                lm.unlock(SECTION_TEST);
             }
         }
         then:

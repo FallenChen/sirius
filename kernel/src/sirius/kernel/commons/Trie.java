@@ -54,7 +54,7 @@ public class Trie<V> {
      * @return a new instance of {@link Trie}
      */
     public static <V> Trie<V> create() {
-        return new Trie<V>();
+        return new Trie<>();
     }
 
     /**
