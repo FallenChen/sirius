@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Register(classes = IdGenerator.class)
 public class IdGenerator {
+
     private final ReentrantLock lock = new ReentrantLock();
 
     /**
@@ -49,6 +50,7 @@ public class IdGenerator {
                                 seq = new Sequence();
                                 seq.setId(sequence);
                                 seq.setNext(1);
+                                seq = Index.tryUpdate(seq);
                             }
                             int result = seq.getNext();
                             seq.setNext(result + 1);

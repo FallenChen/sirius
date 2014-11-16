@@ -20,6 +20,7 @@ import sirius.search.locks.LockManager
 import sirius.testtools.SiriusBaseSpecification
 import spock.lang.Shared
 
+import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 class LockManagerSpec extends SiriusBaseSpecification {
@@ -37,19 +38,21 @@ class LockManagerSpec extends SiriusBaseSpecification {
         def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         then:
         1 * lm.index.find(LockInfo.class, "L") >> null;
-        1 * lm.index.tryUpdate(_) >> new LockInfo();
+        2 * lm.index.tryUpdate(_) >> new LockInfo();
         result == true
     }
 
     def "tryLock fails on already acquired lock"() {
         given:
         def lm = new LockManager();
+        def li = new LockInfo();
+        li.setLockedSince(LocalDateTime.now());
         lm.index = Mock(IndexAccess);
         when:
         def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         then:
-        _ * lm.index.find(LockInfo.class, "L") >> new LockInfo();
-        0 * lm.index.tryUpdate(_);
+        1 * lm.index.find(LockInfo.class, "L") >> li;
+        0 * lm.index.tryUpdate(_) >> li;
         result == false
     }
 
@@ -60,8 +63,8 @@ class LockManagerSpec extends SiriusBaseSpecification {
         when:
         def result = lm.tryLock(SECTION_TEST, 1, TimeUnit.MILLISECONDS);
         then:
-        _ * lm.index.find(LockInfo.class, "L") >> null;
-        _ * lm.index.tryUpdate(_) >> { LockInfo l ->
+        1 * lm.index.find(LockInfo.class, "L") >> null;
+        1 * lm.index.tryUpdate(_) >> { LockInfo l ->
             l.id == "L"
             l.currentOwnerSection == "TEST"
             throw new OptimisticLockException(null, l);

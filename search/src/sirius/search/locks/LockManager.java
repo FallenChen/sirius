@@ -124,11 +124,17 @@ public class LockManager {
     protected boolean tryAcquire(CriticalSection section) {
         try {
             LockInfo li = index.find(LockInfo.class, section.getLock().getName());
-            if (li != null) {
+            if (li == null) {
+                li = new LockInfo();
+                li.setId(section.getLock().getName());
+                li = index.tryUpdate(li);
+            }
+            // Lock is locked -> abort...
+            if (Strings.isFilled(li.getCurrentOwnerSection()) || li.getLockedSince() != null) {
                 return false;
             }
-            li = new LockInfo();
-            li.setId(section.getLock().getName());
+
+            // Lock was unlocked, try to acquire....
             li.setCurrentOwnerSection(section.getSection());
             li.setCurrentOwnerNode(CallContext.getNodeName());
             li.setLockedSince(LocalDateTime.now());
@@ -192,7 +198,25 @@ public class LockManager {
                                         li.getCurrentOwnerNode())
                                 .handle();
             }
-            index.delete(li);
+            if (section.getLock().isPersistent()) {
+                try {
+                    li.setLockedSince(null);
+                    li.setCurrentOwnerSection(null);
+                    li.setCurrentOwnerNode(null);
+                    index.tryUpdate(li);
+                } catch (OptimisticLockException e) {
+                    throw Exceptions.handle()
+                                    .to(LOG)
+                                    .withSystemErrorMessage(
+                                            "Cannot unlock '%s' by section '%s' on '%s' as lock was updated while unlocking!",
+                                            section.getLock(),
+                                            section.getSection(),
+                                            CallContext.getNodeName())
+                                    .handle();
+                }
+            } else {
+                index.delete(li);
+            }
         } else {
             throw Exceptions.handle()
                             .to(LOG)

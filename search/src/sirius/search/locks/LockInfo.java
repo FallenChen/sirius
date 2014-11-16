@@ -14,9 +14,12 @@ import sirius.search.annotations.Indexed;
 import java.time.LocalDateTime;
 
 /**
- * Created by aha on 12.11.14.
+ * Used by {@link sirius.search.locks.LockManager} to represent a lock in Elasticsearch.
+ *
+ * @author Andreas Haufler (aha@scireum.de)
+ * @since 2014/11
  */
-@Indexed(index = "locks", framework = "search.locks")
+@Indexed(index = "core", framework = "search.locks")
 public class LockInfo extends Entity {
 
     private String currentOwnerNode;

@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
  */
 public class Lock {
     private final String name;
+    private boolean persistent = true;
 
     private Lock(String name) {
         this.name = name;
@@ -44,6 +45,38 @@ public class Lock {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Makes the lock transient.
+     * <p>
+     * A transient lock is deleted once it becomes unlocked. This adds some overhead on locking and unlocking
+     * the lock, but must be used when locks are used for mutual exclusive access on data objects (dynamic locks),
+     * as otherwise an unlocked lock would never be deleted.
+     * </p>
+     *
+     * @return the lock itself.
+     */
+    public Lock makeTransient() {
+        persistent = false;
+        return this;
+    }
+
+    /**
+     * Determines if the lock is persistent.
+     * <p>
+     * <p>
+     * A persistent lock is not deleted from the lock table once it becomes unlocked. This adds some performance
+     * to locking and unlocking it. This should be only used for static locks which are regularly used. For
+     * dynamic locks which manage the exclusive access on a single object, {@link #makeTransient()} should be
+     * called so that the lock is deleted once it is no longer held - as otherwise it might remain on the lock
+     * table forever.
+     * </p>
+     *
+     * @return <tt>true</tt> if the lock is persistent (static), <tt>false</tt> if the lock is transient (dynamic)
+     */
+    public boolean isPersistent() {
+        return persistent;
     }
 
     /**
