@@ -33,6 +33,7 @@ import sirius.web.security.UserContext;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -194,6 +195,7 @@ public class RythmConfig implements Lifecycle {
             map.put("prefix", String.class);
             map.put("product", String.class);
             map.put("version", String.class);
+            map.put("year", int.class);
             map.put("detailedVersion", String.class);
             map.put("isDev", Boolean.class);
             map.put("call", WebContext.class);
@@ -219,6 +221,7 @@ public class RythmConfig implements Lifecycle {
             template.__setRenderArg("prefix", wc.getContextPrefix());
             template.__setRenderArg("product", Sirius.getProductName());
             template.__setRenderArg("version", Sirius.getProductVersion());
+            template.__setRenderArg("year", LocalDate.now().getYear());
             template.__setRenderArg("detailedVersion", Sirius.getProductVersionDetails());
             template.__setRenderArg("isDev", Sirius.isDev());
             template.__setRenderArg("call", wc);
